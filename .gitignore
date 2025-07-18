@@ -1,3 +1,11 @@
+# Custom
+data/
+keys/
+results
+logs
+outputs
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
