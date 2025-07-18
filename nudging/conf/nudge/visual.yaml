@@ -1,0 +1,15 @@
+name: visual
+nudge:
+    _target_: nudges.VisualNudge
+
+    data: ${hydra:runtime.cwd}/data/default.csv
+    # Wrapper to call the LLM APIs
+    api_call: ${general.api_call}
+
+    seed: ${general.seed}
+
+    # Model to use for prompt evaluation using TextGrad
+    eval_model: gpt-4o-mini
+
+    initial_prompt: |
+        Make the image of this product more appealing.
