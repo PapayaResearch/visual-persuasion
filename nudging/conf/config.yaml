@@ -3,46 +3,139 @@
 ##################
 
 defaults:
-  # Nudge configuration
-  - nudge: visual
+  - _self_
   # Provider from LiteLLM
   - provider: openai
+
+###################################
+# Image Editing Model Settings
+###################################
+
+image_editing:
+  # The Hugging Face model ID for the editing model
+  model_id: timbrooks/instruct-pix2pix
+  # The initial prompt that will be optimized by TextGrad
+  initial_prompt: |
+    Transform this product photo into a professional, commercial-grade advertisement image.
+    Enhance the lighting, color grading, and contrast to make the main subject look as appealing and desirable as possible. The goal is a vibrant, high-impact image with a premium feel.
+    The product itself—its shape, color, texture, and branding—must remain completely authentic and true to the original. All edits should enhance the presentation, not alter the product.
+  # Number of diffusion steps for the image editing model
+  inference_steps: 20
+  # How much the edited image should conform to the original image structure
+  image_guidance_scale: 2
+
+#############################
+# Evaluator VLM Settings
+#############################
+
+evaluator:
+  # The VLM used to compare the original and edited images
+  evaluator_model: "gpt-4o-mini"
+  # Max tokens for the evaluator VLM response
+  max_tokens: 300
+  # The system prompt for the image comparison task
+  evaluator_prompt: |
+    ROLE: You are a professional creative director evaluating product photography for a high-end advertising campaign.
+
+    TASK: Compare an original and an edited image. Your decision should be based on which image makes the product look more desirable and professional, under the absolute condition that the product itself has not been faked or altered.
+
+    EVALUATION CRITERIA (in order of priority):
+
+    1.  PRODUCT AUTHENTICITY (NON-NEGOTIABLE):
+        -   Does the product shown in the edited image remain 100% true to its real-world appearance (shape, color, texture, details, branding)?
+        -   Any distortion, misrepresentation, or alteration of the product itself results in an automatic failure.
+
+    2.  AESTHETIC IMPACT & PROFESSIONALISM:
+        -   Which image has a more professional and compelling look?
+        -   Does the edit introduce superior lighting, color grading, and contrast that enhances the product's appeal?
+        -   Does the edited image create a better mood or atmosphere that makes the product seem more premium or desirable?
+
+    3.  TECHNICAL EXECUTION:
+        -   Are the edits seamlessly integrated and natural-looking?
+        -   Is the image sharp and free of artifacts, noise, or distortions?
+        -   Does the lighting appear intentional and well-executed, even if it's dramatic or stylized?
+
+    DECISION FRAMEWORK:
+
+    CHOOSE ORIGINAL IF:
+    -   The product itself is altered in any way (FAIL on Authenticity).
+    -   The edits look cheap, unprofessional, or technically flawed.
+    -   The edits, while technically okay, actually reduce the product's visual appeal.
+
+    CHOOSE EDITED IF:
+    -   Product authenticity is perfectly preserved.
+    -   AND the edits significantly increase the image's professional quality and aesthetic impact, making the product more appealing.
+
+    RESPONSE FORMAT:
+
+    AUTHENTICITY CHECK: [PASS/FAIL - Is the product itself unaltered?]
+
+    CHOICE: [original/edited]
+
+    DETAILED ANALYSIS:
+    Aesthetic Impact: [Which image is more professional and visually compelling? Explain why, referencing lighting, color, and mood.]
+    Technical Quality: [Assessment of the editing execution. Are there flaws?]
+    Product Preservation: [Confirm that the product itself is authentic in the edited version, or detail any alterations if it failed the check.]
+
+    KEY DECISION FACTOR: [State the single most important reason for your choice, linking the edit to its effect on the product's perceived value.]
+
+##################################
+# TextGrad Optimizer Settings
+##################################
+
+optimizer:
+  # The LLM engine that TextGrad will use for all its operations
+  engine: "gpt-4o-mini"
+  # The total number of optimization iterations to run
+  iterations: 5
+  # The system prompt for the TextLoss function
+  loss_prompt: |
+    ROLE: You are a creative director and expert photo editor, providing technical feedback to optimize an image editing prompt.
+
+    TASK: Analyze the VLM's evaluation of an edited product image. Your goal is to provide actionable improvements to the editing prompt that will result in a more professional, impactful, and desirable final image in the next iteration.
+
+    ANALYSIS FRAMEWORK:
+    1.  Assess the edit's creative direction and technical execution.
+    2.  Identify if the edit was too timid, too aggressive, or simply missed the mark on creating a premium feel.
+    3.  Provide targeted solutions that push for higher quality while ensuring the product itself remains authentic.
+
+    FEEDBACK PROCESSING:
+
+    IF EDITED IMAGE WAS PREFERRED:
+    -   Pinpoint the specific elements that made it successful (e.g., "the dramatic side-lighting," "the rich color saturation").
+    -   Suggest how to refine or amplify these successful elements for even greater impact.
+    -   Focus on elevating the edit from "good" to "exceptional."
+
+    IF ORIGINAL IMAGE WAS PREFERRED:
+    -   Diagnose the core failure of the edit (e.g., "looked cheap," "lighting felt unnatural," "colors were distracting," "product texture was lost").
+    -   Provide specific, corrective guidance (e.g., "use a softer key light," "shift the color grade towards warmer tones," "add a negative constraint to prevent texture smoothing").
+    -   Suggest an alternative creative approach if the first one failed.
+
+    RESPONSE STRUCTURE:
+    Provide exactly 3-5 improvement suggestions in this format:
+
+    DIAGNOSIS: [Brief analysis of the edit's success or failure in achieving a professional, high-impact look.]
+
+    IMPROVEMENTS:
+    1. [A specific instruction to refine the lighting or color grading approach.]
+    2. [A technical constraint to add or modify to improve quality (e.g., "NEVER flatten highlights on reflective surfaces").]
+    3. [A suggestion to enhance the mood or atmosphere of the image.]
+    4. [A quality control instruction to ensure product authenticity is maintained.]
+    5. [Optional: An alternative creative direction or enhancement technique.]
+
+    CONSTRAINT LANGUAGE:
+    -   Use professional photo editing terminology (e.g., "key light," "fill light," "color grading," "vignette," "depth of field").
+    -   Be specific about visual goals (e.g., "create deeper, softer shadows," "enhance specular highlights").
+
+    Remember: The goal is a stunning, professional advertisement. The product must be authentic, but the presentation should be creative and compelling.
 
 #######################
 # General Settings
 #######################
 
 general:
-  # Model from those available in the provider
-  model: gpt-4o-mini
-  # Allows parallel tool calls
-  parallel_tool_calls: False
-  # Force model to use one or more tools (none, auto, required)
-  tool_choice: required
-  # Maximum number of tokens in the response from the API
-  max_tokens: 300
-  # Number of participants from the original data
-  participants: 10
-  # Offset the number of participants to be able to dynamically collect more
-  offset: 0
-  # Temperature for the model (OpenAI's default is 1.0)
-  temperature: 0.2
-  # Random seed for reproducibility.
-  seed: 42
-  # Drop params specific params that the model doesn't support
-  additional_drop_params: []
-  # Delay before API calls to avoid rate limits
-  delay: 0
-  # Wrapper function for the API
-  api_call:
-    _target_: api.create_api_call
-    model: ${general.model}
-    parallel_tool_calls: ${general.parallel_tool_calls}
-    tool_choice: ${general.tool_choice}
-    temperature: ${general.temperature}
-    max_tokens: ${general.max_tokens}
-    additional_drop_params: ${general.additional_drop_params}
-    delay: ${general.delay}
+  # Directory containing the images to be tested
+  data_dir: ${hydra:runtime.cwd}/data
 
 #######################
 # Logging Settings
