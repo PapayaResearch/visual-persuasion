@@ -15,24 +15,24 @@ class VisualNudge:
         evaluator_model: EvaluatorModel, 
         loss_model: LossModel, 
         optimizer_model: OptimizerModel,
-        iterations: int
+        iterations: int,
+        initial_prompt: str
     ):
         self.image_editing_model = image_editing_model
         self.evaluator_model = evaluator_model
         self.loss_model = loss_model
         self.optimizer_model = optimizer_model
         self.iterations = iterations
+        self.initial_prompt = initial_prompt
 
-    def run(self, image_paths: list, results_dir: str, initial_prompt: str):
+    def run(self, image_paths: list, results_dir: str):
         """
         Runs the optimization loop for each image.
         """
-        current_prompt = initial_prompt
-
         for img_idx, image_path in enumerate(image_paths):
             base_filename, _ = os.path.splitext(os.path.basename(image_path))
             logging.info(f"===== Processing Image {img_idx + 1}/{len(image_paths)}: {base_filename} =====")
-            
+
             with open(image_path, "rb") as f:
                 original_image_bytes = f.read()
 
@@ -41,6 +41,7 @@ class VisualNudge:
             original_image.save(original_save_path)
             logging.info(f"Saved original image to: {original_save_path}")
             
+            current_prompt = self.initial_prompt
             logging.info("--- Starting Optimization ---")
 
             for i in range(self.iterations):

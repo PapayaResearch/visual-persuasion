@@ -15,7 +15,13 @@ visual_nudge:
   # Hydra target class for the main pipeline orchestrator
   _target_: nudge.VisualNudge
   # Total number of optimization iterations to run per image
-  iterations: ${general.iterations}
+  iterations: 5
+  # The initial prompt for the image editing task
+  initial_prompt: |
+    Transform this product photo into a professional, commercial-grade advertisement image.
+    Enhance the lighting, color grading, and contrast to make the main subject look as appealing and desirable as possible.
+    The goal is a vibrant, high-impact image with a premium feel.
+    The product itself—its shape, color, texture, and branding—must remain completely authentic and true to the original.
 
   image_editing_model:
     # Hydra target class for the image editing model
@@ -25,7 +31,7 @@ visual_nudge:
     # Number of diffusion steps for the image editing model
     inference_steps: 20
     # How much the edited image should conform to the original image structure
-    image_guidance_scale: 2
+    image_guidance_scale: 1.7
 
   evaluator_model:
     # Hydra target class for the evaluator model
@@ -88,6 +94,8 @@ visual_nudge:
     # The system prompt for the prompt optimization task
     system_prompt: |
       You are a prompt optimizer. Based on the critique and the original prompt, generate a new, improved prompt.
+      Keep the new prompt concise (under 50 words) while incorporating the suggested improvements.
+      Ensure the new prompt maintains the original intent but enhances clarity and specificity to achieve a more professional and impactful image edit.
       Return only the new prompt as the output, without any additional explanation or preamble.
 
 ######################
@@ -97,10 +105,8 @@ visual_nudge:
 general:
   # Directory containing the images to be tested
   data_dir: ${hydra:runtime.cwd}/data
-  # Global delay in seconds before API calls to avoid rate limits
+  # Delay in seconds before API calls to avoid rate limits
   delay: 0
-  # Global number of optimization iterations to run per image
-  iterations: 5
 
 ######################
 # Logging Settings

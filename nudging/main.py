@@ -21,7 +21,7 @@ def main(cfg: DictConfig) -> None:
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     base_dir = os.path.join(
         cfg.provider.name,
-        cfg.visual_nudge.optimizer_model.model
+        cfg.visual_nudge.evaluator_model.model
     )
     results_dir = os.path.join(cfg.logging.results_dir, base_dir, current_date)
     log_dir = os.path.join(cfg.logging.log_dir, base_dir)
@@ -65,18 +65,14 @@ def main(cfg: DictConfig) -> None:
         logging.warning(f"No images found in data directory: {data_dir}")
         return
 
-    # Instantiate the entire VisualNudge pipeline with one call
+    # Instantiate the entire VisualNudge pipeline
     logging.info("Instantiating VisualNudge pipeline...")
     nudge = hydra.utils.instantiate(cfg.visual_nudge)
     logging.info("Pipeline instantiated.")
         
     logging.info(f"Starting visual nudge run with {len(image_paths)} image(s) from {data_dir}")
     # Pass runtime-specific parameters to the run method
-    nudge.run(
-        image_paths=image_paths, 
-        results_dir=results_dir,
-        initial_prompt=cfg.visual_nudge.image_editing_model.initial_prompt
-    )
+    nudge.run(image_paths=image_paths, results_dir=results_dir)
     logging.info("Visual nudge run completed")
 
 

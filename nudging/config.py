@@ -1,5 +1,4 @@
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 ######################
 # Model Settings
@@ -80,6 +79,8 @@ class VisualNudgeConfig:
     _target_: str
     # Total number of optimization iterations to run per image
     iterations: int
+    # The initial prompt for the image editing task
+    initial_prompt: str
     # Configuration object for the image editing model
     image_editing_model: ImageEditingConfig
     # Configuration object for the evaluator model
