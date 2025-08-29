@@ -2,7 +2,7 @@ import os
 import io
 import logging
 from PIL import Image
-from models import ImageEditingModel, EvaluatorModel, LossModel, OptimizerModel
+from wrappers import ImageEditingModel, EvaluatorModel, LossModel, OptimizerModel
 
 class VisualNudge:
     """

@@ -2,7 +2,7 @@ import logging
 import os
 import hydra
 from datetime import datetime
-from omegaconf import OmegaConf, DictConfig
+from omegaconf import OmegaConf
 from config import Config
 from utils.misc import print_config
 
@@ -11,7 +11,7 @@ config_store = hydra.core.config_store.ConfigStore.instance()
 config_store.store(name="base_config", node=Config)
 
 @hydra.main(config_path="conf", config_name="config", version_base=None)
-def main(cfg: DictConfig) -> None:
+def main(cfg: Config) -> None:
     # Load and print configuration
     OmegaConf.resolve(cfg)
     cfg_yaml = OmegaConf.to_yaml(cfg)
@@ -21,7 +21,7 @@ def main(cfg: DictConfig) -> None:
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     base_dir = os.path.join(
         cfg.provider.name,
-        cfg.visual_nudge.evaluator_model.model
+        cfg.visual_nudge.evaluator_model.api_call.model
     )
     results_dir = os.path.join(cfg.logging.results_dir, base_dir, current_date)
     log_dir = os.path.join(cfg.logging.log_dir, base_dir)
@@ -72,7 +72,10 @@ def main(cfg: DictConfig) -> None:
         
     logging.info(f"Starting visual nudge run with {len(image_paths)} image(s) from {data_dir}")
     # Pass runtime-specific parameters to the run method
-    nudge.run(image_paths=image_paths, results_dir=results_dir)
+    nudge.run(
+        image_paths=image_paths,
+        results_dir=results_dir
+    )
     logging.info("Visual nudge run completed")
 
 
