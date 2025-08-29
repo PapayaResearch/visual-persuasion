@@ -1,0 +1,5 @@
+# InstructPix2Pix model configuration
+_target_: models.InstructPix2Pix
+model_id: timbrooks/instruct-pix2pix
+inference_steps: 20
+image_guidance_scale: 1.7

@@ -1,130 +1,128 @@
 from dataclasses import dataclass
+from typing import Any
 
-######################
-# Model Settings
-######################
-
-@dataclass
-class ImageEditingConfig:
-    # Hydra target class path
-    _target_: str
-    # Hugging Face model identifier
-    model_id: str
-    # Number of diffusion steps for the image editing model
-    inference_steps: int
-    # How much the edited image should conform to the original image structure
-    image_guidance_scale: float
+#######################
+# API Settings
+#######################
 
 @dataclass
-class EvaluatorConfig:
-    # Hydra target class path
+class ApiCall:
+    # Hydra target for API call function
     _target_: str
-    # The VLM used to compare the original and edited images
+    # Model name for API calls
     model: str
-    # Max tokens for the evaluator VLM response
-    max_tokens: int
-    # Sampling temperature for the model's output
+    # Sampling temperature for responses
     temperature: float
-    # Delay in seconds before making an API call
+    # Maximum tokens in API response
+    max_tokens: int
+    # Delay before API calls to avoid rate limits
     delay: int
-    # The system prompt for the image comparison task
-    system_prompt: str
+
+#######################
+# Model Components
+#######################
 
 @dataclass
-class LossConfig:
-    # Hydra target class path
+class ImageEditingModel:
+    # Hydra target for image editing model class
     _target_: str
-    # The LLM used to generate the critique (loss)
-    model: str
-    # Max tokens for the critique response
-    max_tokens: int
-    # Sampling temperature for the model's output
-    temperature: float
-    # Delay in seconds before making an API call
-    delay: int
-    # The system prompt for the loss generation task
-    system_prompt: str
+    # Additional model-specific parameters (from model configs)
+    # These will be filled in by the model-specific YAML files
 
 @dataclass
-class OptimizerConfig:
-    # Hydra target class path
+class EvaluatorModel:
+    # Hydra target for evaluator model class
     _target_: str
-    # The LLM used to generate the new, optimized prompt
-    model: str
-    # Max tokens for the new prompt
-    max_tokens: int
-    # Sampling temperature for the model's output
-    temperature: float
-    # Delay in seconds before making an API call
-    delay: int
-    # The system prompt for the prompt optimization task
+    # System prompt for image comparison task
     system_prompt: str
+    # API call configuration
+    api_call: ApiCall
 
-######################
-# Misc. Objects
-######################
+@dataclass
+class LossModel:
+    # Hydra target for loss model class
+    _target_: str
+    # System prompt for critique generation
+    system_prompt: str
+    # API call configuration
+    api_call: ApiCall
+
+@dataclass
+class OptimizerModel:
+    # Hydra target for optimizer model class
+    _target_: str
+    # System prompt for prompt optimization
+    system_prompt: str
+    # API call configuration
+    api_call: ApiCall
+
+#######################
+# Main Pipeline
+#######################
+
+@dataclass
+class VisualNudge:
+    # Hydra target for main pipeline class
+    _target_: str
+    # Number of optimization iterations per image
+    iterations: int
+    # Initial prompt for image editing
+    initial_prompt: str
+    # Image editing model configuration
+    image_editing_model: ImageEditingModel
+    # Evaluator model configuration
+    evaluator_model: EvaluatorModel
+    # Loss model configuration
+    loss_model: LossModel
+    # Optimizer model configuration
+    optimizer_model: OptimizerModel
+
+#######################
+# Provider Settings
+#######################
 
 @dataclass
 class Provider:
-    # Name of the API provider (e.g., 'openai')
+    # Provider name (e.g., 'openai')
     name: str
-    # Path to the file containing the API key
+    # Path to API key file
     key: str
-    # The environment variable name to set for the API key
+    # Environment variable name for API key
     key_name: str
 
-@dataclass
-class VisualNudgeConfig:
-    # Hydra target class path for the main pipeline orchestrator
-    _target_: str
-    # Total number of optimization iterations to run per image
-    iterations: int
-    # The initial prompt for the image editing task
-    initial_prompt: str
-    # Configuration object for the image editing model
-    image_editing_model: ImageEditingConfig
-    # Configuration object for the evaluator model
-    evaluator_model: EvaluatorConfig
-    # Configuration object for the loss model
-    loss_model: LossConfig
-    # Configuration object for the optimizer model
-    optimizer_model: OptimizerConfig
-
-######################
+#######################
 # General Settings
-######################
+#######################
 
 @dataclass
 class General:
-    # Directory containing the images to be tested
+    # Directory containing input images
     data_dir: str
-    # Global delay in seconds before API calls to avoid rate limits
+    # Global delay for API calls
     delay: int
-    # Global number of optimization iterations to run per image
-    iterations: int
 
-######################
+#######################
 # Logging Settings
-######################
+#######################
 
 @dataclass
 class Logging:
-    # Base directory for writing log files
+    # Directory for log files
     log_dir: str
-    # Base directory for writing results (images, configs)
+    # Directory for results (images, configs)
     results_dir: str
 
 ######################
-# The Config
+# Main Config
 ######################
 
 @dataclass
 class Config:
+    # Main pipeline configuration
+    visual_nudge: VisualNudge
     # API provider configuration
     provider: Provider
-    # Main pipeline configuration object
-    visual_nudge: VisualNudgeConfig
     # General experiment settings
     general: General
-    # Logging path settings
+    # Logging configuration
     logging: Logging
