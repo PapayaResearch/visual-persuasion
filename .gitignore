@@ -1,8 +1,9 @@
 # Custom
-data/
-keys/
-results
+*.sh
+data
+keys
 logs
+results
 outputs
 .DS_Store
 

@@ -44,6 +44,7 @@ def main(cfg: Config) -> None:
         force=True
     )
     logging.getLogger().addHandler(logging.StreamHandler())
+    logging.getLogger("LiteLLM").setLevel(logging.WARNING)
 
     # Set up provider API key
     try:
