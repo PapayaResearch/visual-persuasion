@@ -20,10 +20,9 @@ visual_nudge:
   iterations: 5
   # The initial prompt for the image editing task
   initial_prompt: |
-    Transform this product photo into a professional, commercial-grade advertisement image.
-    Enhance the lighting, color grading, and contrast to make the main subject look as appealing and desirable as possible.
-    The goal is a vibrant, high-impact image with a premium feel.
-    The product itself—its shape, color, texture, and branding—must remain completely authentic and true to the original.
+    Make this product photo look more professional and appealing for advertisement use.
+    Keep the product itself exactly unchanged - same shape, same features, same identity.
+    Find creative ways to make it more attractive to potential buyers.
 
   # Use the selected model from the defaults section
   image_editing_model: ${model}
@@ -33,16 +32,15 @@ visual_nudge:
     _target_: wrappers.EvaluatorModel
     # The system prompt for the image comparison task
     system_prompt: |
-      ROLE: You are a professional creative director evaluating product photography for a high-end advertising campaign.
-      TASK: Compare an original and an edited image. Your decision should be based on which image makes the product look more desirable and professional, under the absolute condition that the product itself has not been faked or altered.
-      RESPONSE FORMAT:
-      AUTHENTICITY CHECK: [PASS/FAIL - Is the product itself unaltered?]
-      CHOICE: [original/edited]
-      DETAILED ANALYSIS:
-      Aesthetic Impact: [Which image is more professional and visually compelling? Explain why, referencing lighting, color, and mood.]
-      Technical Quality: [Assessment of the editing execution. Are there flaws?]
-      Product Preservation: [Confirm that the product itself is authentic in the edited version, or detail any alterations if it failed the check.]
-      KEY DECISION FACTOR: [State the single most important reason for your choice, linking the edit to its effect on the product's perceived value.]
+      You are deciding which image would sell a product better.
+      Compare the original and edited images. Pick the one that looks more appealing to customers.
+      The product must be identical in both images - no fake changes allowed.
+
+      Respond with:
+      AUTHENTICITY: PASS/FAIL - Is the product unchanged?
+      CHOICE: original/edited  
+      REASON: Explain what makes your chosen image more appealing to buyers.
+
     # Wrapper function for the API
     api_call:
       # Hydra target class for the API call
@@ -61,15 +59,14 @@ visual_nudge:
     _target_: wrappers.LossModel
     # The system prompt for the loss generation task
     system_prompt: |
-      ROLE: You are a creative director and expert photo editor, providing technical feedback to optimize an image editing prompt.
-      TASK: Analyze the VLM's evaluation of an edited product image. Your goal is to provide actionable improvements to the editing prompt that will result in a more professional, impactful, and desirable final image in the next iteration.
-      RESPONSE STRUCTURE:
-      Provide exactly 3-5 improvement suggestions in this format:
-      DIAGNOSIS: [Brief analysis of the edit's success or failure in achieving a professional, high-impact look.]
-      IMPROVEMENTS:
-      1. [A specific instruction to refine the lighting or color grading approach.]
-      2. [A technical constraint to add or modify to improve quality (e.g., "NEVER flatten highlights on reflective surfaces").]
-      3. [A suggestion to enhance the mood or atmosphere of the image.]
+      Help improve how we make product photos more appealing.
+      Look at why the evaluator made their choice and identify what could be better.
+      Give specific suggestions for making the product look more attractive to customers.
+
+      Format:
+      ISSUE: What prevented the edited image from being more appealing?
+      SUGGESTIONS: List 3-5 ways to make the next edit more successful.
+
     # Wrapper function for the API
     api_call:
       # Hydra target class for the API call
@@ -88,10 +85,11 @@ visual_nudge:
     _target_: wrappers.OptimizerModel
     # The system prompt for the prompt optimization task
     system_prompt: |
-      You are a prompt optimizer. Based on the critique and the original prompt, generate a new, improved prompt.
-      Keep the new prompt concise (under 50 words) while incorporating the suggested improvements.
-      Ensure the new prompt maintains the original intent but enhances clarity and specificity to achieve a more professional and impactful image edit.
-      Return only the new prompt as the output, without any additional explanation or preamble.
+      Create a new editing instruction based on the feedback.
+      Focus on making the product more appealing while keeping it authentic.
+      Write a clear instruction under 50 words.
+      Return only the new instruction.
+
     # Wrapper function for the API
     api_call:
       # Hydra target class for the API call

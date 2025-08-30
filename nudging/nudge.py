@@ -31,7 +31,7 @@ class VisualNudge:
         """
         for img_idx, image_path in enumerate(image_paths):
             base_filename, _ = os.path.splitext(os.path.basename(image_path))
-            logging.info(f"===== Processing Image {img_idx + 1}/{len(image_paths)}: {base_filename} =====")
+            logging.info(f"\n===== Processing Image {img_idx + 1}/{len(image_paths)}: {base_filename} =====\n")
 
             with open(image_path, "rb") as f:
                 original_image_bytes = f.read()
@@ -42,10 +42,10 @@ class VisualNudge:
             logging.info(f"Saved original image to: {original_save_path}")
             
             current_prompt = self.initial_prompt
-            logging.info("--- Starting Optimization ---")
+            logging.info("\n--- Starting Optimization ---\n")
 
             for i in range(self.iterations):
-                logging.info(f"\n>> ITERATION {i + 1}/{self.iterations} <<")
+                logging.info(f"\n>> ITERATION {i + 1}/{self.iterations} <<\n")
                 logging.info(f"Current Prompt:\n{current_prompt}")
 
                 # 1. Edit image with current prompt
@@ -56,7 +56,7 @@ class VisualNudge:
 
                 # 2. Evaluate the edit
                 evaluation = self.evaluator_model.evaluate(original_image_bytes, edited_image_bytes)
-                logging.info(f"VLM Evaluation:\n{evaluation}")
+                logging.info(f"\nVLM Evaluation:\n{evaluation}\n")
 
                 # 3. Get critique (loss)
                 loss_context = (
@@ -66,7 +66,7 @@ class VisualNudge:
                     f"{evaluation}\n"
                 )
                 critique = self.loss_model.get_critique(loss_context)
-                logging.info(f"Critique (Loss):\n{critique}")
+                logging.info(f"\nCritique (Loss):\n{critique}\n")
 
                 # 4. Get new prompt from optimizer
                 optimizer_context = (
@@ -80,5 +80,5 @@ class VisualNudge:
                 # Update the prompt for the next iteration
                 current_prompt = new_prompt
                 
-                logging.info(f"New Optimized Prompt:\n{current_prompt}")
+                logging.info(f"\nNew Optimized Prompt:\n{current_prompt}\n")
                 logging.info("-" * 30)
