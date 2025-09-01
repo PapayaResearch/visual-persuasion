@@ -1,12 +1,14 @@
 from abc import ABC, abstractmethod
 import base64
+from typing import Tuple
+from PIL import Image
 
 class ImageEditingModel(ABC):
     """
     Abstract base class for all image editing models.
     """
     @abstractmethod
-    def edit(self, prompt: str, image_bytes: bytes):
+    def edit(self, prompt: str, image_bytes: bytes) -> Tuple[Image.Image, bytes]:
         """
         Applies the editing prompt to an image.
             
