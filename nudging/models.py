@@ -1,9 +1,11 @@
 from wrappers import ImageEditingModel
+import logging
 import torch
 import io
 from PIL import Image
 import base64
 from diffusers import StableDiffusionInstructPix2PixPipeline
+from google import genai
 
 class InstructPix2Pix(ImageEditingModel):
     """
@@ -46,31 +48,33 @@ class NanoBanana(ImageEditingModel):
     """
     Implementation of Google's Nano Banana (Gemini 2.5 Flash Image) model for image editing.
     """
-    def __init__(self, api_call: callable):        
-        self.api_call = api_call
+    def __init__(self, key: str, model: str):        
+        self.model = model
+
+        # Set up provider API key
+        try:
+            with open(key) as infile:
+                self.api_key = infile.read().strip()
+            logging.info(f"Set Nano Banana API key from {key}")
+        except FileNotFoundError:
+            logging.error(f"Nano Banana API key file not found at: {key}")
+        
+        self.client = genai.Client(api_key=self.api_key)
         
     def edit(self, prompt: str, image_bytes: bytes):            
-        messages = [
-            {
-                "role": "user", 
-                "content": [
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(image_bytes).decode('utf-8')}"}
-                    },
-                    {
-                        "type": "text",
-                        "text": prompt
-                    }
-                ]
-            }
-        ]
-        
-        # Call the API
-        image_url = self.api_call(messages)
-        
-        # Handle data URI format: "data:image/png;base64,..."
-        _, data = image_url.split(",", 1)
-        edited_image_bytes = base64.b64decode(data)
-        edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+        # API call
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=[prompt, image],
+        )
+
+        for part in response.candidates[0].content.parts:
+            if part.text is not None:
+                logging.info(f"\nNano Banana Response:\n{part.text}\n")
+            elif part.inline_data is not None:
+                edited_image_bytes = part.inline_data.data
+                edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
+
         return edited_image, edited_image_bytes
