@@ -1,0 +1,9 @@
+# Nano Banana model configuration
+_target_: models.NanoBanana
+api_call:
+  _target_: api.create_image_api_call
+  key: ${hydra:runtime.cwd}/keys/goo.txt
+  model: gemini/gemini-2.5-flash-image-preview
+  temperature: 1.0
+  max_tokens: 1000
+  delay: 0

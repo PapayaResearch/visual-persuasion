@@ -2,6 +2,7 @@ from wrappers import ImageEditingModel
 import torch
 import io
 from PIL import Image
+import base64
 from diffusers import StableDiffusionInstructPix2PixPipeline
 
 class InstructPix2Pix(ImageEditingModel):
@@ -39,4 +40,37 @@ class InstructPix2Pix(ImageEditingModel):
             edited_image.save(output, format="JPEG")
             edited_image_bytes = output.getvalue()
             
+        return edited_image, edited_image_bytes
+
+class NanoBanana(ImageEditingModel):
+    """
+    Implementation of Google's Nano Banana (Gemini 2.5 Flash Image) model for image editing.
+    """
+    def __init__(self, api_call: callable):        
+        self.api_call = api_call
+        
+    def edit(self, prompt: str, image_bytes: bytes):            
+        messages = [
+            {
+                "role": "user", 
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(image_bytes).decode('utf-8')}"}
+                    },
+                    {
+                        "type": "text",
+                        "text": prompt
+                    }
+                ]
+            }
+        ]
+        
+        # Call the API
+        image_url = self.api_call(messages)
+        
+        # Handle data URI format: "data:image/png;base64,..."
+        _, data = image_url.split(",", 1)
+        edited_image_bytes = base64.b64decode(data)
+        edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
         return edited_image, edited_image_bytes
