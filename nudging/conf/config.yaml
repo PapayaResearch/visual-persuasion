@@ -16,7 +16,11 @@ defaults:
 visual_nudge:
   # Hydra target class for the main pipeline orchestrator
   _target_: nudge.VisualNudge
-  # Total number of optimization iterations to run per image
+
+  # Enable prompt optimization pipeline (disable for zero-shot testing)
+  enable_optimization: false
+
+  # Total number of iterations to run per image
   iterations: 5
   # The initial prompt for the image editing task
   initial_prompt: |
