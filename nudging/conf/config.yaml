@@ -7,7 +7,7 @@ defaults:
   # Provider from LiteLLM (e.g., openai, anthropic)
   - provider: openai
   # Image editing model (e.g., nanobanana, instructpix2pix)
-  - model: nanobanana
+  - model: gemini
 
 ######################
 # Nudge Settings

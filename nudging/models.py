@@ -44,9 +44,9 @@ class InstructPix2Pix(ImageEditingModel):
             
         return edited_image, edited_image_bytes
 
-class NanoBanana(ImageEditingModel):
+class Gemini(ImageEditingModel):
     """
-    Implementation of Google's Nano Banana (Gemini 2.5 Flash Image) model for image editing.
+    Implementation of Gemini-based image models for image editing.
     """
     def __init__(self, key: str, model: str):        
         self.model = model
@@ -55,9 +55,9 @@ class NanoBanana(ImageEditingModel):
         try:
             with open(key) as infile:
                 self.api_key = infile.read().strip()
-            logging.info(f"Set Nano Banana API key from {key}")
+            logging.info(f"Set Gemini API key from {key}")
         except FileNotFoundError:
-            logging.error(f"Nano Banana API key file not found at: {key}")
+            logging.error(f"Gemini API key file not found at: {key}")
         
         self.client = genai.Client(api_key=self.api_key)
         
