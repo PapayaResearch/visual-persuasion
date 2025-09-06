@@ -77,9 +77,9 @@ def main(cfg: Config) -> None:
             return
 
         # Instantiate the entire VisualNudge pipeline
-        logging.info("Instantiating VisualNudge pipeline...")
+        logging.info("\nInstantiating VisualNudge pipeline...")
         nudge = hydra.utils.instantiate(cfg.visual_nudge)
-        logging.info("Pipeline instantiated.")
+        logging.info("Pipeline instantiated")
             
         logging.info(f"Starting visual nudge run with {len(image_paths)} image(s) from {data_dir}")
         # Pass runtime-specific parameters to the run method
@@ -110,7 +110,7 @@ def main(cfg: Config) -> None:
         eval_pipeline = hydra.utils.instantiate(cfg.evaluate)
         
         # Run evaluation
-        eval_pipeline.run(eval_dir)
+        eval_pipeline.run(eval_dir, cfg.evaluate.evaluator_model.api_call.model)
         logging.info("\nEvaluation completed\n")
 
 if __name__ == "__main__":

@@ -81,7 +81,7 @@ class Gemini(ImageEditingModel):
             return edited_image, edited_image_bytes
 
         except Exception as e:
-            logging.error(f"Gemini API call failed: {e}")
+            logging.error(f"Gemini API call failed: {e}\n")
             logging.info(response)
             return None, None
 
@@ -116,6 +116,6 @@ class LiteLLM(ImageEditingModel):
             return edited_image, edited_image_bytes
 
         except Exception as e:
-            logging.error(f"LiteLLM API call failed: {e}")
+            logging.error(f"LiteLLM API call failed: {e}\n")
             logging.info(response)
             return None, None

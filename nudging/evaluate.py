@@ -35,17 +35,19 @@ class EvaluationPipeline:
             self.evaluator_model.system_prompt = self.agent_prompt
             logging.info("Using agent perspective for evaluation")
     
-    def run(self, image_dir: str):
+    def run(self, image_dir: str, model: str):
         """
         Runs the evaluation pipeline for each image.
         """
         try:
             # Create results directory if it doesn't exist
-            results_dir = os.path.join(image_dir, "evaluation")
+            results_dir = os.path.join(image_dir, "evaluation", "enhanced" if self.enhance_original else "original",
+                                       "customer" if self.use_customer_perspective else "agent", model)
             os.makedirs(results_dir, exist_ok=True)
 
             # Get all image files in the directory
-            all_files = [f for f in os.listdir(image_dir) if os.path.isfile(os.path.join(image_dir, f)) and f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+            all_files = [f for f in os.listdir(image_dir) if (os.path.isfile(os.path.join(image_dir, f))
+                                                              and f.lower().endswith(('.jpg', '.jpeg', '.png')))]
             
             # Get all the original images
             original_images = [f for f in all_files if "_original" in f]
@@ -140,9 +142,10 @@ class EvaluationPipeline:
                                 vlm_choice = choice_match.group(1).lower()
                                 
                                 # Determine which image was chosen by the VLM
-                                original_chosen = (vlm_choice == "first" and is_original_first) or (vlm_choice == "second" and not is_original_first)
+                                original_chosen = ((vlm_choice == "first" and is_original_first) or
+                                    (vlm_choice == "second" and not is_original_first))
                                 
-                                choice_text = base_type if original_chosen else f"iteration {iter_num}"
+                                choice_text = "original" if original_chosen else "edited"
                                 reason_text = reason_match.group(1).strip() if reason_match else "No reason provided"
                                 
                                 result = f"VLM Choice: {choice_text}\n"
@@ -153,7 +156,7 @@ class EvaluationPipeline:
                                 # Append this result to our collection for this base image
                                 all_evaluations += result + "\n" + "-" * 40 + "\n\n"
                             else:
-                                error_msg = f"Could not parse choice from VLM response for {iter_image_name}"
+                                error_msg = f"Could not parse choice from VLM response for {iter_image_name}\nResponse was:\n{evaluation}"
                                 logging.error(error_msg)
                                 all_evaluations += f"ERROR: {error_msg}\n\n"
                         except Exception as e:

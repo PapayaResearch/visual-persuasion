@@ -18,6 +18,9 @@ def print_config(cfg: DictConfig):
             for nested_key in value.keys():
                 keys.add(nested_key)
 
+    # Sort keys for consistent column ordering
+    keys = sorted(keys)
+
     # Add columns for each key
     for key in keys:
         table.add_column(key, style="cyan")

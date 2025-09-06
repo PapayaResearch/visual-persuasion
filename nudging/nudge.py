@@ -35,78 +35,110 @@ class VisualNudge:
         """
         Runs the optimization loop for each image.
         """
-        for img_idx, image_path in enumerate(image_paths):
-            base_filename, _ = os.path.splitext(os.path.basename(image_path))
-            logging.info(f"\n===== Processing Image {img_idx + 1}/{len(image_paths)}: {base_filename} =====\n")
+        try:
+            for img_idx, image_path in enumerate(image_paths):
+                try:
+                    base_filename, _ = os.path.splitext(os.path.basename(image_path))
+                    logging.info(f"\n===== Processing Image {img_idx + 1}/{len(image_paths)}: {base_filename} =====\n")
 
-            with open(image_path, "rb") as f:
-                original_image_bytes = f.read()
+                    with open(image_path, "rb") as f:
+                        original_image_bytes = f.read()
 
-            original_image = Image.open(io.BytesIO(original_image_bytes))
-            original_save_path = os.path.join(results_dir, f"{base_filename}_original.jpg")
-            original_image.save(original_save_path)
-            logging.info(f"Saved original image to: {original_save_path}")
+                    original_image = Image.open(io.BytesIO(original_image_bytes))
+                    original_save_path = os.path.join(results_dir, f"{base_filename}_original.jpg")
+                    original_image.save(original_save_path)
+                    logging.info(f"Saved original image to: {original_save_path}")
 
-            # Optionally enhance the original image before starting
-            if self.enhance_original:
-                logging.info("\n--- Enhancing Original Image ---\n")
-                enhanced_image, enhanced_image_bytes = self.image_editing_model.edit(self.enhance_prompt, original_image_bytes)
-                
-                if enhanced_image is None or enhanced_image_bytes is None:
-                    logging.error("Enhancement failed. Proceeding with the original image.")
-                else:
-                    enhanced_save_path = os.path.join(results_dir, f"{base_filename}_enhanced.jpg")
-                    enhanced_image.save(enhanced_save_path)
-                    logging.info(f"Saved enhanced image to: {enhanced_save_path}")
-                    # Use the enhanced image for subsequent edits
-                    original_image = enhanced_image
-                    original_image_bytes = enhanced_image_bytes
-            
-            current_prompt = self.initial_prompt
-            logging.info("\n--- Starting Run ---\n")
+                    # Optionally enhance the original image before starting
+                    if self.enhance_original:
+                        try:
+                            logging.info("\n--- Enhancing Original Image ---\n")
+                            enhanced_image, enhanced_image_bytes = self.image_editing_model.edit(self.enhance_prompt, original_image_bytes)
+                            
+                            if enhanced_image is None or enhanced_image_bytes is None:
+                                logging.error("Enhancement failed. Proceeding with the original image.")
+                            else:
+                                enhanced_save_path = os.path.join(results_dir, f"{base_filename}_enhanced.jpg")
+                                enhanced_image.save(enhanced_save_path)
+                                logging.info(f"Saved enhanced image to: {enhanced_save_path}")
+                                # Use the enhanced image for subsequent edits
+                                original_image = enhanced_image
+                                original_image_bytes = enhanced_image_bytes
+                        except Exception as e:
+                            logging.error(f"Error enhancing image {base_filename}: {str(e)}. Proceeding with original image.")
+                    
+                    current_prompt = self.initial_prompt
+                    logging.info("\n--- Starting Run ---")
 
-            for i in range(self.iterations):
-                logging.info(f"\n>> ITERATION {i + 1}/{self.iterations} <<\n")
-                logging.info(f"Prompt:\n{current_prompt}")
+                    for i in range(self.iterations):
+                        try:
+                            logging.info(f"\n>> ITERATION {i + 1}/{self.iterations} <<\n")
+                            logging.info(f"Prompt:\n{current_prompt}")
 
-                # 1. Edit image with current prompt
-                edited_image, edited_image_bytes = self.image_editing_model.edit(current_prompt, original_image_bytes)
+                            # 1. Edit image with current prompt
+                            try:
+                                edited_image, edited_image_bytes = self.image_editing_model.edit(current_prompt, original_image_bytes)
 
-                if edited_image is None or edited_image_bytes is None:
-                    logging.error("Image editing failed. Skipping to next iteration.")
+                                if edited_image is None or edited_image_bytes is None:
+                                    logging.error("Image editing failed. Skipping to next iteration.\n")
+                                    continue
+
+                                edited_image_save_path = os.path.join(results_dir, f"{base_filename}_iter_{i+1}.jpg")
+                                edited_image.save(edited_image_save_path)
+                                logging.info(f"Saved edited image to: {edited_image_save_path}")
+                            except Exception as e:
+                                logging.error(f"Error editing image in iteration {i+1}: {str(e)}. Skipping to next iteration.")
+                                continue
+
+                            if self.enable_optimization:
+                                try:
+                                    # 2. Evaluate the edit
+                                    evaluation = self.evaluator_model.evaluate("Compare the original and edited images.", original_image_bytes, edited_image_bytes)
+                                    logging.info(f"\nVLM Evaluation:\n{evaluation}\n")
+                                except Exception as e:
+                                    logging.error(f"Error in evaluation step for iteration {i+1}: {str(e)}. Continuing without optimization.")
+                                    continue
+
+                                try:
+                                    # 3. Get critique (loss)
+                                    loss_context = (
+                                        "CURRENT PROMPT:\n"
+                                        f"{current_prompt}\n\n"
+                                        "VLM EVALUATION:\n"
+                                        f"{evaluation}\n"
+                                    )
+                                    critique = self.loss_model.get_critique(loss_context)
+                                    logging.info(f"Critique (Loss):\n{critique}\n")
+                                except Exception as e:
+                                    logging.error(f"Error in critique generation for iteration {i+1}: {str(e)}. Continuing without optimization.")
+                                    continue
+
+                                try:
+                                    # 4. Get new prompt from optimizer
+                                    optimizer_context = (
+                                        "ORIGINAL PROMPT:\n"
+                                        f"{current_prompt}\n\n"
+                                        "CRITIQUE:\n"
+                                        f"{critique}\n"
+                                    )
+                                    new_prompt = self.optimizer_model.update_prompt(optimizer_context)
+                                    
+                                    # Update the prompt for the next iteration
+                                    current_prompt = new_prompt
+                                    
+                                    logging.info(f"\nOptimized Prompt:\n{current_prompt}\n")
+                                except Exception as e:
+                                    logging.error(f"Error in prompt optimization for iteration {i+1}: {str(e)}. Using original prompt for next iteration.")
+
+                            logging.info("-" * 30)
+
+                        except Exception as e:
+                            logging.error(f"Error in iteration {i+1} for image {base_filename}: {str(e)}. Continuing to next iteration.")
+                            continue
+
+                except Exception as e:
+                    logging.error(f"Error processing image {image_path}: {str(e)}. Continuing to next image.")
                     continue
 
-                edited_image_save_path = os.path.join(results_dir, f"{base_filename}_iter_{i+1}.jpg")
-                edited_image.save(edited_image_save_path)
-                logging.info(f"Saved edited image to: {edited_image_save_path}")
-
-                if self.enable_optimization:
-                    # 2. Evaluate the edit
-                    evaluation = self.evaluator_model.evaluate("Compare the original and edited images.", original_image_bytes, edited_image_bytes)
-                    logging.info(f"\nVLM Evaluation:\n{evaluation}\n")
-
-                    # 3. Get critique (loss)
-                    loss_context = (
-                        "CURRENT PROMPT:\n"
-                        f"{current_prompt}\n\n"
-                        "VLM EVALUATION:\n"
-                        f"{evaluation}\n"
-                    )
-                    critique = self.loss_model.get_critique(loss_context)
-                    logging.info(f"\nCritique (Loss):\n{critique}\n")
-
-                    # 4. Get new prompt from optimizer
-                    optimizer_context = (
-                        "ORIGINAL PROMPT:\n"
-                        f"{current_prompt}\n\n"
-                        "CRITIQUE:\n"
-                        f"{critique}\n"
-                    )
-                    new_prompt = self.optimizer_model.update_prompt(optimizer_context)
-                    
-                    # Update the prompt for the next iteration
-                    current_prompt = new_prompt
-                    
-                    logging.info(f"\nOptimized Prompt:\n{current_prompt}\n")
-
-                logging.info("-" * 30)
+        except Exception as e:
+            logging.error(f"Fatal error in visual nudge pipeline: {str(e)}")

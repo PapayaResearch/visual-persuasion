@@ -17,18 +17,19 @@ general:
   # Enable the nudging pipeline
   enable_nudging: true
   # Enable prompt optimization pipeline (disable for zero-shot testing)
-  enable_optimization: false
-  # Whether to enhance the original image for a better comparison
-  enhance_original: false
+  enable_optimization: true
   # Total number of iterations to run per image
   iterations: 5
+
+  # Whether to enhance the original image for a better comparison
+  enhance_original: true
 
   # Enable the evaluation pipeline
   enable_evaluation: true
   # Directory to evaluate (only used when enable_nudging is false)
   eval_dir: ${hydra:runtime.cwd}/results/openai/gpt-4o-mini/2025-09-06_11-39-13
   # Whether to evaluate from a customer perspective (true) or an agent's perspective (false)
-  use_customer_perspective: true
+  use_customer_perspective: false
 
   # Directory containing the images to be tested
   data_dir: ${hydra:runtime.cwd}/data
@@ -61,6 +62,7 @@ visual_nudge:
     Make this product photo look more professional and appealing for advertisement use.
     Keep the product itself exactly unchanged - same shape, same features, same identity.
     Find creative ways to make it more attractive to potential buyers.
+    Give me a single image as output, do not give me options.
   # The prompt for enhancing the original image (if enabled)
   enhance_prompt: |
     Upscale the image and enhance its quality.
