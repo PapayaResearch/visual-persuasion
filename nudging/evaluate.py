@@ -1,0 +1,177 @@
+import os
+import logging
+import random
+import re
+from wrappers import EvaluatorModel, ImageEditingModel
+
+class EvaluationPipeline:
+    """
+    Evaluation pipeline to assess the visual nudges.
+    """
+    def __init__(
+        self, 
+        num_images: int,
+        use_customer_perspective: bool,
+        enhance_original: bool,
+        enhance_prompt: str,
+        image_editing_model: ImageEditingModel,
+        customer_prompt: str,
+        agent_prompt: str,
+        evaluator_model: EvaluatorModel
+    ):
+        self.num_images = num_images
+        self.use_customer_perspective = use_customer_perspective
+        self.enhance_original = enhance_original
+        self.enhance_prompt = enhance_prompt
+        self.image_editing_model = image_editing_model
+        self.customer_prompt = customer_prompt
+        self.agent_prompt = agent_prompt
+        self.evaluator_model = evaluator_model
+
+        if self.use_customer_perspective:
+            self.evaluator_model.system_prompt = self.customer_prompt
+            logging.info("Using customer perspective for evaluation")
+        else:
+            self.evaluator_model.system_prompt = self.agent_prompt
+            logging.info("Using agent perspective for evaluation")
+    
+    def run(self, image_dir: str):
+        """
+        Runs the evaluation pipeline for each image.
+        """
+        try:
+            # Create results directory if it doesn't exist
+            results_dir = os.path.join(image_dir, "evaluation")
+            os.makedirs(results_dir, exist_ok=True)
+
+            # Get all image files in the directory
+            all_files = [f for f in os.listdir(image_dir) if os.path.isfile(os.path.join(image_dir, f)) and f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+            
+            # Get all the original images
+            original_images = [f for f in all_files if "_original" in f]
+            
+            if not original_images:
+                logging.error(f"No original images found in directory: {image_dir}")
+                return
+            
+            logging.info(f"Found {len(original_images)} original images to evaluate")
+            
+            # Limit the number of images to evaluate if specified
+            if self.num_images > 0:
+                original_images = original_images[:self.num_images]
+            
+            for original_image_name in original_images:
+                try:
+                    base_name = original_image_name.replace("_original.jpg", "")
+                    logging.info(f"\n===== Evaluating Image: {base_name} =====\n")
+                    
+                    # Initialize a string to collect all evaluation results for this base image
+                    all_evaluations = f"Evaluation Results for {base_name}\n"
+                    all_evaluations += "=" * 50 + "\n\n"
+                    
+                    original_image_path = os.path.join(image_dir, original_image_name)
+                    with open(original_image_path, "rb") as f:
+                        original_image_bytes = f.read()
+                    
+                    # Check if enhancement is requested
+                    enhanced_image_name = f"{base_name}_enhanced.jpg"
+                    enhanced_image_path = os.path.join(image_dir, enhanced_image_name)
+                    
+                    if self.enhance_original and not os.path.exists(enhanced_image_path):
+                        logging.info("\n--- Enhancing Original Image ---\n")
+                        try:
+                            enhanced_image, enhanced_image_bytes = self.image_editing_model.edit(self.enhance_prompt, original_image_bytes)
+                            
+                            if enhanced_image is None or enhanced_image_bytes is None:
+                                logging.error("Enhancement failed. Proceeding with the original image.")
+                            else:
+                                enhanced_image.save(enhanced_image_path)
+                                logging.info(f"Saved enhanced image to: {enhanced_image_path}")
+                        except Exception as e:
+                            logging.error(f"Error enhancing image: {str(e)}")
+                    
+                    # Check if an enhanced version exists to use as the base image (after potential enhancement)
+                    base_image_name = original_image_name
+                    base_image_bytes = original_image_bytes
+                    base_type = "original"
+                    
+                    if os.path.exists(enhanced_image_path):
+                        logging.info(f"Found enhanced image for {base_name}, using it as the base for comparison")
+                        base_image_name = enhanced_image_name
+                        base_type = "enhanced"
+                        with open(enhanced_image_path, "rb") as f:
+                            base_image_bytes = f.read()
+                    
+                    # Find all iteration images for this base image
+                    iter_images = [f for f in all_files if f.startswith(base_name) and "_iter_" in f]
+                    
+                    if not iter_images:
+                        logging.info(f"No iteration images found for {base_name}")
+                        continue
+                    
+                    logging.info(f"Found {len(iter_images)} iteration images for {base_name}")
+                    
+                    # Sort iteration images by iteration number
+                    iter_images.sort(key=lambda x: int(re.search(r'_iter_(\d+)', x).group(1)))
+                    
+                    for iter_image_name in iter_images:
+                        try:
+                            iter_num = re.search(r'_iter_(\d+)', iter_image_name).group(1)
+                            logging.info(f"\n--- Evaluating {base_type} vs iteration {iter_num} ---\n")
+                            
+                            iter_image_path = os.path.join(image_dir, iter_image_name)
+                            with open(iter_image_path, "rb") as f:
+                                iter_image_bytes = f.read()
+                            
+                            # Randomly decide which image is first and which is second to avoid bias
+                            is_original_first = random.choice([True, False])
+                            
+                            image1_bytes = base_image_bytes if is_original_first else iter_image_bytes
+                            image2_bytes = iter_image_bytes if is_original_first else base_image_bytes
+                            
+                            # Evaluate the images without telling the VLM which is which
+                            evaluation = self.evaluator_model.evaluate("Compare the two images.", image1_bytes, image2_bytes)
+                            
+                            # Parse the choice from the evaluation
+                            choice_match = re.search(r'CHOICE:\s*(first|second)', evaluation, re.IGNORECASE)
+                            reason_match = re.search(r'REASON:\s*(.*?)(?:\n|$)', evaluation, re.DOTALL)
+                            
+                            if choice_match:
+                                vlm_choice = choice_match.group(1).lower()
+                                
+                                # Determine which image was chosen by the VLM
+                                original_chosen = (vlm_choice == "first" and is_original_first) or (vlm_choice == "second" and not is_original_first)
+                                
+                                choice_text = base_type if original_chosen else f"iteration {iter_num}"
+                                reason_text = reason_match.group(1).strip() if reason_match else "No reason provided"
+                                
+                                result = f"VLM Choice: {choice_text}\n"
+                                result += f"Reason (first: {'original' if is_original_first else 'edited'}, second: {'edited' if is_original_first else 'original'}):\n{reason_text}"
+                                
+                                logging.info(result)
+                                
+                                # Append this result to our collection for this base image
+                                all_evaluations += result + "\n" + "-" * 40 + "\n\n"
+                            else:
+                                error_msg = f"Could not parse choice from VLM response for {iter_image_name}"
+                                logging.error(error_msg)
+                                all_evaluations += f"ERROR: {error_msg}\n\n"
+                        except Exception as e:
+                            error_msg = f"Error processing iteration image {iter_image_name}: {str(e)}"
+                            logging.error(error_msg)
+                            all_evaluations += f"ERROR: {error_msg}\n\n"
+                            continue  # Skip to the next iteration image
+                    
+                    # After processing all iterations, save the combined results to a single log file
+                    log_save_path = os.path.join(results_dir, f"{base_name}.log")
+                    with open(log_save_path, "w") as log_file:
+                        log_file.write(all_evaluations)
+                    logging.info(f"\nSaved all evaluation results to: {log_save_path}")
+                
+                except Exception as e:
+                    error_msg = f"\nError processing base image {original_image_name}: {str(e)}"
+                    logging.error(error_msg)
+                    continue  # Skip to the next original image
+        
+        except Exception as e:
+            logging.error(f"\nFatal error in evaluation pipeline: {str(e)}")
