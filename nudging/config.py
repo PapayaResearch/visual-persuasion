@@ -64,10 +64,16 @@ class OptimizerModel:
 class VisualNudge:
     # Hydra target for main pipeline class
     _target_: str
+    # Enable prompt optimization pipeline (disable for zero-shot testing)
+    enable_optimization: bool
+    # Whether to enhance the original image for a better comparison
+    enhance_original: bool
     # Number of optimization iterations per image
     iterations: int
     # Initial prompt for image editing
     initial_prompt: str
+    # The prompt for enhancing the original image (if enabled)
+    enhance_prompt: str
     # Image editing model configuration
     image_editing_model: ImageEditingModel
     # Evaluator model configuration
@@ -78,12 +84,37 @@ class VisualNudge:
     optimizer_model: OptimizerModel
 
 #######################
+# Evaluation Pipeline
+#######################
+
+@dataclass
+class Evaluate:
+    # Hydra target for evaluation pipeline class
+    _target_: str
+    # Number of images to evaluate (set to -1 to evaluate all)
+    num_images: int
+    # Whether to evaluate from a customer perspective (true) or an agent's perspective (false)
+    use_customer_perspective: bool
+    # Whether to enhance the original image before comparison
+    enhance_original: bool
+    # The prompt for enhancing the original image (if enabled)
+    enhance_prompt: str
+    # The image editing model used for enhancing the original image (if enabled)
+    image_editing_model: ImageEditingModel
+    # The prompt for the image comparison task when evaluating from a customer perspective
+    customer_prompt: str
+    # The prompt for the image comparison task when evaluating from the agent's perspective
+    agent_prompt: str
+    # Evaluator model configuration
+    evaluator_model: EvaluatorModel
+
+#######################
 # Provider Settings
 #######################
 
 @dataclass
 class Provider:
-    # Provider name (e.g., 'openai')
+    # Provider name
     name: str
     # Path to API key file
     key: str
@@ -96,9 +127,29 @@ class Provider:
 
 @dataclass
 class General:
+    # Enable the nudging pipeline
+    enable_nudging: bool
+    # Enable prompt optimization pipeline (disable for zero-shot testing)
+    enable_optimization: bool
+    # Whether to enhance the original image for a better comparison
+    enhance_original: bool
+    # Total number of iterations to run per image
+    iterations: int
+    # Enable the evaluation pipeline
+    enable_evaluation: bool
+    # Directory to evaluate (only used when enable_nudging is false)
+    eval_dir: str
+    # Whether to evaluate from a customer perspective (true) or an agent's perspective (false)
+    use_customer_perspective: bool
     # Directory containing input images
     data_dir: str
-    # Global delay for API calls
+    # Model for all API calls
+    model: str
+    # Temperature for all API calls
+    temperature: float
+    # Max tokens for all API calls
+    max_tokens: int
+    # Standard delay for API calls
     delay: int
 
 #######################
@@ -120,6 +171,8 @@ class Logging:
 class Config:
     # Main pipeline configuration
     visual_nudge: VisualNudge
+    # Evaluation pipeline configuration
+    evaluate: Evaluate
     # API provider configuration
     provider: Provider
     # General experiment settings

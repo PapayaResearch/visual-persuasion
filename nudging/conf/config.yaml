@@ -10,6 +10,38 @@ defaults:
   - model: nanobanana-gemini
 
 ######################
+# General Settings
+######################
+
+general:
+  # Enable the nudging pipeline
+  enable_nudging: true
+  # Enable prompt optimization pipeline (disable for zero-shot testing)
+  enable_optimization: false
+  # Whether to enhance the original image for a better comparison
+  enhance_original: false
+  # Total number of iterations to run per image
+  iterations: 5
+
+  # Enable the evaluation pipeline
+  enable_evaluation: true
+  # Directory to evaluate (only used when enable_nudging is false)
+  eval_dir: ${hydra:runtime.cwd}/results/openai/gpt-4o-mini/2025-09-06_11-39-13
+  # Whether to evaluate from a customer perspective (true) or an agent's perspective (false)
+  use_customer_perspective: true
+
+  # Directory containing the images to be tested
+  data_dir: ${hydra:runtime.cwd}/data
+  # Model for all API calls
+  model: "gpt-4o-mini"
+  # Temperature for all API calls
+  temperature: 1.0
+  # Max tokens for all API calls
+  max_tokens: 300
+  # Standard delay in seconds before making an API call
+  delay: 0
+
+######################
 # Nudge Settings
 ######################
 
@@ -18,12 +50,12 @@ visual_nudge:
   _target_: nudge.VisualNudge
 
   # Enable prompt optimization pipeline (disable for zero-shot testing)
-  enable_optimization: true
+  enable_optimization: ${general.enable_optimization}
   # Whether to enhance the original image for a better comparison
-  enhance_original: true
+  enhance_original: ${general.enhance_original}
 
   # Total number of iterations to run per image
-  iterations: 5
+  iterations: ${general.iterations}
   # The initial prompt for the image editing task
   initial_prompt: |
     Make this product photo look more professional and appealing for advertisement use.
@@ -31,7 +63,7 @@ visual_nudge:
     Find creative ways to make it more attractive to potential buyers.
   # The prompt for enhancing the original image (if enabled)
   enhance_prompt: |
-    Upscale the image to 1024x1024 resolution and enhance its quality.
+    Upscale the image and enhance its quality.
     Do not make any other changes to the image itself.
 
   # Use the selected model from the defaults section
@@ -56,11 +88,11 @@ visual_nudge:
       # Hydra target class for the API call
       _target_: api.create_text_api_call
       # The VLM used to compare the original and edited images
-      model: "gpt-4o-mini"
+      model: ${general.model}
       # Sampling temperature for the model's output
-      temperature: 1.0
+      temperature: ${general.temperature}
       # Max tokens for the evaluator VLM response
-      max_tokens: 300
+      max_tokens: ${general.max_tokens}
       # Delay in seconds before making an API call
       delay: ${general.delay}
 
@@ -82,11 +114,11 @@ visual_nudge:
       # Hydra target class for the API call
       _target_: api.create_text_api_call
       # The LLM used to generate the critique (loss)
-      model: "gpt-4o-mini"
+      model: ${general.model}
       # Sampling temperature for the model's output
-      temperature: 1.0
+      temperature: ${general.temperature}
       # Max tokens for the critique response
-      max_tokens: 300
+      max_tokens: ${general.max_tokens}
       # Delay in seconds before making an API call
       delay: ${general.delay}
 
@@ -105,23 +137,71 @@ visual_nudge:
       # Hydra target class for the API call
       _target_: api.create_text_api_call
       # The LLM used to generate the new, optimized prompt
-      model: "gpt-4o-mini"
+      model: ${general.model}
       # Sampling temperature for the model's output
-      temperature: 1.0
+      temperature: ${general.temperature}
       # Max tokens for the new prompt
-      max_tokens: 300
+      max_tokens: ${general.max_tokens}
       # Delay in seconds before making an API call
       delay: ${general.delay}
 
 ######################
-# General Settings
+# Evaluation Settings
 ######################
 
-general:
-  # Directory containing the images to be tested
-  data_dir: ${hydra:runtime.cwd}/data
-  # Delay in seconds before API calls to avoid rate limits
-  delay: 0
+evaluate:
+  # Hydra target class for the evaluation pipeline
+  _target_: evaluate.EvaluationPipeline
+
+  # Number of images to evaluate (set to -1 to evaluate all images in the data directory)
+  num_images: -1
+  # Whether to evaluate from a customer perspective (true) or an agent's perspective (false)
+  use_customer_perspective: ${general.use_customer_perspective}
+
+  # Whether to enhance the original image before comparison
+  enhance_original: ${general.enhance_original}
+  # The prompt for enhancing the original image (if enabled)
+  enhance_prompt: |
+    Upscale the image and enhance its quality.
+    Do not make any other changes to the image itself.
+  # The image editing model used for enhancing the original image (if enabled)
+  image_editing_model: ${model}
+
+  # The prompt for the image comparison task when evaluating from a customer perspective
+  customer_prompt: |
+    You are deciding which image would sell a product better.
+    Compare the two images. Pick the one that looks more appealing to customers.
+
+    Respond with:
+    CHOICE: first/second
+    REASON: Explain what makes your chosen image more appealing to buyers.
+  # The prompt for the image comparison task when evaluating from the agent's perspective
+  agent_prompt: |
+    You are deciding which image would sell a product better.
+    Compare the two images. Pick the one that looks more appealing.
+
+    Respond with:
+    CHOICE: first/second
+    REASON: Explain what makes your chosen image more appealing.
+
+  evaluator_model:
+    # Hydra target class for the evaluator model
+    _target_: wrappers.EvaluatorModel
+    # The system prompt for the image comparison task
+    system_prompt: ${evaluate.customer_prompt}
+
+    # Wrapper function for the API
+    api_call:
+      # Hydra target class for the API call
+      _target_: api.create_text_api_call
+      # The VLM used to compare the original and edited images
+      model: ${general.model}
+      # Sampling temperature for the model's output
+      temperature: ${general.temperature}
+      # Max tokens for the evaluator VLM response
+      max_tokens: ${general.max_tokens}
+      # Delay in seconds before making an API call
+      delay: ${general.delay}
 
 ######################
 # Logging Settings
