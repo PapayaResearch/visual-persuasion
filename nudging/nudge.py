@@ -52,6 +52,11 @@ class VisualNudge:
 
                 # 1. Edit image with current prompt
                 edited_image, edited_image_bytes = self.image_editing_model.edit(current_prompt, original_image_bytes)
+
+                if edited_image is None or edited_image_bytes is None:
+                    logging.error("Image editing failed. Skipping to next iteration.")
+                    continue
+
                 edited_image_save_path = os.path.join(results_dir, f"{base_filename}_iter_{i+1}.jpg")
                 edited_image.save(edited_image_save_path)
                 logging.info(f"Saved edited image to: {edited_image_save_path}")

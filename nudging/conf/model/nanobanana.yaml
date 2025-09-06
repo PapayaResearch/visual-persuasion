@@ -1,4 +1,0 @@
-# Nano Banana model configuration
-_target_: models.NanoBanana
-key: ${hydra:runtime.cwd}/keys/goo.txt
-model: gemini-2.5-flash-image-preview

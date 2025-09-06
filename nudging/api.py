@@ -27,8 +27,6 @@ def create_text_api_call(
 def create_image_api_call(
         key,
         model,
-        temperature,
-        max_tokens,
         delay
 ):
     """
@@ -49,9 +47,7 @@ def create_image_api_call(
         return litellm.completion(
             api_key=api_key,
             model=model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens
-        ).choices[0].message.image["url"]
+            messages=messages
+        ).choices[0].message
     
     return api_call

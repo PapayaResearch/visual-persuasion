@@ -64,17 +64,56 @@ class Gemini(ImageEditingModel):
     def edit(self, prompt: str, image_bytes: bytes):            
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
-        # API call
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=[prompt, image],
-        )
+        try:
+            # API call
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=[prompt, image],
+            )
 
-        for part in response.candidates[0].content.parts:
-            if part.text is not None:
-                logging.info(f"\nNano Banana Response:\n{part.text}\n")
-            elif part.inline_data is not None:
-                edited_image_bytes = part.inline_data.data
-                edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
+            for part in response.candidates[0].content.parts:
+                if part.text is not None:
+                    logging.info(f"\nImage Model Response:\n{part.text}\n")
+                elif part.inline_data is not None:
+                    edited_image_bytes = part.inline_data.data
+                    edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
+        except Exception as e:
+            logging.error(f"Gemini API call failed: {e}")
+            logging.info(response)
+            return None, None
+
+        return edited_image, edited_image_bytes
+
+class LiteLLM(ImageEditingModel):
+    """
+    Implementation of LiteLLM-based image models for image editing.
+    """
+    def __init__(self, api_call: callable):
+        self.api_call = api_call
+        
+    def edit(self, prompt: str, image_bytes: bytes):            
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(image_bytes).decode('utf-8')}"}},
+                    {"type": "text", "text": prompt}
+                ]
+            }
+        ]
+        
+        try:
+            # API call
+            response = self.api_call(messages)
+            image_string = response.image["url"].split(',', 1)[1]
+            text_response = response.content
+            
+            logging.info(f"\nImage Model Response:\n{text_response}\n")
+            edited_image_bytes = base64.b64decode(image_string)
+            edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
+        except Exception as e:
+            logging.error(f"LiteLLM API call failed: {e}")
+            logging.info(response)
+            return None, None
 
         return edited_image, edited_image_bytes

@@ -7,7 +7,7 @@ defaults:
   # Provider from LiteLLM (e.g., openai, anthropic)
   - provider: openai
   # Image editing model (e.g., nanobanana, instructpix2pix)
-  - model: gemini
+  - model: nanobanana-gemini
 
 ######################
 # Nudge Settings
@@ -18,7 +18,7 @@ visual_nudge:
   _target_: nudge.VisualNudge
 
   # Enable prompt optimization pipeline (disable for zero-shot testing)
-  enable_optimization: false
+  enable_optimization: true
 
   # Total number of iterations to run per image
   iterations: 5

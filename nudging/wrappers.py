@@ -37,7 +37,7 @@ class EvaluatorModel:
                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(original_bytes).decode('utf-8')}"}},
                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(edited_bytes).decode('utf-8')}"}},
                     {"type": "text", "text": "Here are the original and edited images. Which one is more appealing according to the criteria?"}
-                ],
+                ]
             }
         ]
         try:
