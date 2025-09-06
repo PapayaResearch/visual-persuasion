@@ -30,10 +30,10 @@ class EvaluationPipeline:
 
         if self.use_customer_perspective:
             self.evaluator_model.system_prompt = self.customer_prompt
-            logging.info("Using customer perspective for evaluation")
+            logging.info("Using customer perspective for evaluation\n")
         else:
             self.evaluator_model.system_prompt = self.agent_prompt
-            logging.info("Using agent perspective for evaluation")
+            logging.info("Using agent perspective for evaluation\n")
     
     def run(self, image_dir: str, model: str):
         """
@@ -53,10 +53,10 @@ class EvaluationPipeline:
             original_images = [f for f in all_files if "_original" in f]
             
             if not original_images:
-                logging.error(f"No original images found in directory: {image_dir}")
+                logging.error(f"No original images found in directory: {image_dir}\n")
                 return
             
-            logging.info(f"Found {len(original_images)} original images to evaluate")
+            logging.info(f"Found {len(original_images)} original images to evaluate\n")
             
             # Limit the number of images to evaluate if specified
             if self.num_images > 0:
@@ -85,12 +85,12 @@ class EvaluationPipeline:
                             enhanced_image, enhanced_image_bytes = self.image_editing_model.edit(self.enhance_prompt, original_image_bytes)
                             
                             if enhanced_image is None or enhanced_image_bytes is None:
-                                logging.error("Enhancement failed. Proceeding with the original image.")
+                                logging.error("Enhancement failed. Proceeding with the original image.\n")
                             else:
                                 enhanced_image.save(enhanced_image_path)
-                                logging.info(f"Saved enhanced image to: {enhanced_image_path}")
+                                logging.info(f"Saved enhanced image to: {enhanced_image_path}\n")
                         except Exception as e:
-                            logging.error(f"Error enhancing image: {str(e)}")
+                            logging.error(f"Error enhancing image: {str(e)}\n")
                     
                     # Check if an enhanced version exists to use as the base image (after potential enhancement)
                     base_image_name = original_image_name
@@ -98,7 +98,7 @@ class EvaluationPipeline:
                     base_type = "original"
                     
                     if os.path.exists(enhanced_image_path):
-                        logging.info(f"Found enhanced image for {base_name}, using it as the base for comparison")
+                        logging.info(f"Found enhanced image for {base_name}, using it as the base for comparison\n")
                         base_image_name = enhanced_image_name
                         base_type = "enhanced"
                         with open(enhanced_image_path, "rb") as f:
@@ -108,10 +108,10 @@ class EvaluationPipeline:
                     iter_images = [f for f in all_files if f.startswith(base_name) and "_iter_" in f]
                     
                     if not iter_images:
-                        logging.info(f"No iteration images found for {base_name}")
+                        logging.info(f"No iteration images found for {base_name}\n")
                         continue
                     
-                    logging.info(f"Found {len(iter_images)} iteration images for {base_name}")
+                    logging.info(f"Found {len(iter_images)} iteration images for {base_name}\n")
                     
                     # Sort iteration images by iteration number
                     iter_images.sort(key=lambda x: int(re.search(r'_iter_(\d+)', x).group(1)))
@@ -135,12 +135,13 @@ class EvaluationPipeline:
                             evaluation = self.evaluator_model.evaluate("Compare the two images.", image1_bytes, image2_bytes)
                             
                             # Parse the choice from the evaluation
-                            choice_match = re.search(r'CHOICE:\s*(first|second)', evaluation, re.IGNORECASE)
-                            reason_match = re.search(r'REASON:\s*(.*?)(?:\n|$)', evaluation, re.DOTALL)
+                            if 'second' in evaluation.split("REASON")[0].lower():
+                                vlm_choice = "second"
+                            else:
+                                vlm_choice = "first"
+                            reason_match = re.search(r'(?:\*{0,2})?REASON(?:\*{0,2})?:\s*(.*?)(?=\n\*{0,2}[A-Z]+(?:\*{0,2})?:|$)', evaluation, re.DOTALL | re.IGNORECASE)
                             
-                            if choice_match:
-                                vlm_choice = choice_match.group(1).lower()
-                                
+                            if vlm_choice:
                                 # Determine which image was chosen by the VLM
                                 original_chosen = ((vlm_choice == "first" and is_original_first) or
                                     (vlm_choice == "second" and not is_original_first))
@@ -149,18 +150,18 @@ class EvaluationPipeline:
                                 reason_text = reason_match.group(1).strip() if reason_match else "No reason provided"
                                 
                                 result = f"VLM Choice: {choice_text}\n"
-                                result += f"Reason (first: {'original' if is_original_first else 'edited'}, second: {'edited' if is_original_first else 'original'}):\n{reason_text}"
+                                result += f"Reason (first: {'original' if is_original_first else 'edited'}, second: {'edited' if is_original_first else 'original'}):\n{reason_text}\n"
                                 
                                 logging.info(result)
                                 
                                 # Append this result to our collection for this base image
                                 all_evaluations += result + "\n" + "-" * 40 + "\n\n"
                             else:
-                                error_msg = f"Could not parse choice from VLM response for {iter_image_name}\nResponse was:\n{evaluation}"
+                                error_msg = f"Could not parse choice from VLM response for {iter_image_name}\nResponse was:\n{evaluation}\n"
                                 logging.error(error_msg)
                                 all_evaluations += f"ERROR: {error_msg}\n\n"
                         except Exception as e:
-                            error_msg = f"Error processing iteration image {iter_image_name}: {str(e)}"
+                            error_msg = f"Error processing iteration image {iter_image_name}: {str(e)}\n"
                             logging.error(error_msg)
                             all_evaluations += f"ERROR: {error_msg}\n\n"
                             continue  # Skip to the next iteration image
@@ -169,12 +170,12 @@ class EvaluationPipeline:
                     log_save_path = os.path.join(results_dir, f"{base_name}.log")
                     with open(log_save_path, "w") as log_file:
                         log_file.write(all_evaluations)
-                    logging.info(f"\nSaved all evaluation results to: {log_save_path}")
+                    logging.info(f"Saved all evaluation results to: {log_save_path}\n")
                 
                 except Exception as e:
-                    error_msg = f"\nError processing base image {original_image_name}: {str(e)}"
+                    error_msg = f"Error processing base image {original_image_name}: {str(e)}\n"
                     logging.error(error_msg)
                     continue  # Skip to the next original image
         
         except Exception as e:
-            logging.error(f"\nFatal error in evaluation pipeline: {str(e)}")
+            logging.error(f"Fatal error in evaluation pipeline: {str(e)}\n")

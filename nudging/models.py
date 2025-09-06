@@ -55,9 +55,9 @@ class Gemini(ImageEditingModel):
         try:
             with open(key) as infile:
                 self.api_key = infile.read().strip()
-            logging.info(f"Set Gemini API key from {key}")
+            logging.info(f"Set Gemini API key from {key}\n")
         except FileNotFoundError:
-            logging.error(f"Gemini API key file not found at: {key}")
+            logging.error(f"Gemini API key file not found at: {key}\n")
         
         self.client = genai.Client(api_key=self.api_key)
         
@@ -73,7 +73,7 @@ class Gemini(ImageEditingModel):
 
             for part in response.candidates[0].content.parts:
                 if part.text is not None:
-                    logging.info(f"\nImage Model Response:\n{part.text}\n")
+                    logging.info(f"Image Model Response:\n{part.text}\n")
                 elif part.inline_data is not None:
                     edited_image_bytes = part.inline_data.data
                     edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
@@ -82,7 +82,7 @@ class Gemini(ImageEditingModel):
 
         except Exception as e:
             logging.error(f"Gemini API call failed: {e}\n")
-            logging.info(response)
+            logging.info(response + "\n")
             return None, None
 
 class LiteLLM(ImageEditingModel):
@@ -109,7 +109,7 @@ class LiteLLM(ImageEditingModel):
             image_string = response.image["url"].split(',', 1)[1]
             text_response = response.content
             
-            logging.info(f"\nImage Model Response:\n{text_response}\n")
+            logging.info(f"Image Model Response:\n{text_response}\n")
             edited_image_bytes = base64.b64decode(image_string)
             edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
 
@@ -117,5 +117,5 @@ class LiteLLM(ImageEditingModel):
 
         except Exception as e:
             logging.error(f"LiteLLM API call failed: {e}\n")
-            logging.info(response)
+            logging.info(response + "\n")
             return None, None

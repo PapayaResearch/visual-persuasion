@@ -57,9 +57,9 @@ def main(cfg: Config) -> None:
     try:
         with open(cfg.provider.key) as infile:
             os.environ[cfg.provider.key_name] = infile.read().strip()
-        logging.info(f"Set API key from {cfg.provider.key}")
+        logging.info(f"Set API key from {cfg.provider.key}\n")
     except FileNotFoundError:
-        logging.error(f"API key file not found at: {cfg.provider.key}")
+        logging.error(f"API key file not found at: {cfg.provider.key}\n")
         return
 
     # Run the Nudging pipeline if enabled
@@ -67,27 +67,27 @@ def main(cfg: Config) -> None:
         # Get list of images from data directory
         data_dir = cfg.general.data_dir
         if not os.path.isdir(data_dir):
-            logging.error(f"Data directory not found at: {data_dir}")
+            logging.error(f"Data directory not found at: {data_dir}\n")
             return
         
         image_paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir) 
                        if os.path.isfile(os.path.join(data_dir, f))]
         if not image_paths:
-            logging.warning(f"No images found in data directory: {data_dir}")
+            logging.warning(f"No images found in data directory: {data_dir}\n")
             return
 
         # Instantiate the entire VisualNudge pipeline
-        logging.info("\nInstantiating VisualNudge pipeline...")
+        logging.info("Instantiating VisualNudge pipeline...\n")
         nudge = hydra.utils.instantiate(cfg.visual_nudge)
-        logging.info("Pipeline instantiated")
+        logging.info("Pipeline instantiated\n")
             
-        logging.info(f"Starting visual nudge run with {len(image_paths)} image(s) from {data_dir}")
+        logging.info(f"Starting visual nudge run with {len(image_paths)} image(s) from {data_dir}\n")
         # Pass runtime-specific parameters to the run method
         nudge.run(
             image_paths=image_paths,
             results_dir=results_dir
         )
-        logging.info("\nVisual nudge run completed\n")
+        logging.info("Visual nudge run completed\n")
 
     # Run the Evaluation pipeline if enabled
     if run_evaluate:
@@ -101,17 +101,17 @@ def main(cfg: Config) -> None:
         
         # Check if the directory exists and is valid
         if not os.path.isdir(eval_dir):
-            logging.error(f"Evaluation directory not found: {eval_dir}")
+            logging.error(f"Evaluation directory not found: {eval_dir}\n")
             return
         
-        logging.info(f"Starting evaluation on results in: {eval_dir}")
+        logging.info(f"Starting evaluation on results in: {eval_dir}\n")
         
         # Create evaluation pipeline
         eval_pipeline = hydra.utils.instantiate(cfg.evaluate)
         
         # Run evaluation
         eval_pipeline.run(eval_dir, cfg.evaluate.evaluator_model.api_call.model)
-        logging.info("\nEvaluation completed\n")
+        logging.info("Evaluation completed\n")
 
 if __name__ == "__main__":
     main()

@@ -47,7 +47,7 @@ class VisualNudge:
                     original_image = Image.open(io.BytesIO(original_image_bytes))
                     original_save_path = os.path.join(results_dir, f"{base_filename}_original.jpg")
                     original_image.save(original_save_path)
-                    logging.info(f"Saved original image to: {original_save_path}")
+                    logging.info(f"Saved original image to: {original_save_path}\n")
 
                     # Optionally enhance the original image before starting
                     if self.enhance_original:
@@ -56,24 +56,24 @@ class VisualNudge:
                             enhanced_image, enhanced_image_bytes = self.image_editing_model.edit(self.enhance_prompt, original_image_bytes)
                             
                             if enhanced_image is None or enhanced_image_bytes is None:
-                                logging.error("Enhancement failed. Proceeding with the original image.")
+                                logging.error("Enhancement failed. Proceeding with the original image.\n")
                             else:
                                 enhanced_save_path = os.path.join(results_dir, f"{base_filename}_enhanced.jpg")
                                 enhanced_image.save(enhanced_save_path)
-                                logging.info(f"Saved enhanced image to: {enhanced_save_path}")
+                                logging.info(f"Saved enhanced image to: {enhanced_save_path}\n")
                                 # Use the enhanced image for subsequent edits
                                 original_image = enhanced_image
                                 original_image_bytes = enhanced_image_bytes
                         except Exception as e:
-                            logging.error(f"Error enhancing image {base_filename}: {str(e)}. Proceeding with original image.")
+                            logging.error(f"Error enhancing image {base_filename}: {str(e)}. Proceeding with original image.\n")
                     
                     current_prompt = self.initial_prompt
-                    logging.info("\n--- Starting Run ---")
+                    logging.info("\n--- Starting Run ---\n")
 
                     for i in range(self.iterations):
                         try:
-                            logging.info(f"\n>> ITERATION {i + 1}/{self.iterations} <<\n")
-                            logging.info(f"Prompt:\n{current_prompt}")
+                            logging.info(f">> ITERATION {i + 1}/{self.iterations} <<\n")
+                            logging.info(f"Prompt:\n{current_prompt}\n")
 
                             # 1. Edit image with current prompt
                             try:
@@ -85,18 +85,18 @@ class VisualNudge:
 
                                 edited_image_save_path = os.path.join(results_dir, f"{base_filename}_iter_{i+1}.jpg")
                                 edited_image.save(edited_image_save_path)
-                                logging.info(f"Saved edited image to: {edited_image_save_path}")
+                                logging.info(f"Saved edited image to: {edited_image_save_path}\n")
                             except Exception as e:
-                                logging.error(f"Error editing image in iteration {i+1}: {str(e)}. Skipping to next iteration.")
+                                logging.error(f"Error editing image in iteration {i+1}: {str(e)}. Skipping to next iteration.\n")
                                 continue
 
                             if self.enable_optimization:
                                 try:
                                     # 2. Evaluate the edit
                                     evaluation = self.evaluator_model.evaluate("Compare the original and edited images.", original_image_bytes, edited_image_bytes)
-                                    logging.info(f"\nVLM Evaluation:\n{evaluation}\n")
+                                    logging.info(f"VLM Evaluation:\n{evaluation}\n")
                                 except Exception as e:
-                                    logging.error(f"Error in evaluation step for iteration {i+1}: {str(e)}. Continuing without optimization.")
+                                    logging.error(f"Error in evaluation step for iteration {i+1}: {str(e)}. Continuing without optimization.\n")
                                     continue
 
                                 try:
@@ -110,7 +110,7 @@ class VisualNudge:
                                     critique = self.loss_model.get_critique(loss_context)
                                     logging.info(f"Critique (Loss):\n{critique}\n")
                                 except Exception as e:
-                                    logging.error(f"Error in critique generation for iteration {i+1}: {str(e)}. Continuing without optimization.")
+                                    logging.error(f"Error in critique generation for iteration {i+1}: {str(e)}. Continuing without optimization.\n")
                                     continue
 
                                 try:
@@ -126,19 +126,19 @@ class VisualNudge:
                                     # Update the prompt for the next iteration
                                     current_prompt = new_prompt
                                     
-                                    logging.info(f"\nOptimized Prompt:\n{current_prompt}\n")
+                                    logging.info(f"Optimized Prompt:\n{current_prompt}\n")
                                 except Exception as e:
-                                    logging.error(f"Error in prompt optimization for iteration {i+1}: {str(e)}. Using original prompt for next iteration.")
+                                    logging.error(f"Error in prompt optimization for iteration {i+1}: {str(e)}. Using original prompt for next iteration.\n")
 
-                            logging.info("-" * 30)
+                            logging.info("-" * 30 + "\n")
 
                         except Exception as e:
-                            logging.error(f"Error in iteration {i+1} for image {base_filename}: {str(e)}. Continuing to next iteration.")
+                            logging.error(f"Error in iteration {i+1} for image {base_filename}: {str(e)}. Continuing to next iteration.\n")
                             continue
 
                 except Exception as e:
-                    logging.error(f"Error processing image {image_path}: {str(e)}. Continuing to next image.")
+                    logging.error(f"Error processing image {image_path}: {str(e)}. Continuing to next image.\n")
                     continue
 
         except Exception as e:
-            logging.error(f"Fatal error in visual nudge pipeline: {str(e)}")
+            logging.error(f"Fatal error in visual nudge pipeline: {str(e)}\n")
