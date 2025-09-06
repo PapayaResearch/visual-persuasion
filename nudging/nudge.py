@@ -12,16 +12,20 @@ class VisualNudge:
     def __init__(
         self, 
         enable_optimization: bool,
+        enhance_original: bool,
         iterations: int,
         initial_prompt: str,
+        enhance_prompt: str,
         image_editing_model: ImageEditingModel, 
         evaluator_model: EvaluatorModel, 
         loss_model: LossModel, 
         optimizer_model: OptimizerModel,
     ):
         self.enable_optimization = enable_optimization
+        self.enhance_original = enhance_original
         self.iterations = iterations
         self.initial_prompt = initial_prompt
+        self.enhance_prompt = enhance_prompt
         self.image_editing_model = image_editing_model
         self.evaluator_model = evaluator_model
         self.loss_model = loss_model
@@ -42,6 +46,21 @@ class VisualNudge:
             original_save_path = os.path.join(results_dir, f"{base_filename}_original.jpg")
             original_image.save(original_save_path)
             logging.info(f"Saved original image to: {original_save_path}")
+
+            # Optionally enhance the original image before starting
+            if self.enhance_original:
+                logging.info("\n--- Enhancing Original Image ---\n")
+                enhanced_image, enhanced_image_bytes = self.image_editing_model.edit(self.enhance_prompt, original_image_bytes)
+                
+                if enhanced_image is None or enhanced_image_bytes is None:
+                    logging.error("Enhancement failed. Proceeding with the original image.")
+                else:
+                    enhanced_save_path = os.path.join(results_dir, f"{base_filename}_enhanced.jpg")
+                    enhanced_image.save(enhanced_save_path)
+                    logging.info(f"Saved enhanced image to: {enhanced_save_path}")
+                    # Use the enhanced image for subsequent edits
+                    original_image = enhanced_image
+                    original_image_bytes = enhanced_image_bytes
             
             current_prompt = self.initial_prompt
             logging.info("\n--- Starting Run ---\n")

@@ -19,6 +19,8 @@ visual_nudge:
 
   # Enable prompt optimization pipeline (disable for zero-shot testing)
   enable_optimization: true
+  # Whether to enhance the original image for a better comparison
+  enhance_original: true
 
   # Total number of iterations to run per image
   iterations: 5
@@ -27,6 +29,10 @@ visual_nudge:
     Make this product photo look more professional and appealing for advertisement use.
     Keep the product itself exactly unchanged - same shape, same features, same identity.
     Find creative ways to make it more attractive to potential buyers.
+  # The prompt for enhancing the original image (if enabled)
+  enhance_prompt: |
+    Upscale the image to 1024x1024 resolution and enhance its quality.
+    Do not make any other changes to the image itself.
 
   # Use the selected model from the defaults section
   image_editing_model: ${model}

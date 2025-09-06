@@ -77,12 +77,13 @@ class Gemini(ImageEditingModel):
                 elif part.inline_data is not None:
                     edited_image_bytes = part.inline_data.data
                     edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
+            
+            return edited_image, edited_image_bytes
+
         except Exception as e:
             logging.error(f"Gemini API call failed: {e}")
             logging.info(response)
             return None, None
-
-        return edited_image, edited_image_bytes
 
 class LiteLLM(ImageEditingModel):
     """
@@ -111,9 +112,10 @@ class LiteLLM(ImageEditingModel):
             logging.info(f"\nImage Model Response:\n{text_response}\n")
             edited_image_bytes = base64.b64decode(image_string)
             edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
+
+            return edited_image, edited_image_bytes
+
         except Exception as e:
             logging.error(f"LiteLLM API call failed: {e}")
             logging.info(response)
             return None, None
-
-        return edited_image, edited_image_bytes
