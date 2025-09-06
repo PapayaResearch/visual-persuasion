@@ -82,7 +82,7 @@ class VisualNudge:
 
                 if self.enable_optimization:
                     # 2. Evaluate the edit
-                    evaluation = self.evaluator_model.evaluate(original_image_bytes, edited_image_bytes)
+                    evaluation = self.evaluator_model.evaluate("Compare the original and edited images.", original_image_bytes, edited_image_bytes)
                     logging.info(f"\nVLM Evaluation:\n{evaluation}\n")
 
                     # 3. Get critique (loss)

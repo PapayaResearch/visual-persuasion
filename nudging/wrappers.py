@@ -25,25 +25,25 @@ class EvaluatorModel:
         self.system_prompt = system_prompt
         self.api_call = api_call
 
-    def evaluate(self, original_bytes: bytes, edited_bytes: bytes) -> str:
+    def evaluate(self, prompt: str, image1_bytes: bytes, image2_bytes: bytes) -> str:
         """
-        Compares the original and edited images and returns the evaluation.
+        Compares the two images and returns the evaluation.
         """
         messages = [
             {"role": "system", "content": self.system_prompt},
             {
                 "role": "user",
                 "content": [
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(original_bytes).decode('utf-8')}"}},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(edited_bytes).decode('utf-8')}"}},
-                    {"type": "text", "text": "Here are the original and edited images. Which one is more appealing according to the criteria?"}
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(image1_bytes).decode('utf-8')}"}},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(image2_bytes).decode('utf-8')}"}},
+                    {"type": "text", "text": prompt}
                 ]
             }
         ]
         try:
             return self.api_call(messages)
         except Exception as e:
-            return f"CHOICE: original. ANALYSIS: Evaluation failed due to an API error: {e}"
+            return f"Evaluation failed due to an API error: {e}"
 
 class LossModel:
     """

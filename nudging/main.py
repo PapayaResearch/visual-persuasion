@@ -17,26 +17,23 @@ def main(cfg: Config) -> None:
     cfg_yaml = OmegaConf.to_yaml(cfg)
     print_config(cfg)
 
-    # Create results and log directories
+    # Determine which pipelines to run based on config
+    run_nudge = cfg.general.enable_nudging
+    run_evaluate = cfg.general.enable_evaluation
+
+    # Create common directories and paths
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     base_dir = os.path.join(
         cfg.provider.name,
         cfg.visual_nudge.evaluator_model.api_call.model
     )
     results_dir = os.path.join(cfg.logging.results_dir, base_dir, current_date)
-    log_dir = os.path.join(cfg.logging.log_dir, base_dir)
-    log_file = os.path.join(log_dir, current_date + ".log")
-
-    os.makedirs(log_dir, exist_ok=True)
-    os.makedirs(results_dir, exist_ok=True)
-
-    # Save config to output directories
-    with open(os.path.join(results_dir, "config.yaml"), "w") as outfile:
-        outfile.write(cfg_yaml)
-    with open(os.path.join(log_dir, "config.yaml"), "w") as outfile:
-        outfile.write(cfg_yaml)
-
-    # Set up logging to file and console
+    
+    # Set up logging
+    log_dir = cfg.logging.log_dir
+    log_file = os.path.join(log_dir, base_dir, current_date + ".log")
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    
     logging.basicConfig(
         filename=log_file,
         level=logging.INFO,
@@ -45,6 +42,16 @@ def main(cfg: Config) -> None:
     )
     logging.getLogger().addHandler(logging.StreamHandler())
     logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+    logging.info(f"Logging to: {log_file}")
+    
+    # Create the results directory if needed
+    if run_nudge:
+        os.makedirs(results_dir, exist_ok=True)
+        # Save config to output directories
+        with open(os.path.join(results_dir, "config.yaml"), "w") as outfile:
+            outfile.write(cfg_yaml)
+        with open(os.path.join(os.path.dirname(log_file), "config.yaml"), "w") as outfile:
+            outfile.write(cfg_yaml)
 
     # Set up provider API key
     try:
@@ -55,30 +62,56 @@ def main(cfg: Config) -> None:
         logging.error(f"API key file not found at: {cfg.provider.key}")
         return
 
-    # Get list of images from data directory
-    data_dir = cfg.general.data_dir
-    if not os.path.isdir(data_dir):
-        logging.error(f"Data directory not found at: {data_dir}")
-        return
-    
-    image_paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, f))]
-    if not image_paths:
-        logging.warning(f"No images found in data directory: {data_dir}")
-        return
-
-    # Instantiate the entire VisualNudge pipeline
-    logging.info("Instantiating VisualNudge pipeline...")
-    nudge = hydra.utils.instantiate(cfg.visual_nudge)
-    logging.info("Pipeline instantiated.")
+    # Run the Nudging pipeline if enabled
+    if run_nudge:
+        # Get list of images from data directory
+        data_dir = cfg.general.data_dir
+        if not os.path.isdir(data_dir):
+            logging.error(f"Data directory not found at: {data_dir}")
+            return
         
-    logging.info(f"Starting visual nudge run with {len(image_paths)} image(s) from {data_dir}")
-    # Pass runtime-specific parameters to the run method
-    nudge.run(
-        image_paths=image_paths,
-        results_dir=results_dir
-    )
-    logging.info("Visual nudge run completed")
+        image_paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir) 
+                       if os.path.isfile(os.path.join(data_dir, f))]
+        if not image_paths:
+            logging.warning(f"No images found in data directory: {data_dir}")
+            return
 
+        # Instantiate the entire VisualNudge pipeline
+        logging.info("Instantiating VisualNudge pipeline...")
+        nudge = hydra.utils.instantiate(cfg.visual_nudge)
+        logging.info("Pipeline instantiated.")
+            
+        logging.info(f"Starting visual nudge run with {len(image_paths)} image(s) from {data_dir}")
+        # Pass runtime-specific parameters to the run method
+        nudge.run(
+            image_paths=image_paths,
+            results_dir=results_dir
+        )
+        logging.info("\nVisual nudge run completed\n")
+
+    # Run the Evaluation pipeline if enabled
+    if run_evaluate:
+        # Determine which directory to evaluate
+        if run_nudge:
+            # If we just ran the nudging pipeline, evaluate its results
+            eval_dir = results_dir
+        else:
+            # If only evaluation is enabled, use the configured eval_dir
+            eval_dir = cfg.general.eval_dir
+        
+        # Check if the directory exists and is valid
+        if not os.path.isdir(eval_dir):
+            logging.error(f"Evaluation directory not found: {eval_dir}")
+            return
+        
+        logging.info(f"Starting evaluation on results in: {eval_dir}")
+        
+        # Create evaluation pipeline
+        eval_pipeline = hydra.utils.instantiate(cfg.evaluate)
+        
+        # Run evaluation
+        eval_pipeline.run(eval_dir)
+        logging.info("\nEvaluation completed\n")
 
 if __name__ == "__main__":
     main()
