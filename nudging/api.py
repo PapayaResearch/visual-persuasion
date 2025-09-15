@@ -1,5 +1,6 @@
 import litellm
 import time
+import logging
 
 def create_text_api_call(
         model,
@@ -15,12 +16,16 @@ def create_text_api_call(
         Calls the LLM API with the provided messages.
         """
         time.sleep(delay) # Delay before each call
-        return litellm.completion(
-            model=model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens
-        ).choices[0].message.content
+        try:
+            return litellm.completion(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens
+            ).choices[0].message.content
+        except Exception as e:
+            logging.error(f"Litellm API call failed: {e}\n")
+            return None
     
     return api_call
 
@@ -44,10 +49,14 @@ def create_image_api_call(
         Calls the LLM API with the provided messages.
         """
         time.sleep(delay) # Delay before each call
-        return litellm.completion(
-            api_key=api_key,
-            model=model,
-            messages=messages
-        ).choices[0].message
+        try:
+            return litellm.completion(
+                api_key=api_key,
+                model=model,
+                messages=messages
+            ).choices[0].message
+        except Exception as e:
+            logging.error(f"Litellm API call failed: {e}\n")
+            return None
     
     return api_call

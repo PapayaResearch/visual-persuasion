@@ -40,10 +40,7 @@ class EvaluatorModel:
                 ]
             }
         ]
-        try:
-            return self.api_call(messages)
-        except Exception as e:
-            return f"Evaluation failed due to an API error: {e}"
+        return self.api_call(messages)
 
 class LossModel:
     """
