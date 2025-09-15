@@ -66,8 +66,10 @@ class VisualNudge:
     _target_: str
     # Enable prompt optimization pipeline (disable for zero-shot testing)
     enable_optimization: bool
-    # Enable previous image context (the last edited image)
-    enable_image_context: bool
+    # Enable previous image context (the last edited image) during comparison
+    enable_evaluation_context: bool
+    # Enable previous image context (the last edited image) during editing
+    enable_editing_context: bool
     # Whether to enhance the original image for a better comparison
     enhance_original: bool
     # Number of optimization iterations per image
@@ -76,6 +78,10 @@ class VisualNudge:
     initial_prompt: str
     # The prompt for enhancing the original image (if enabled)
     enhance_prompt: str
+    # The prompt for the image comparison task when image context is disabled
+    no_context_prompt: str
+    # The prompt for the image comparison task when image context is enabled
+    context_prompt: str
     # Image editing model configuration
     image_editing_model: ImageEditingModel
     # Evaluator model configuration
@@ -133,10 +139,12 @@ class General:
     enable_nudging: bool
     # Enable prompt optimization pipeline (disable for zero-shot testing)
     enable_optimization: bool
-    # Enable previous image context (the last edited image)
-    enable_image_context: bool
+    # Enable previous image context (the last edited image) during comparison
+    enable_evaluation_context: bool
     # Total number of iterations to run per image
     iterations: int
+    # Enable previous image context (the last edited image) during editing
+    enable_editing_context: bool
     # Whether to enhance the original image for a better comparison
     enhance_original: bool
     # Enable the evaluation pipeline

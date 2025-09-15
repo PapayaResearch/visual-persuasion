@@ -17,6 +17,16 @@ class ImageEditingModel(ABC):
         """
         pass
 
+    @abstractmethod
+    def edit_with_context(self, prompt: str, image_bytes: bytes, context_image_bytes: bytes) -> Tuple[Image.Image, bytes]:
+        """
+        Applies the editing prompt to an image with additional context from another image.
+            
+        Returns:
+            tuple: (edited_image, edited_image_bytes)
+        """
+        pass
+
 class EvaluatorModel:
     """
     A wrapper for the VLM that evaluates the edited image.

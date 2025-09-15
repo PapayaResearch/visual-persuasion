@@ -19,10 +19,12 @@ general:
   # Enable prompt optimization pipeline (disable for zero-shot testing)
   enable_optimization: true
   # Enable previous image context (the last edited image) during comparison
-  enable_image_context: true
+  enable_evaluation_context: true
   # Total number of iterations to run per image
   iterations: 3
 
+  # Enable previous image context (the last edited image) during editing
+  enable_editing_context: true
   # Whether to enhance the original image for a better comparison
   enhance_original: true
 
@@ -55,8 +57,10 @@ visual_nudge:
   # Enable prompt optimization pipeline (disable for zero-shot testing)
   enable_optimization: ${general.enable_optimization}
   # Enable previous image context (the last edited image) during comparison
-  enable_image_context: ${general.enable_image_context}
+  enable_evaluation_context: ${general.enable_evaluation_context}
 
+  # Enable previous image context (the last edited image) during editing
+  enable_editing_context: ${general.enable_editing_context}
   # Whether to enhance the original image for a better comparison
   enhance_original: ${general.enhance_original}
 

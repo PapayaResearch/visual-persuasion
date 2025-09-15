@@ -12,7 +12,8 @@ class VisualNudge:
     def __init__(
         self, 
         enable_optimization: bool,
-        enable_image_context: bool,
+        enable_evaluation_context: bool,
+        enable_editing_context: bool,
         enhance_original: bool,
         iterations: int,
         initial_prompt: str,
@@ -25,8 +26,9 @@ class VisualNudge:
         optimizer_model: OptimizerModel,
     ):
         self.enable_optimization = enable_optimization
+        self.enable_evaluation_context = enable_evaluation_context
+        self.enable_editing_context = enable_editing_context
         self.enhance_original = enhance_original
-        self.enable_image_context = enable_image_context
         self.iterations = iterations
         self.initial_prompt = initial_prompt
         self.enhance_prompt = enhance_prompt
@@ -71,13 +73,23 @@ class VisualNudge:
             current_prompt = self.initial_prompt
             logging.info("\n--- Starting Run ---\n")
 
+            # Store the most recent successful iteration for context if needed
+            previous_image_bytes = None
+
             for i in range(self.iterations):
                 logging.info("-" * 30 + "\n")
                 logging.info(f">> ITERATION {i + 1}/{self.iterations} <<\n")
                 logging.info(f"Prompt:\n{current_prompt}\n")
 
                 # 1. Edit image with current prompt
-                edited_image, edited_image_bytes = self.image_editing_model.edit(current_prompt, original_image_bytes)
+                if self.enable_editing_context and previous_image_bytes:
+                    # Use original and previous edited images for context
+                    logging.info("Using previous edited image for context during editing\n")
+                    edited_prompt = current_prompt + "\nThe first image is the original, the second image is the previous edit."
+                    edited_image, edited_image_bytes = self.image_editing_model.edit_with_context(edited_prompt, original_image_bytes, previous_image_bytes)
+                else:
+                    # Use only the original image
+                    edited_image, edited_image_bytes = self.image_editing_model.edit(current_prompt, original_image_bytes)
 
                 if edited_image is None or edited_image_bytes is None:
                     logging.error("Image editing failed. Skipping to next iteration.\n")
@@ -89,18 +101,6 @@ class VisualNudge:
 
                 if self.enable_optimization:
                     # 2. Evaluate the edit
-                    previous_image_bytes = None
-
-                    if self.enable_image_context and i > 0:
-                        # Use the previous edited image as context
-                        previous_image_path = os.path.join(results_dir, f"{base_filename}_iter_{i}.jpg")
-
-                        try:
-                            with open(previous_image_path, "rb") as f:
-                                previous_image_bytes = f.read()
-                        except Exception as e:
-                            logging.info(f"Failed to read previous image for context: {e}. Using only the original image for comparison.\n")
-                            
                     if previous_image_bytes:
                         # Use original, previous, and current edited images
                         self.evaluator_model.system_prompt = self.context_prompt
@@ -159,6 +159,7 @@ class VisualNudge:
                     
                     # Update the prompt for the next iteration
                     current_prompt = new_prompt
+                    previous_image_bytes = edited_image_bytes
                     
                     logging.info(f"Optimized Prompt:\n{current_prompt}\n")
 
