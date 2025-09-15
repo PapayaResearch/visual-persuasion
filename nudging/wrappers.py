@@ -41,6 +41,24 @@ class EvaluatorModel:
             }
         ]
         return self.api_call(messages)
+    
+    def evaluate_with_context(self, prompt: str, image1_bytes: bytes, image2_bytes: bytes, image3_bytes: bytes) -> str:
+        """
+        Compares the three images and returns the evaluation.
+        """
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(image1_bytes).decode('utf-8')}"}},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(image2_bytes).decode('utf-8')}"}},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(image3_bytes).decode('utf-8')}"}},
+                    {"type": "text", "text": prompt}
+                ]
+            }
+        ]
+        return self.api_call(messages)
 
 class LossModel:
     """

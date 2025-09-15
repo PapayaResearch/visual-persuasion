@@ -12,21 +12,27 @@ class VisualNudge:
     def __init__(
         self, 
         enable_optimization: bool,
+        enable_image_context: bool,
         enhance_original: bool,
         iterations: int,
         initial_prompt: str,
         enhance_prompt: str,
-        image_editing_model: ImageEditingModel, 
+        image_editing_model: ImageEditingModel,
+        no_context_prompt: str,
+        context_prompt: str,
         evaluator_model: EvaluatorModel, 
         loss_model: LossModel, 
         optimizer_model: OptimizerModel,
     ):
         self.enable_optimization = enable_optimization
         self.enhance_original = enhance_original
+        self.enable_image_context = enable_image_context
         self.iterations = iterations
         self.initial_prompt = initial_prompt
         self.enhance_prompt = enhance_prompt
         self.image_editing_model = image_editing_model
+        self.no_context_prompt = no_context_prompt
+        self.context_prompt = context_prompt
         self.evaluator_model = evaluator_model
         self.loss_model = loss_model
         self.optimizer_model = optimizer_model
@@ -66,6 +72,7 @@ class VisualNudge:
             logging.info("\n--- Starting Run ---\n")
 
             for i in range(self.iterations):
+                logging.info("-" * 30 + "\n")
                 logging.info(f">> ITERATION {i + 1}/{self.iterations} <<\n")
                 logging.info(f"Prompt:\n{current_prompt}\n")
 
@@ -82,7 +89,39 @@ class VisualNudge:
 
                 if self.enable_optimization:
                     # 2. Evaluate the edit
-                    evaluation = self.evaluator_model.evaluate("Compare the original and edited images.", original_image_bytes, edited_image_bytes)
+                    previous_image_bytes = None
+
+                    if self.enable_image_context and i > 0:
+                        # Use the previous edited image as context
+                        previous_image_path = os.path.join(results_dir, f"{base_filename}_iter_{i}.jpg")
+
+                        try:
+                            with open(previous_image_path, "rb") as f:
+                                previous_image_bytes = f.read()
+                        except Exception as e:
+                            logging.info(f"Failed to read previous image for context: {e}. Using only the original image for comparison.\n")
+                            
+                    if previous_image_bytes:
+                        # Use original, previous, and current edited images
+                        self.evaluator_model.system_prompt = self.context_prompt
+                        logging.info("Using context-aware evaluation prompt\n")
+
+                        evaluation = self.evaluator_model.evaluate_with_context(
+                            "Compare the original, previous edited, and current edited images.", 
+                            original_image_bytes, 
+                            previous_image_bytes, 
+                            edited_image_bytes
+                        )
+                    else:
+                        # Use only original and current edited images
+                        self.evaluator_model.system_prompt = self.no_context_prompt
+                        logging.info("Using no-context evaluation prompt\n")
+
+                        evaluation = self.evaluator_model.evaluate(
+                            "Compare the original and edited images.",
+                            original_image_bytes,
+                            edited_image_bytes
+                        )
 
                     if evaluation is None:
                         logging.error("Evaluation failed. Skipping to next iteration.\n")
@@ -123,4 +162,4 @@ class VisualNudge:
                     
                     logging.info(f"Optimized Prompt:\n{current_prompt}\n")
 
-                logging.info("-" * 30 + "\n")
+            logging.info("-" * 30 + "\n")

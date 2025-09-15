@@ -113,6 +113,7 @@ class EvaluationPipeline:
             
             logging.info(f"Found {len(iter_images)} iteration images for {base_name}\n")
             all_evaluations += f"Found {len(iter_images)} iteration images for {base_name}\n\n"
+            all_evaluations += "-" * 40 + "\n\n"
             
             # Sort iteration images by iteration number
             iter_images.sort(key=lambda x: int(re.search(r'_iter_(\d+)', x).group(1)))
@@ -120,7 +121,7 @@ class EvaluationPipeline:
             for iter_image_name in iter_images:
                 iter_num = re.search(r'_iter_(\d+)', iter_image_name).group(1)
                 logging.info(f"\n--- Evaluating {base_type} vs iteration {iter_num} ---\n")
-                all_evaluations += f"--- Evaluating {base_type} vs iteration {iter_num} ---\n"
+                all_evaluations += f"Evaluating {base_type} vs iteration {iter_num}\n"
                 
                 iter_image_path = os.path.join(image_dir, iter_image_name)
                 with open(iter_image_path, "rb") as f:

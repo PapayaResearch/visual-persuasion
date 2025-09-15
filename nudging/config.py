@@ -66,6 +66,8 @@ class VisualNudge:
     _target_: str
     # Enable prompt optimization pipeline (disable for zero-shot testing)
     enable_optimization: bool
+    # Enable previous image context (the last edited image)
+    enable_image_context: bool
     # Whether to enhance the original image for a better comparison
     enhance_original: bool
     # Number of optimization iterations per image
@@ -131,10 +133,12 @@ class General:
     enable_nudging: bool
     # Enable prompt optimization pipeline (disable for zero-shot testing)
     enable_optimization: bool
-    # Whether to enhance the original image for a better comparison
-    enhance_original: bool
+    # Enable previous image context (the last edited image)
+    enable_image_context: bool
     # Total number of iterations to run per image
     iterations: int
+    # Whether to enhance the original image for a better comparison
+    enhance_original: bool
     # Enable the evaluation pipeline
     enable_evaluation: bool
     # Directory to evaluate (only used when enable_nudging is false)
