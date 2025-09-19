@@ -18,15 +18,16 @@ general:
   enable_nudging: true
   # Enable prompt optimization pipeline (disable for zero-shot testing)
   enable_optimization: true
-  # Enable previous image context (the last edited image) during comparison
-  enable_evaluation_context: true
   # Total number of iterations to run per image
   iterations: 3
-
   # Enable previous image context (the last edited image) during editing
   enable_editing_context: true
-  # Whether to enhance the original image for a better comparison
-  enhance_original: true
+  # Enable previous image context (the last edited image) during comparison
+  enable_evaluation_context: true
+  # Enable tournament mode (keep track of the last chosen image instead of the previous image)
+  enable_tournament_mode: true
+  # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
+  save_best_prompts: false
 
   # Enable the evaluation pipeline
   enable_evaluation: true
@@ -34,6 +35,9 @@ general:
   eval_dir: ${hydra:runtime.cwd}/results/openai/gpt-4o-mini/2025-09-06_11-39-13
   # Whether to evaluate from a customer perspective (true) or an agent's perspective (false)
   use_customer_perspective: true
+
+  # Whether to enhance the original image for a better comparison during nudging and evaluation
+  enhance_original: true
 
   # Directory containing the images to be tested
   data_dir: ${hydra:runtime.cwd}/data
@@ -56,22 +60,26 @@ visual_nudge:
 
   # Enable prompt optimization pipeline (disable for zero-shot testing)
   enable_optimization: ${general.enable_optimization}
-  # Enable previous image context (the last edited image) during comparison
-  enable_evaluation_context: ${general.enable_evaluation_context}
+  # Total number of iterations to run per image
+  iterations: ${general.iterations}
 
   # Enable previous image context (the last edited image) during editing
   enable_editing_context: ${general.enable_editing_context}
+  # Enable previous image context (the last edited image) during comparison
+  enable_evaluation_context: ${general.enable_evaluation_context}
+  # Enable tournament mode (keep track of the last chosen image instead of the previous image)
+  enable_tournament_mode: ${general.enable_tournament_mode}
+  # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
+  save_best_prompts: ${general.save_best_prompts}
+
   # Whether to enhance the original image for a better comparison
   enhance_original: ${general.enhance_original}
 
-  # Total number of iterations to run per image
-  iterations: ${general.iterations}
   # The initial prompt for the image editing task
   initial_prompt: |
-    Make this product photo look more professional and appealing for advertisement use.
-    Keep the product itself exactly unchanged - same shape, same features, same identity.
-    Find creative ways to make it more attractive to potential buyers.
-    Give me a single image as output, do not give me options.
+    Make this product photo look more appealing.
+    Keep the product itself exactly unchanged.
+    Return a single image as output, do not give any options.
   # The prompt for enhancing the original image (if enabled)
   enhance_prompt: |
     Upscale the image and enhance its quality.
@@ -82,24 +90,20 @@ visual_nudge:
 
   # The prompt for the image comparison task when image context is disabled
   no_context_prompt: |
-    You are deciding which image would sell a product better.
-    Compare the original and edited images. Pick the one that looks more appealing to customers.
-    The product must be identical in both images - no fake changes allowed.
+    Compare the original image (old) and the edited image (new).
+    Pick the one that would look more appealing to customers.
 
     Respond with:
-    AUTHENTICITY: PASS/FAIL - Is the product unchanged?
-    CHOICE: original/edited  
-    REASON: Explain what makes your chosen image more appealing to buyers.
+    CHOICE: old/new
+    REASON: Explain what makes your chosen image more appealing.
   # The prompt for the image comparison task when image context is enabled
   context_prompt: |
-    You are deciding which image would sell a product better.
-    Compare the previous edited image and the new edited image. Pick the one that looks more appealing to customers.
-    The product must be identical in both images - no fake changes allowed. Use the original image for reference if needed.
+    Compare the previous edited image (old) and the current edited image (new).
+    Pick the one that would look more appealing to customers.
 
     Respond with:
-    AUTHENTICITY: PASS/FAIL - Is the product unchanged?
-    CHOICE: previous/new
-    REASON: Explain what makes your chosen image more appealing to buyers.
+    CHOICE: old/new
+    REASON: Explain what makes your chosen image more appealing.
 
   evaluator_model:
     # Hydra target class for the evaluator model
@@ -125,13 +129,12 @@ visual_nudge:
     _target_: wrappers.LossModel
     # The system prompt for the loss generation task
     system_prompt: |
-      Help improve how we make product photos more appealing.
+      You are helping to improve product photos by providing constructive feedback.
       Look at why the evaluator made their choice and identify what could be better.
-      Give specific suggestions for making the product look more attractive to customers.
 
-      Format:
-      ISSUE: What prevented the edited image from being more appealing?
-      SUGGESTIONS: List 3-5 ways to make the next edit more successful.
+      Respond with:
+      ISSUE: What prevented the new image from being more appealing?
+      SUGGESTIONS: List 3-5 ways to make the next image more successful.
 
     # Wrapper function for the API
     api_call:
@@ -151,7 +154,7 @@ visual_nudge:
     _target_: wrappers.OptimizerModel
     # The system prompt for the prompt optimization task
     system_prompt: |
-      Edit the existing instruction to retain its good points while emphasizing the suggested improvements.
+      Edit the existing instruction based on the feedback.
       Write a clear and concise instruction under 100 words.
       Return only the updated instruction.
 
@@ -192,7 +195,6 @@ evaluate:
 
   # The prompt for the image comparison task when evaluating from a customer perspective
   customer_prompt: |
-    You are deciding which image would sell a product better.
     Compare the two images. Pick the one that looks more appealing to customers.
 
     Respond with:
@@ -200,7 +202,6 @@ evaluate:
     REASON: Explain what makes your chosen image more appealing to buyers.
   # The prompt for the image comparison task when evaluating from the agent's perspective
   agent_prompt: |
-    You are deciding which image would sell a product better.
     Compare the two images. Pick the one that looks more appealing.
 
     Respond with:
