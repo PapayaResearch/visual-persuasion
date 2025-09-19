@@ -12,10 +12,12 @@ class VisualNudge:
     def __init__(
         self, 
         enable_optimization: bool,
-        enable_evaluation_context: bool,
-        enable_editing_context: bool,
-        enhance_original: bool,
         iterations: int,
+        enable_editing_context: bool,
+        enable_evaluation_context: bool,
+        enable_tournament_mode: bool,
+        save_best_prompts: bool,
+        enhance_original: bool,
         initial_prompt: str,
         enhance_prompt: str,
         image_editing_model: ImageEditingModel,
@@ -26,10 +28,12 @@ class VisualNudge:
         optimizer_model: OptimizerModel,
     ):
         self.enable_optimization = enable_optimization
-        self.enable_evaluation_context = enable_evaluation_context
-        self.enable_editing_context = enable_editing_context
-        self.enhance_original = enhance_original
         self.iterations = iterations
+        self.enable_editing_context = enable_editing_context
+        self.enable_evaluation_context = enable_evaluation_context
+        self.enable_tournament_mode = enable_tournament_mode
+        self.save_best_prompts = save_best_prompts
+        self.enhance_original = enhance_original
         self.initial_prompt = initial_prompt
         self.enhance_prompt = enhance_prompt
         self.image_editing_model = image_editing_model
@@ -74,7 +78,8 @@ class VisualNudge:
             logging.info("\n--- Starting Run ---\n")
 
             # Store the most recent successful iteration for context if needed
-            previous_image_bytes = None
+            context_image_bytes = None
+            best_prompt = current_prompt
 
             for i in range(self.iterations):
                 logging.info("-" * 30 + "\n")
@@ -82,11 +87,16 @@ class VisualNudge:
                 logging.info(f"Prompt:\n{current_prompt}\n")
 
                 # 1. Edit image with current prompt
-                if self.enable_editing_context and previous_image_bytes:
+                if self.enable_editing_context and context_image_bytes:
+                    if self.enable_tournament_mode and self.save_best_prompts:
+                        # Regenerate context image from best prompt so far
+                        _, context_image_bytes = self.image_editing_model.edit(best_prompt, original_image_bytes)
+                        logging.info("Regenerating context image from best prompt so far\n")
+
                     # Use original and previous edited images for context
                     logging.info("Using previous edited image for context during editing\n")
                     edited_prompt = current_prompt + "\nThe first image is the original, the second image is the previous edit."
-                    edited_image, edited_image_bytes = self.image_editing_model.edit_with_context(edited_prompt, original_image_bytes, previous_image_bytes)
+                    edited_image, edited_image_bytes = self.image_editing_model.edit_with_context(edited_prompt, original_image_bytes, context_image_bytes)
                 else:
                     # Use only the original image
                     edited_image, edited_image_bytes = self.image_editing_model.edit(current_prompt, original_image_bytes)
@@ -101,15 +111,15 @@ class VisualNudge:
 
                 if self.enable_optimization:
                     # 2. Evaluate the edit
-                    if previous_image_bytes:
+                    if context_image_bytes and not self.enable_tournament_mode:
                         # Use original, previous, and current edited images
                         self.evaluator_model.system_prompt = self.context_prompt
-                        logging.info("Using context-aware evaluation prompt\n")
+                        logging.info("Using context-aware evaluation prompt\n")          
 
                         evaluation = self.evaluator_model.evaluate_with_context(
                             "Compare the original, previous edited, and current edited images.", 
                             original_image_bytes, 
-                            previous_image_bytes, 
+                            context_image_bytes, 
                             edited_image_bytes
                         )
                     else:
@@ -129,14 +139,14 @@ class VisualNudge:
 
                     logging.info(f"VLM Evaluation:\n{evaluation}\n")
 
+                    # Parse the choice from the evaluation
+                    if 'new' in evaluation.split("REASON")[0].lower():
+                        vlm_choice = "new"
+                    else:
+                        vlm_choice = "old"
+
                     # 3. Get critique (loss)
-                    loss_context = (
-                        "CURRENT PROMPT:\n"
-                        f"{current_prompt}\n\n"
-                        "VLM EVALUATION:\n"
-                        f"{evaluation}\n"
-                    )
-                    critique = self.loss_model.get_critique(loss_context)
+                    critique = self.loss_model.get_critique(evaluation)
 
                     if critique is None:
                         logging.error("Critique generation failed. Skipping to next iteration.")
@@ -145,21 +155,45 @@ class VisualNudge:
                     logging.info(f"Critique (Loss):\n{critique}\n")
 
                     # 4. Get new prompt from optimizer
-                    optimizer_context = (
-                        "ORIGINAL PROMPT:\n"
-                        f"{current_prompt}\n\n"
-                        "CRITIQUE:\n"
-                        f"{critique}\n"
-                    )
+                    if self.enable_tournament_mode:
+                        # In tournmanent mode, optimize the best prompt so far
+                        optimizer_context = (
+                            "ORIGINAL PROMPT:\n"
+                            f"{best_prompt}\n\n"
+                            "CRITIQUE:\n"
+                            f"{critique}\n"
+                        )
+                        logging.info("Optimizing best prompt so far\n")
+                    else:
+                        # Otherwise optimize the current prompt
+                        optimizer_context = (
+                            "ORIGINAL PROMPT:\n"
+                            f"{current_prompt}\n\n"
+                            "CRITIQUE:\n"
+                            f"{critique}\n"
+                        )
+                        logging.info("Optimizing current prompt\n")
                     new_prompt = self.optimizer_model.update_prompt(optimizer_context)
 
                     if new_prompt is None:
                         logging.error("Prompt optimization failed. Skipping to next iteration.")
                         continue
                     
+                    if self.enable_tournament_mode:
+                        # In tournament mode, only update context if the new image was preferred
+                        if vlm_choice == "new":
+                            context_image_bytes = edited_image_bytes
+                            best_prompt = current_prompt
+                            logging.info("VLM preferred the new image. Updating context for next iteration.\n")
+                        else:
+                            logging.info("VLM preferred the original image. Retaining previous context for next iteration.\n")
+                    else:
+                        # Otherwise update context to the latest edit
+                        context_image_bytes = edited_image_bytes
+                        best_prompt = current_prompt
+
                     # Update the prompt for the next iteration
                     current_prompt = new_prompt
-                    previous_image_bytes = edited_image_bytes
                     
                     logging.info(f"Optimized Prompt:\n{current_prompt}\n")
 

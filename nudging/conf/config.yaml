@@ -100,6 +100,7 @@ visual_nudge:
   context_prompt: |
     Compare the previous edited image (old) and the current edited image (new).
     Pick the one that would look more appealing to customers.
+    Use the original image for reference only.
 
     Respond with:
     CHOICE: old/new
@@ -155,6 +156,7 @@ visual_nudge:
     # The system prompt for the prompt optimization task
     system_prompt: |
       Edit the existing instruction based on the feedback.
+      Preserve any positive aspects of the original instruction.
       Write a clear and concise instruction under 100 words.
       Return only the updated instruction.
 
