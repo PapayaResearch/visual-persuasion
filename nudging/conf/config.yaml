@@ -20,14 +20,12 @@ general:
   enable_optimization: true
   # Total number of iterations to run per image
   iterations: 3
-  # Enable previous image context (the last edited image) during editing
+  # Enable previous image context during editing
   enable_editing_context: true
-  # Enable previous image context (the last edited image) during comparison
-  enable_evaluation_context: true
   # Enable tournament mode (keep track of the last chosen image instead of the previous image)
   enable_tournament_mode: true
   # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
-  save_best_prompts: false
+  save_best_prompts: true
 
   # Enable the evaluation pipeline
   enable_evaluation: true
@@ -38,6 +36,10 @@ general:
 
   # Whether to enhance the original image for a better comparison during nudging and evaluation
   enhance_original: true
+  # The prompt for enhancing the original image
+  enhance_prompt: |
+    Upscale the image and enhance its quality.
+    Do not make any other changes to the image itself.
 
   # Directory containing the images to be tested
   data_dir: ${hydra:runtime.cwd}/data
@@ -63,10 +65,8 @@ visual_nudge:
   # Total number of iterations to run per image
   iterations: ${general.iterations}
 
-  # Enable previous image context (the last edited image) during editing
+  # Enable previous image context during editing
   enable_editing_context: ${general.enable_editing_context}
-  # Enable previous image context (the last edited image) during comparison
-  enable_evaluation_context: ${general.enable_evaluation_context}
   # Enable tournament mode (keep track of the last chosen image instead of the previous image)
   enable_tournament_mode: ${general.enable_tournament_mode}
   # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
@@ -81,36 +81,23 @@ visual_nudge:
     Keep the product itself exactly unchanged.
     Return a single image as output, do not give any options.
   # The prompt for enhancing the original image (if enabled)
-  enhance_prompt: |
-    Upscale the image and enhance its quality.
-    Do not make any other changes to the image itself.
+  enhance_prompt: ${general.enhance_prompt}
 
   # Use the selected model from the defaults section
   image_editing_model: ${model}
-
-  # The prompt for the image comparison task when image context is disabled
-  no_context_prompt: |
-    Compare the original image (old) and the edited image (new).
-    Pick the one that would look more appealing to customers.
-
-    Respond with:
-    CHOICE: old/new
-    REASON: Explain what makes your chosen image more appealing.
-  # The prompt for the image comparison task when image context is enabled
-  context_prompt: |
-    Compare the previous edited image (old) and the current edited image (new).
-    Pick the one that would look more appealing to customers.
-    Use the original image for reference only.
-
-    Respond with:
-    CHOICE: old/new
-    REASON: Explain what makes your chosen image more appealing.
 
   evaluator_model:
     # Hydra target class for the evaluator model
     _target_: wrappers.EvaluatorModel
     # The system prompt for the image comparison task
-    system_prompt: ${visual_nudge.no_context_prompt}
+    system_prompt: |
+      Compare the original image and the edited image.
+      Pick the one that would looks more appealing.
+
+      Respond with:
+      CHOICE: original/edited
+      REASON: Explain what makes your chosen image more appealing.
+      IMPROVEMENTS: Suggest possible improvements for the new image.
 
     # Wrapper function for the API
     api_call:
@@ -134,7 +121,7 @@ visual_nudge:
       Look at why the evaluator made their choice and identify what could be better.
 
       Respond with:
-      ISSUE: What prevented the new image from being more appealing?
+      ISSUE: What prevented the edited image from being more appealing?
       SUGGESTIONS: List 3-5 ways to make the next image more successful.
 
     # Wrapper function for the API
@@ -189,22 +176,22 @@ evaluate:
   # Whether to enhance the original image before comparison
   enhance_original: ${general.enhance_original}
   # The prompt for enhancing the original image (if enabled)
-  enhance_prompt: |
-    Upscale the image and enhance its quality.
-    Do not make any other changes to the image itself.
+  enhance_prompt: ${general.enhance_prompt}
   # The image editing model used for enhancing the original image (if enabled)
   image_editing_model: ${model}
 
   # The prompt for the image comparison task when evaluating from a customer perspective
   customer_prompt: |
-    Compare the two images. Pick the one that looks more appealing to customers.
+    Compare the two images.
+    Pick the one that looks more appealing to customers.
 
     Respond with:
     CHOICE: first/second
     REASON: Explain what makes your chosen image more appealing to buyers.
   # The prompt for the image comparison task when evaluating from the agent's perspective
   agent_prompt: |
-    Compare the two images. Pick the one that looks more appealing.
+    Compare the two images.
+    Pick the one that looks more appealing.
 
     Respond with:
     CHOICE: first/second
