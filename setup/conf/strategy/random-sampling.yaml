@@ -1,0 +1,20 @@
+# Random Sampling Strategy Configuration
+_target_: strategy.RandomSampling
+name: ${dataset.name}
+subfolder: ${dataset.subfolder}
+num_folders: ${dataset.num_folders}
+num_evaluate_per_folder: ${dataset.num_evaluate_per_folder}
+num_process_per_folder: ${dataset.num_process_per_folder}
+src_dir: ${general.src_dir}
+dst_dir: ${general.dst_dir}
+evaluator_model:
+  _target_: api.EvaluatorModel
+  system_prompt: |
+    Your task is to help select the most appealing image from a given set.
+    Return only the index (1-based) of the selected image, without any additional text or formatting.
+  api_call:
+    _target_: api.create_api_call
+    model: ${general.model}
+    temperature: ${general.temperature}
+    max_tokens: ${general.max_tokens}
+    delay: ${general.delay}  

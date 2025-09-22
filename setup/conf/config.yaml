@@ -1,0 +1,44 @@
+######################
+# Defaults
+######################
+
+defaults:
+  - _self_
+  # Provider from LiteLLM (e.g., openai, anthropic)
+  - provider: openai
+  # Strategy for processing images (e.g., random-sampling)
+  - strategy: random-sampling
+
+######################
+# Dataset Settings
+######################
+
+dataset:
+  # Name of the dataset to be processed
+  name: default_dataset
+  # Subfolder within the source directory containing the image folders
+  subfolder: images
+  # Number of image folders to process (set to -1 to process all)
+  num_folders: -1
+  # Number of images to evaluate from each folder (set to -1 to evaluate all)
+  num_evaluate_per_folder: -1
+  # Number of images to finally select for processing from each folder (set to -1 to choose all)
+  num_process_per_folder: -1
+
+######################
+# General Settings
+######################
+
+general:
+  # Directory containing the folders of images to process
+  src_dir: ${hydra:runtime.cwd}/data
+  # Destination directory for saving the processed images
+  dst_dir: ${hydra:runtime.cwd}/../nudging/data
+  # Model to be used for processing images
+  model: gpt-5-nano
+  # Temperature for all API calls
+  temperature: 1.0
+  # Max tokens for all API calls
+  max_tokens: 100
+  # Standard delay in seconds before making an API call
+  delay: 0
