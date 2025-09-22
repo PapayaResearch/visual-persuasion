@@ -1,10 +1,8 @@
 import time
 import logging
 import litellm
-import base64
-from typing import List
 
-def create_text_api_call(
+def create_api_call(
         model,
         temperature,
         max_tokens,
@@ -30,38 +28,3 @@ def create_text_api_call(
             return None
     
     return api_call
-
-class EvaluatorModel:
-    """
-    A wrapper for the VLM that evaluates the images and chooses the best one.
-    """
-    def __init__(self, system_prompt: str, api_call: callable):
-        self.system_prompt = system_prompt
-        self.api_call = api_call
-
-    def evaluate(self, images: List[bytes]) -> int:
-        """
-        Compares the two images and returns the evaluation.
-        """
-        messages = [
-            {"role": "system", "content": self.system_prompt},
-            {
-                "role": "user",
-                "content": [
-                    *[{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(images[i]).decode('utf-8')}"}} for i in range(len(images))],
-                    {"type": "text", "text": "Evaluate the images and return the index of the best one."}
-                ]
-            }
-        ]
-        response = self.api_call(messages)
-        # Parse response to get the index of the best image
-        try:
-            best_index = int(response.strip()) - 1
-            if best_index in range(len(images)):
-                return best_index
-            else:
-                logging.error(f"Evaluator returned invalid index: {response}\n")
-                return 0  # Default to first image on error
-        except ValueError:
-            logging.error(f"Evaluator response parsing failed: {response}\n")
-            return 0  # Default to first image on error

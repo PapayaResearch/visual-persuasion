@@ -54,6 +54,8 @@ def main(cfg: Config) -> None:
     
     # Check destination directory and modify if it already contains images
     original_dst_dir = os.path.join(cfg.general.dst_dir, cfg.dataset.name)
+    final_dst_dir = original_dst_dir
+    
     if os.path.exists(original_dst_dir):
         # Check if the directory contains any image files
         existing_files = [f for f in os.listdir(original_dst_dir) 
@@ -61,16 +63,13 @@ def main(cfg: Config) -> None:
                          and f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
         
         if existing_files:
-            modified_dst_dir = original_dst_dir + current_date
-            logging.info(f"Destination directory {original_dst_dir} already exists with {len(existing_files)} images. Using modified destination: {modified_dst_dir}")
-            # Update the config with the modified destination directory
-            cfg.general.dst_dir = os.path.dirname(modified_dst_dir)
-            cfg.dataset.name = os.path.basename(modified_dst_dir)
+            final_dst_dir = original_dst_dir + '_' + current_date
+            logging.info(f"Destination directory {original_dst_dir} already exists with {len(existing_files)} images. Using modified destination: {final_dst_dir}")
         else:
             logging.info(f"Destination directory {original_dst_dir} exists but is empty. Using original destination.")
     
-    # Get all folders in the source directory (strategy-independent)
-    all_folders = [f for f in os.listdir(src_path) if os.path.isdir(os.path.join(src_path, f))]
+    # Get all folders in the source directory with absolute paths (strategy-independent)
+    all_folders = [os.path.join(src_path, f) for f in os.listdir(src_path) if os.path.isdir(os.path.join(src_path, f))]
     if not all_folders:
         logging.error(f"No folders found in source directory: {src_path}")
         return
@@ -80,9 +79,9 @@ def main(cfg: Config) -> None:
     
     # Create strategy instance and run dataset creation
     strategy = hydra.utils.instantiate(cfg.strategy)
-    strategy.create_dataset(all_folders)
+    strategy.create_dataset(all_folders, final_dst_dir)
     
-    logging.info(f"Dataset creation completed. Results saved to: {strategy.dst_dir}")
+    logging.info(f"Dataset creation completed.\nResults saved to: {final_dst_dir}")
 
 if __name__ == "__main__":
     main()
