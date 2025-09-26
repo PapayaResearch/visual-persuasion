@@ -16,12 +16,13 @@ defaults:
 general:
   # Enable the nudging pipeline
   enable_nudging: true
-  # Enable prompt optimization pipeline (disable for zero-shot testing)
-  enable_optimization: true
   # Total number of iterations to run per image
   iterations: 3
   # Enable previous image context during editing
   enable_editing_context: true
+
+  # Enable prompt optimization pipeline (disable for zero-shot testing)
+  enable_optimization: true
   # Enable tournament mode (keep track of the last chosen image instead of the previous image)
   enable_tournament_mode: true
   # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
@@ -30,9 +31,14 @@ general:
   # Enable the evaluation pipeline
   enable_evaluation: true
   # Directory to evaluate (only used when enable_nudging is false)
-  eval_dir: ${hydra:runtime.cwd}/results/openai/gpt-4o-mini/2025-09-06_11-39-13
+  eval_dir: ${hydra:runtime.cwd}/results/xxxx
   # Whether to evaluate from a customer perspective (true) or an agent's perspective (false)
   use_customer_perspective: true
+
+  # Enable the analysis pipeline
+  enable_analysis: true
+  # Directory to analyze (only used when enable_evaluation is false)
+  analysis_dir: ${hydra:runtime.cwd}/results/xxxx
 
   # Whether to enhance the original image for a better comparison during nudging and evaluation
   enhance_original: true
@@ -44,7 +50,7 @@ general:
   # Directory containing the images to be tested
   data_dir: ${hydra:runtime.cwd}/data
   # Model for all API calls
-  model: "gpt-4o-mini"
+  model: gpt-4o-mini
   # Temperature for all API calls
   temperature: 1.0
   # Max tokens for all API calls
@@ -56,17 +62,17 @@ general:
 # Nudge Settings
 ######################
 
-visual_nudge:
+nudge:
   # Hydra target class for the main pipeline orchestrator
   _target_: nudge.VisualNudge
 
-  # Enable prompt optimization pipeline (disable for zero-shot testing)
-  enable_optimization: ${general.enable_optimization}
   # Total number of iterations to run per image
   iterations: ${general.iterations}
-
   # Enable previous image context during editing
   enable_editing_context: ${general.enable_editing_context}
+
+  # Enable prompt optimization pipeline (disable for zero-shot testing)
+  enable_optimization: ${general.enable_optimization}
   # Enable tournament mode (keep track of the last chosen image instead of the previous image)
   enable_tournament_mode: ${general.enable_tournament_mode}
   # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
@@ -74,14 +80,14 @@ visual_nudge:
 
   # Whether to enhance the original image for a better comparison
   enhance_original: ${general.enhance_original}
+  # The prompt for enhancing the original image (if enabled)
+  enhance_prompt: ${general.enhance_prompt}
 
   # The initial prompt for the image editing task
   initial_prompt: |
     Make this product photo look more appealing.
     Keep the product itself exactly unchanged.
     Return a single image as output, do not give any options.
-  # The prompt for enhancing the original image (if enabled)
-  enhance_prompt: ${general.enhance_prompt}
 
   # Use the selected model from the defaults section
   image_editing_model: ${model}
@@ -215,6 +221,14 @@ evaluate:
       max_tokens: ${general.max_tokens}
       # Delay in seconds before making an API call
       delay: ${general.delay}
+
+######################
+# Analysis Settings
+######################
+
+analyze:
+  # Hydra target class for the analysis pipeline
+  _target_: analysis.EvaluationAnalyzer
 
 ######################
 # Logging Settings

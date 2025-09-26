@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Any
 
 #######################
 # API Settings
@@ -64,30 +63,24 @@ class OptimizerModel:
 class VisualNudge:
     # Hydra target for main pipeline class
     _target_: str
-    # Enable prompt optimization pipeline (disable for zero-shot testing)
-    enable_optimization: bool
     # Total number of iterations to run per image
     iterations: int
     # Enable previous image context (the last edited image) during editing
     enable_editing_context: bool
-    # Enable previous image context (the last edited image) during comparison
-    enable_evaluation_context: bool
+    # Enable prompt optimization pipeline (disable for zero-shot testing)
+    enable_optimization: bool
     # Enable tournament mode (keep track of the last chosen image instead of the previous image)
     enable_tournament_mode: bool
     # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
     save_best_prompts: bool
     # Whether to enhance the original image for a better comparison
     enhance_original: bool
-    # Initial prompt for image editing
-    initial_prompt: str
     # The prompt for enhancing the original image (if enabled)
     enhance_prompt: str
+    # Initial prompt for image editing
+    initial_prompt: str
     # Image editing model configuration
     image_editing_model: ImageEditingModel
-    # The prompt for the image comparison task when image context is disabled
-    no_context_prompt: str
-    # The prompt for the image comparison task when image context is enabled
-    context_prompt: str
     # Evaluator model configuration
     evaluator_model: EvaluatorModel
     # Loss model configuration
@@ -121,6 +114,15 @@ class Evaluate:
     evaluator_model: EvaluatorModel
 
 #######################
+# Analysis Pipeline
+#######################
+
+@dataclass
+class Analyze:
+    # Hydra target class for the analysis pipeline
+    _target_: str
+
+#######################
 # Provider Settings
 #######################
 
@@ -141,14 +143,12 @@ class Provider:
 class General:
     # Enable the nudging pipeline
     enable_nudging: bool
-    # Enable prompt optimization pipeline (disable for zero-shot testing)
-    enable_optimization: bool
     # Total number of iterations to run per image
     iterations: int
     # Enable previous image context (the last edited image) during editing
     enable_editing_context: bool
-    # Enable previous image context (the last edited image) during comparison
-    enable_evaluation_context: bool
+    # Enable prompt optimization pipeline (disable for zero-shot testing)
+    enable_optimization: bool
     # Enable tournament mode (keep track of the last chosen image instead of the previous image)
     enable_tournament_mode: bool
     # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
@@ -159,8 +159,14 @@ class General:
     eval_dir: str
     # Whether to evaluate from a customer perspective (true) or an agent's perspective (false)
     use_customer_perspective: bool
+    # Enable the analysis pipeline
+    enable_analysis: bool
+    # Directory to analyze (only used when enable_evaluation is false)
+    analysis_dir: str
     # Whether to enhance the original image for a better comparison during nudging and evaluation
     enhance_original: bool
+    # The prompt for enhancing the original image
+    enhance_prompt: str
     # Directory containing input images
     data_dir: str
     # Model for all API calls
@@ -190,9 +196,11 @@ class Logging:
 @dataclass
 class Config:
     # Main pipeline configuration
-    visual_nudge: VisualNudge
+    nudge: VisualNudge
     # Evaluation pipeline configuration
     evaluate: Evaluate
+    # Analysis pipeline configuration
+    analyze: Analyze
     # API provider configuration
     provider: Provider
     # General experiment settings
