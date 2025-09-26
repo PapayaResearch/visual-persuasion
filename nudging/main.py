@@ -20,12 +20,13 @@ def main(cfg: Config) -> None:
     # Determine which pipelines to run based on config
     run_nudge = cfg.general.enable_nudging
     run_evaluate = cfg.general.enable_evaluation
+    run_analysis = cfg.general.enable_analysis
 
     # Create common directories and paths
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     base_dir = os.path.join(
         cfg.provider.name,
-        cfg.visual_nudge.evaluator_model.api_call.model
+        cfg.nudge.evaluator_model.api_call.model
     )
     results_dir = os.path.join(cfg.logging.results_dir, base_dir, current_date)
     
@@ -78,16 +79,14 @@ def main(cfg: Config) -> None:
 
         # Instantiate the entire VisualNudge pipeline
         logging.info("Instantiating VisualNudge pipeline...\n")
-        nudge = hydra.utils.instantiate(cfg.visual_nudge)
+        nudge_pipeline = hydra.utils.instantiate(cfg.nudge)
         logging.info("Pipeline instantiated\n")
             
         logging.info(f"Starting visual nudge run with {len(image_paths)} image(s) from {data_dir}\n")
+
         # Pass runtime-specific parameters to the run method
-        nudge.run(
-            image_paths=image_paths,
-            results_dir=results_dir
-        )
-        logging.info("Visual nudge run completed\n")
+        nudge_results_dir = nudge_pipeline.run(image_paths, results_dir)
+        logging.info(f"Visual nudge run completed: {nudge_results_dir}\n")
 
     # Run the Evaluation pipeline if enabled
     if run_evaluate:
@@ -110,8 +109,32 @@ def main(cfg: Config) -> None:
         eval_pipeline = hydra.utils.instantiate(cfg.evaluate)
         
         # Run evaluation
-        eval_pipeline.run(eval_dir, cfg.evaluate.evaluator_model.api_call.model)
-        logging.info("Evaluation completed\n")
+        eval_results_dir = eval_pipeline.run(eval_dir, cfg.evaluate.evaluator_model.api_call.model)
+        logging.info(f"Evaluation completed: {eval_results_dir}\n")
+
+    # Run the Analysis pipeline if enabled
+    if run_analysis:
+        # Determine which directory to analyze
+        if run_evaluate:
+            # If we just ran the evaluation pipeline, analyze its results
+            analysis_dir = eval_results_dir
+        else:
+            # If only analysis is enabled, use the configured analysis_dir
+            analysis_dir = cfg.general.analysis_dir
+        
+        # Check if the directory exists and is valid
+        if not os.path.isdir(analysis_dir):
+            logging.error(f"Analysis directory not found: {analysis_dir}\n")
+            return
+        
+        logging.info(f"Starting analysis on results in: {analysis_dir}\n")
+
+        # Create analysis pipeline
+        analysis_pipeline = hydra.utils.instantiate(cfg.analyze)
+
+        # Run analysis
+        analysis_results_dir = analysis_pipeline.run(analysis_dir)
+        logging.info(f"Analysis completed: {analysis_results_dir}\n")
 
 if __name__ == "__main__":
     main()
