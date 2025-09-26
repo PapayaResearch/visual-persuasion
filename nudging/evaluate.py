@@ -173,3 +173,5 @@ class EvaluationPipeline:
             with open(log_save_path, "w") as log_file:
                 log_file.write(all_evaluations)
             logging.info(f"Saved all evaluation results to: {log_save_path}\n")
+        
+        return results_dir

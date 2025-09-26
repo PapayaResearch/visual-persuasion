@@ -145,13 +145,7 @@ class VisualNudge:
                     logging.info(f"Critique (Loss):\n{critique}\n")
 
                     # 4. Get new prompt from optimizer
-                    optimizer_context = (
-                        "ORIGINAL PROMPT:\n"
-                        f"{current_prompt}\n\n"
-                        "CRITIQUE:\n"
-                        f"{critique}\n"
-                    )
-                    new_prompt = self.optimizer_model.update_prompt(optimizer_context)
+                    new_prompt = self.optimizer_model.update_prompt(current_prompt, critique)
 
                     if new_prompt is None:
                         logging.error("Prompt optimization failed. Skipping to next iteration.")
@@ -174,5 +168,7 @@ class VisualNudge:
                     current_prompt = new_prompt
                     
                     logging.info(f"Optimized Prompt:\n{current_prompt}\n")
-
+                                
             logging.info("-" * 30 + "\n")
+
+        return results_dir

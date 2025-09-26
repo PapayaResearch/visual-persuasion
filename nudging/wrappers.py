@@ -78,10 +78,16 @@ class OptimizerModel:
         self.system_prompt = system_prompt
         self.api_call = api_call
 
-    def update_prompt(self, context: str) -> str:
+    def update_prompt(self, current_prompt: str, critique: str) -> str:
         """
         Generates a new prompt based on the old prompt and the critique.
         """
+        context = (
+            "ORIGINAL PROMPT:\n"
+            f"{current_prompt}\n\n"
+            "CRITIQUE:\n"
+            f"{critique}\n"
+        )
         messages = [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": context}

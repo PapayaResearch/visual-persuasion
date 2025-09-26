@@ -9,7 +9,7 @@ def create_text_api_call(
         delay
 ):
     """
-    Factory for creating the api_call function for text-only interactions.
+    Factory for creating the api_call function for text generation tasks.
     """
     def api_call(messages):
         """
@@ -35,7 +35,7 @@ def create_image_api_call(
         delay
 ):
     """
-    Factory for creating the api_call function for image interactions.
+    Factory for creating the api_call function for image generation tasks.
     """
     # Set up provider API key
     try:
