@@ -36,9 +36,9 @@ general:
   # Destination directory for saving the processed images
   dst_dir: ${hydra:runtime.cwd}/../nudging/data
   # Model to be used for processing images
-  model: gpt-4o-mini
+  model: gpt-5-nano
   # Temperature for all API calls
-  temperature: 1.0
+  temperature: 0.2
   # Max tokens for all API calls
   max_tokens: 100
   # Standard delay in seconds before making an API call

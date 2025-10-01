@@ -52,7 +52,7 @@ general:
   # Model for all API calls
   model: gpt-4o-mini
   # Temperature for all API calls
-  temperature: 1.0
+  temperature: 0.2
   # Max tokens for all API calls
   max_tokens: 300
   # Standard delay in seconds before making an API call
