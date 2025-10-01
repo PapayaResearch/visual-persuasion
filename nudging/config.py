@@ -96,20 +96,14 @@ class VisualNudge:
 class Evaluate:
     # Hydra target for evaluation pipeline class
     _target_: str
-    # Number of images to evaluate (set to -1 to evaluate all)
+    # Number of images to evaluate (set to -1 to evaluate all images in the data directory)
     num_images: int
-    # Whether to evaluate from a customer perspective (true) or an agent's perspective (false)
-    use_customer_perspective: bool
     # Whether to enhance the original image before comparison
     enhance_original: bool
     # The prompt for enhancing the original image (if enabled)
     enhance_prompt: str
     # The image editing model used for enhancing the original image (if enabled)
     image_editing_model: ImageEditingModel
-    # The prompt for the image comparison task when evaluating from a customer perspective
-    customer_prompt: str
-    # The prompt for the image comparison task when evaluating from the agent's perspective
-    agent_prompt: str
     # Evaluator model configuration
     evaluator_model: EvaluatorModel
 
@@ -157,8 +151,6 @@ class General:
     enable_evaluation: bool
     # Directory to evaluate (only used when enable_nudging is false)
     eval_dir: str
-    # Whether to evaluate from a customer perspective (true) or an agent's perspective (false)
-    use_customer_perspective: bool
     # Enable the analysis pipeline
     enable_analysis: bool
     # Directory to analyze (only used when enable_evaluation is false)
@@ -167,7 +159,7 @@ class General:
     enhance_original: bool
     # The prompt for enhancing the original image
     enhance_prompt: str
-    # Directory containing input images
+    # Directory containing the images to be tested
     data_dir: str
     # Model for all API calls
     model: str
@@ -175,7 +167,7 @@ class General:
     temperature: float
     # Max tokens for all API calls
     max_tokens: int
-    # Standard delay for API calls
+    # Standard delay in seconds before making an API call
     delay: int
 
 #######################
@@ -184,9 +176,9 @@ class General:
 
 @dataclass
 class Logging:
-    # Directory for log files
+    # Base directory for writing log files
     log_dir: str
-    # Directory for results (images, configs)
+    # Base directory for writing results (images, configs)
     results_dir: str
 
 ######################

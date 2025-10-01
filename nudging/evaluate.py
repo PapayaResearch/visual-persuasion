@@ -11,37 +11,23 @@ class EvaluationPipeline:
     def __init__(
         self, 
         num_images: int,
-        use_customer_perspective: bool,
         enhance_original: bool,
         enhance_prompt: str,
         image_editing_model: ImageEditingModel,
-        customer_prompt: str,
-        agent_prompt: str,
         evaluator_model: EvaluatorModel
     ):
         self.num_images = num_images
-        self.use_customer_perspective = use_customer_perspective
         self.enhance_original = enhance_original
         self.enhance_prompt = enhance_prompt
         self.image_editing_model = image_editing_model
-        self.customer_prompt = customer_prompt
-        self.agent_prompt = agent_prompt
         self.evaluator_model = evaluator_model
-
-        if self.use_customer_perspective:
-            self.evaluator_model.system_prompt = self.customer_prompt
-            logging.info("Using customer perspective for evaluation\n")
-        else:
-            self.evaluator_model.system_prompt = self.agent_prompt
-            logging.info("Using agent perspective for evaluation\n")
     
     def run(self, image_dir: str, model: str):
         """
         Runs the evaluation pipeline for each image.
         """
         # Create results directory if it doesn't exist
-        results_dir = os.path.join(image_dir, "evaluation", "enhanced" if self.enhance_original else "original",
-                                    "customer" if self.use_customer_perspective else "agent", model)
+        results_dir = os.path.join(image_dir, "evaluation", "enhanced" if self.enhance_original else "original", model)
         os.makedirs(results_dir, exist_ok=True)
 
         # Get all image files in the directory

@@ -32,8 +32,6 @@ general:
   enable_evaluation: true
   # Directory to evaluate (only used when enable_nudging is false)
   eval_dir: ${hydra:runtime.cwd}/results/xxxx
-  # Whether to evaluate from a customer perspective (true) or an agent's perspective (false)
-  use_customer_perspective: true
 
   # Enable the analysis pipeline
   enable_analysis: true
@@ -176,8 +174,6 @@ evaluate:
 
   # Number of images to evaluate (set to -1 to evaluate all images in the data directory)
   num_images: -1
-  # Whether to evaluate from a customer perspective (true) or an agent's perspective (false)
-  use_customer_perspective: ${general.use_customer_perspective}
 
   # Whether to enhance the original image before comparison
   enhance_original: ${general.enhance_original}
@@ -186,28 +182,17 @@ evaluate:
   # The image editing model used for enhancing the original image (if enabled)
   image_editing_model: ${model}
 
-  # The prompt for the image comparison task when evaluating from a customer perspective
-  customer_prompt: |
-    Compare the two images.
-    Pick the one that looks more appealing to customers.
-
-    Respond with:
-    CHOICE: first/second
-    REASON: Explain what makes your chosen image more appealing to buyers.
-  # The prompt for the image comparison task when evaluating from the agent's perspective
-  agent_prompt: |
-    Compare the two images.
-    Pick the one that looks more appealing.
-
-    Respond with:
-    CHOICE: first/second
-    REASON: Explain what makes your chosen image more appealing.
-
   evaluator_model:
     # Hydra target class for the evaluator model
     _target_: wrappers.EvaluatorModel
     # The system prompt for the image comparison task
-    system_prompt: ${evaluate.customer_prompt}
+    system_prompt: |
+      Compare the two images.
+      Pick the one that looks more appealing.
+
+      Respond with:
+      CHOICE: first/second
+      REASON: Explain what makes your chosen image more appealing.
 
     # Wrapper function for the API
     api_call:
