@@ -81,6 +81,9 @@ class Gemini(ImageEditingModel):
             logging.error("Gemini API call failed: No response or candidates\n")
             return None, None
 
+        edited_image = None
+        edited_image_bytes = None
+
         for part in response.candidates[0].content.parts:
             if part.text is not None:
                 logging.info(f"Image Model Response:\n{part.text}\n")
@@ -107,6 +110,9 @@ class Gemini(ImageEditingModel):
         if response is None or not hasattr(response, 'candidates') or not response.candidates:
             logging.error("Gemini API call failed: No response or candidates\n")
             return None, None
+        
+        edited_image = None
+        edited_image_bytes = None
 
         for part in response.candidates[0].content.parts:
             if part.text is not None:

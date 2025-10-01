@@ -104,7 +104,7 @@ class EvaluationPipeline:
                     base_image_bytes = f.read()
             
             # Find all iteration images for this base image
-            iter_images = [f for f in all_files if f.startswith(base_name) and "_iter_" in f]
+            iter_images = [f for f in all_files if f.startswith(base_name) and "_iter_" in f and "context" not in f and "best" not in f]
             
             if not iter_images:
                 logging.info(f"No iteration images found for {base_name}\n")

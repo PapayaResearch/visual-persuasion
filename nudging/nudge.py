@@ -123,7 +123,7 @@ class VisualNudge:
                             edited_image_bytes
                         )
 
-                    if evaluation is None:
+                    if evaluation is None or evaluation.strip() == "":
                         logging.error("Evaluation failed. Skipping to next iteration.\n")
                         continue
 
@@ -138,7 +138,7 @@ class VisualNudge:
                     # 3. Get critique (loss)
                     critique = self.loss_model.get_critique(evaluation)
 
-                    if critique is None:
+                    if critique is None or critique.strip() == "":
                         logging.error("Critique generation failed. Skipping to next iteration.")
                         continue
 
@@ -147,7 +147,7 @@ class VisualNudge:
                     # 4. Get new prompt from optimizer
                     new_prompt = self.optimizer_model.update_prompt(current_prompt, critique)
 
-                    if new_prompt is None:
+                    if new_prompt is None or new_prompt.strip() == "":
                         logging.error("Prompt optimization failed. Skipping to next iteration.")
                         continue
                     
@@ -168,7 +168,32 @@ class VisualNudge:
                     current_prompt = new_prompt
                     
                     logging.info(f"Optimized Prompt:\n{current_prompt}\n")
-                                
+
+            if context_image_bytes:
+                logging.info("\n--- Finalizing Best Image ---\n")
+
+                if self.enable_editing_context:
+                    if self.enable_tournament_mode and self.save_best_prompts:
+                        # Regenerate context image from best prompt so far
+                        context_image, context_image_bytes = self.image_editing_model.edit(best_prompt, original_image_bytes)
+                        logging.info(f"Regenerated context image from best prompt so far:\n{best_prompt}\n")
+                        context_image_save_path = os.path.join(results_dir, f"{base_filename}_best_context.jpg")
+                        context_image.save(context_image_save_path)
+                        logging.info(f"Saved context image to: {context_image_save_path}\n")
+
+                    # Using original and previous edited images for context
+                    logging.info("Using previous edited image for context during final edit\n")
+                    edited_prompt = current_prompt + "\nThe first image is the original, the second image is the previous edit."
+                    best_image, _ = self.image_editing_model.edit_with_context(edited_prompt, original_image_bytes, context_image_bytes)
+                else:
+                    # Use only the original image
+                    best_image, _ = self.image_editing_model.edit(current_prompt, original_image_bytes)
+
+                # Save the best image
+                best_image_save_path = os.path.join(results_dir, f"{base_filename}_best.jpg")
+                best_image.save(best_image_save_path)
+                logging.info(f"Saved best image to: {best_image_save_path}\n")
+                           
             logging.info("-" * 30 + "\n")
 
         return results_dir
