@@ -1,6 +1,32 @@
+from abc import ABC, abstractmethod
 import base64
 import logging
-from typing import List
+from typing import List, Tuple
+from PIL import Image
+
+class ImageEditingModel(ABC):
+    """
+    Abstract base class for all image editing models.
+    """
+    @abstractmethod
+    def edit(self, prompt: str, image_bytes: bytes) -> Tuple[Image.Image, bytes]:
+        """
+        Applies the editing prompt to an image.
+            
+        Returns:
+            tuple: (edited_image, edited_image_bytes)
+        """
+        pass
+
+    @abstractmethod
+    def edit_with_context(self, prompt: str, image_bytes: bytes, context_image_bytes: bytes) -> Tuple[Image.Image, bytes]:
+        """
+        Applies the editing prompt to an image with additional context from another image.
+            
+        Returns:
+            tuple: (edited_image, edited_image_bytes)
+        """
+        pass
 
 class EvaluatorModel:
     """
