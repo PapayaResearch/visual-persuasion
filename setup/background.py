@@ -2,6 +2,7 @@ import os
 import io
 import logging
 from wrappers import ImageEditingModel
+from typing import Tuple
 
 import numpy as np
 from PIL import Image
@@ -39,7 +40,7 @@ class BackgroundProcessor:
         ssim_value, _ = ssim(img1_gray, img2_gray, full=True)
         return ssim_value
     
-    def _calculate_subplot_dims(num_images):
+    def _calculate_subplot_dims(self, num_images: int) -> Tuple[int, int]:
         """Calculate rows and cols for a near-square subplot layout."""
         if num_images == 0:
             return 1, 1
