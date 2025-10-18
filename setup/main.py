@@ -57,10 +57,14 @@ def main(cfg: Config) -> None:
     final_dst_dir = original_dst_dir
     
     if os.path.exists(original_dst_dir):
-        # Check if the directory contains any image files
-        existing_files = [f for f in os.listdir(original_dst_dir) 
-                         if os.path.isfile(os.path.join(original_dst_dir, f)) 
-                         and f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
+        # Check if the directory contains any image files in immediate subfolders
+        existing_files = []
+        for item in os.listdir(original_dst_dir):
+            item_path = os.path.join(original_dst_dir, item)
+            if os.path.isdir(item_path):
+                for f in os.listdir(item_path):
+                    if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff')):
+                        existing_files.append(os.path.join(item_path, f))
         
         if existing_files:
             final_dst_dir = original_dst_dir + '_' + current_date
@@ -77,9 +81,19 @@ def main(cfg: Config) -> None:
     logging.info(f"Starting dataset creation for: {cfg.dataset.name}")
     logging.info(f"Found {len(all_folders)} folders in source directory: {src_path}")
     
-    # Create strategy instance and run dataset creation
+    # Create strategy instance and create dataset
     strategy = hydra.utils.instantiate(cfg.strategy)
     strategy.create_dataset(all_folders, final_dst_dir)
+
+    # Enhance image quality if required
+    if cfg.general.enhance_image_quality:
+        enhancer = hydra.utils.instantiate(cfg.image_enhancer)
+        enhancer.enhance_images(final_dst_dir)
+
+    # Split the dataset by background if required
+    if cfg.general.split_by_background:
+        background_processor = hydra.utils.instantiate(cfg.background_processor)
+        background_processor.split_by_background(final_dst_dir)
     
     logging.info(f"Dataset creation completed.\nResults saved to: {final_dst_dir}")
 
