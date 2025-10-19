@@ -43,9 +43,9 @@ class BackgroundProcessor:
     _target_: str
     # Model to be used for background processing
     image_editing_model: ImageEditingModel
-    # Number of images to preview from the with-background dataset (preferably a square number for better visualization)
+    # Maximum number of images to preview from the with-background subset (set to -1 to preview all)
     num_previews_with_background: int
-    # Number of images to preview from the without-background dataset (preferably a square number for better visualization)
+    # Maximum number of images to preview from the without-background subset (set to -1 to preview all)
     num_previews_without_background: int
     # The prompt for the background removal task
     background_removal_prompt: str
