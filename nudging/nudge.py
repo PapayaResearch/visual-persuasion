@@ -16,9 +16,7 @@ class VisualNudge:
         enable_editing_context: bool,
         enable_tournament_mode: bool,
         save_best_prompts: bool,
-        enhance_original: bool,
         initial_prompt: str,
-        enhance_prompt: str,
         image_editing_model: ImageEditingModel,
         evaluator_model: EvaluatorModel, 
         loss_model: LossModel, 
@@ -29,9 +27,7 @@ class VisualNudge:
         self.enable_editing_context = enable_editing_context
         self.enable_tournament_mode = enable_tournament_mode
         self.save_best_prompts = save_best_prompts
-        self.enhance_original = enhance_original
         self.initial_prompt = initial_prompt
-        self.enhance_prompt = enhance_prompt
         self.image_editing_model = image_editing_model
         self.evaluator_model = evaluator_model
         self.loss_model = loss_model
@@ -52,21 +48,6 @@ class VisualNudge:
             original_save_path = os.path.join(results_dir, f"{base_filename}_original.jpg")
             original_image.save(original_save_path)
             logging.info(f"Saved original image to: {original_save_path}\n")
-
-            # Optionally enhance the original image before starting
-            if self.enhance_original:
-                logging.info("\n--- Enhancing Original Image ---\n")
-                enhanced_image, enhanced_image_bytes = self.image_editing_model.edit(self.enhance_prompt, original_image_bytes)
-                
-                if enhanced_image is None or enhanced_image_bytes is None:
-                    logging.error("Enhancement failed. Proceeding with the original image.\n")
-                else:
-                    enhanced_save_path = os.path.join(results_dir, f"{base_filename}_enhanced.jpg")
-                    enhanced_image.save(enhanced_save_path)
-                    logging.info(f"Saved enhanced image to: {enhanced_save_path}\n")
-                    # Use the enhanced image for subsequent edits
-                    original_image = enhanced_image
-                    original_image_bytes = enhanced_image_bytes
             
             current_prompt = self.initial_prompt
             logging.info("\n--- Starting Run ---\n")
@@ -85,6 +66,9 @@ class VisualNudge:
                     if self.enable_tournament_mode and self.save_best_prompts:
                         # Regenerate context image from best prompt so far
                         context_image, context_image_bytes = self.image_editing_model.edit(best_prompt, original_image_bytes)
+                        if context_image is None or context_image_bytes is None:
+                            logging.error("Context image regeneration failed. Skipping to next iteration.\n")
+                            continue
                         logging.info(f"Regenerated context image from best prompt so far:\n{best_prompt}\n")
                         context_image_save_path = os.path.join(results_dir, f"{base_filename}_iter_{i+1}_context.jpg")
                         context_image.save(context_image_save_path)
@@ -176,6 +160,9 @@ class VisualNudge:
                     if self.enable_tournament_mode and self.save_best_prompts:
                         # Regenerate context image from best prompt so far
                         context_image, context_image_bytes = self.image_editing_model.edit(best_prompt, original_image_bytes)
+                        if context_image is None or context_image_bytes is None:
+                            logging.error("Context image regeneration failed for final edit.\n")
+                            continue
                         logging.info(f"Regenerated context image from best prompt so far:\n{best_prompt}\n")
                         context_image_save_path = os.path.join(results_dir, f"{base_filename}_best_context.jpg")
                         context_image.save(context_image_save_path)
@@ -190,6 +177,9 @@ class VisualNudge:
                     best_image, _ = self.image_editing_model.edit(current_prompt, original_image_bytes)
 
                 # Save the best image
+                if best_image is None:
+                    logging.error("Final best image generation failed.\n")
+                    continue
                 best_image_save_path = os.path.join(results_dir, f"{base_filename}_best.jpg")
                 best_image.save(best_image_save_path)
                 logging.info(f"Saved best image to: {best_image_save_path}\n")

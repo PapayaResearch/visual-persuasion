@@ -38,15 +38,8 @@ general:
   # Directory to analyze (only used when enable_evaluation is false)
   analysis_dir: ${hydra:runtime.cwd}/results/xxxx
 
-  # Whether to enhance the original image for a better comparison during nudging and evaluation
-  enhance_original: true
-  # The prompt for enhancing the original image
-  enhance_prompt: |
-    Upscale the image and enhance its quality.
-    Do not make any other changes to the image itself.
-
   # Directory containing the images to be tested
-  data_dir: ${hydra:runtime.cwd}/data
+  data_dir: ${hydra:runtime.cwd}/data/second_dataset/base
   # Model for all API calls
   model: gpt-4o-mini
   # Temperature for all API calls
@@ -75,11 +68,6 @@ nudge:
   enable_tournament_mode: ${general.enable_tournament_mode}
   # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
   save_best_prompts: ${general.save_best_prompts}
-
-  # Whether to enhance the original image for a better comparison
-  enhance_original: ${general.enhance_original}
-  # The prompt for enhancing the original image (if enabled)
-  enhance_prompt: ${general.enhance_prompt}
 
   # The initial prompt for the image editing task
   initial_prompt: |
@@ -174,13 +162,6 @@ evaluate:
 
   # Number of images to evaluate (set to -1 to evaluate all images in the data directory)
   num_images: -1
-
-  # Whether to enhance the original image before comparison
-  enhance_original: ${general.enhance_original}
-  # The prompt for enhancing the original image (if enabled)
-  enhance_prompt: ${general.enhance_prompt}
-  # The image editing model used for enhancing the original image (if enabled)
-  image_editing_model: ${model}
 
   evaluator_model:
     # Hydra target class for the evaluator model

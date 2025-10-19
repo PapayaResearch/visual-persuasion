@@ -73,10 +73,6 @@ class VisualNudge:
     enable_tournament_mode: bool
     # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
     save_best_prompts: bool
-    # Whether to enhance the original image for a better comparison
-    enhance_original: bool
-    # The prompt for enhancing the original image (if enabled)
-    enhance_prompt: str
     # Initial prompt for image editing
     initial_prompt: str
     # Image editing model configuration
@@ -98,12 +94,6 @@ class Evaluate:
     _target_: str
     # Number of images to evaluate (set to -1 to evaluate all images in the data directory)
     num_images: int
-    # Whether to enhance the original image before comparison
-    enhance_original: bool
-    # The prompt for enhancing the original image (if enabled)
-    enhance_prompt: str
-    # The image editing model used for enhancing the original image (if enabled)
-    image_editing_model: ImageEditingModel
     # Evaluator model configuration
     evaluator_model: EvaluatorModel
 
@@ -155,10 +145,6 @@ class General:
     enable_analysis: bool
     # Directory to analyze (only used when enable_evaluation is false)
     analysis_dir: str
-    # Whether to enhance the original image for a better comparison during nudging and evaluation
-    enhance_original: bool
-    # The prompt for enhancing the original image
-    enhance_prompt: str
     # Directory containing the images to be tested
     data_dir: str
     # Model for all API calls

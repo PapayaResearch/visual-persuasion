@@ -1,0 +1,7 @@
+# Nano Banana model configuration
+_target_: models.LiteLLM
+api_call:
+  _target_: api.create_image_api_call
+  key_name: GEMINI_API_KEY
+  model: gemini/gemini-2.5-flash-image-preview
+  delay: ${general.delay}

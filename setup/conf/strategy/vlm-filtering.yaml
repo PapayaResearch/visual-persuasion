@@ -9,7 +9,7 @@ evaluator_model:
     Your task is to help select the most appealing image from a given set.
     Return only the index (1-based) of the selected image, without any additional text or formatting.
   api_call:
-    _target_: api.create_api_call
+    _target_: api.create_text_api_call
     model: ${general.model}
     temperature: ${general.temperature}
     max_tokens: ${general.max_tokens}

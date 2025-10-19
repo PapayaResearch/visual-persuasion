@@ -11,15 +11,9 @@ class EvaluationPipeline:
     def __init__(
         self, 
         num_images: int,
-        enhance_original: bool,
-        enhance_prompt: str,
-        image_editing_model: ImageEditingModel,
         evaluator_model: EvaluatorModel
     ):
         self.num_images = num_images
-        self.enhance_original = enhance_original
-        self.enhance_prompt = enhance_prompt
-        self.image_editing_model = image_editing_model
         self.evaluator_model = evaluator_model
     
     def run(self, image_dir: str, model: str):
@@ -27,7 +21,7 @@ class EvaluationPipeline:
         Runs the evaluation pipeline for each image.
         """
         # Create results directory if it doesn't exist
-        results_dir = os.path.join(image_dir, "evaluation", "enhanced" if self.enhance_original else "original", model)
+        results_dir = os.path.join(image_dir, "evaluation", model)
         os.makedirs(results_dir, exist_ok=True)
 
         # Get all image files in the directory
@@ -59,36 +53,6 @@ class EvaluationPipeline:
             with open(original_image_path, "rb") as f:
                 original_image_bytes = f.read()
             
-            # Check if enhancement is requested
-            enhanced_image_name = f"{base_name}_enhanced.jpg"
-            enhanced_image_path = os.path.join(image_dir, enhanced_image_name)
-            
-            if self.enhance_original and not os.path.exists(enhanced_image_path):
-                logging.info("\n--- Enhancing Original Image ---\n")
-
-                enhanced_image, enhanced_image_bytes = self.image_editing_model.edit(self.enhance_prompt, original_image_bytes)
-                
-                if enhanced_image is None or enhanced_image_bytes is None:
-                    logging.error("Enhancement failed. Proceeding with the original image.\n")
-                    all_evaluations += "Enhancement failed. Using original image for evaluation.\n\n"
-                else:
-                    enhanced_image.save(enhanced_image_path)
-                    logging.info(f"Saved enhanced image to: {enhanced_image_path}\n")
-                    all_evaluations += f"Saved enhanced image to: {enhanced_image_path}\n\n"
-            
-            # Check if an enhanced version exists to use as the base image (after potential enhancement)
-            base_image_name = original_image_name
-            base_image_bytes = original_image_bytes
-            base_type = "original"
-            
-            if os.path.exists(enhanced_image_path):
-                logging.info(f"Found enhanced image for {base_name}, using it as the base for comparison\n")
-                all_evaluations += f"Using enhanced image for evaluation: {enhanced_image_path}\n\n"
-                base_image_name = enhanced_image_name
-                base_type = "enhanced"
-                with open(enhanced_image_path, "rb") as f:
-                    base_image_bytes = f.read()
-            
             # Find all iteration images for this base image
             iter_images = [f for f in all_files if f.startswith(base_name) and "_iter_" in f and "context" not in f and "best" not in f]
             
@@ -106,8 +70,8 @@ class EvaluationPipeline:
             
             for iter_image_name in iter_images:
                 iter_num = re.search(r'_iter_(\d+)', iter_image_name).group(1)
-                logging.info(f"\n--- Evaluating {base_type} vs iteration {iter_num} ---\n")
-                all_evaluations += f"Evaluating {base_type} vs iteration {iter_num}\n"
+                logging.info(f"\n--- Evaluating original vs iteration {iter_num} ---\n")
+                all_evaluations += f"Evaluating original vs iteration {iter_num}\n"
                 
                 iter_image_path = os.path.join(image_dir, iter_image_name)
                 with open(iter_image_path, "rb") as f:
@@ -116,8 +80,8 @@ class EvaluationPipeline:
                 # Randomly decide which image is first and which is second to avoid bias
                 is_original_first = random.choice([True, False])
                 
-                image1_bytes = base_image_bytes if is_original_first else iter_image_bytes
-                image2_bytes = iter_image_bytes if is_original_first else base_image_bytes
+                image1_bytes = original_image_bytes if is_original_first else iter_image_bytes
+                image2_bytes = iter_image_bytes if is_original_first else original_image_bytes
                 
                 # Evaluate the images without telling the VLM which is which
                 evaluation = self.evaluator_model.evaluate("Compare the two images.", image1_bytes, image2_bytes)
