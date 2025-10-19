@@ -59,20 +59,30 @@ class BackgroundProcessor:
         """
         Generates preview images for the with-background and without-background datasets (with normalization).
         """
+        # Get dataset name from src_dir (lowest directory in path)
+        dataset_name = os.path.basename(os.path.normpath(src_dir))
+        
         # Generate previews for with-background images (original vs normalized)
         with_bg_images = [f for f in os.listdir(dst_dir_with_bg) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
         random.shuffle(with_bg_images)
+        if self.num_previews_with_background == -1:
+            self.num_previews_with_background = len(with_bg_images)
         selected_with_bg = with_bg_images[:min(self.num_previews_with_background, len(with_bg_images))]
         
         if selected_with_bg:
             rows, cols = self._calculate_subplot_dims(len(selected_with_bg))
             fig, axes = plt.subplots(rows, cols * 2, figsize=(cols * 6, rows * 3))
             
-            # Flatten axes for easier indexing
-            if rows == 1 and cols == 1:
+            # Add plot title
+            fig.suptitle(f'With Background Subset ({dataset_name})', fontsize=16, fontweight='bold')
+            
+            # Ensure axes is always 2D array for consistent indexing
+            if rows == 1 and cols * 2 == 1:
                 axes = np.array([[axes]])
-            elif rows == 1 or cols == 1:
-                axes = axes.reshape(rows, -1)
+            elif rows == 1:
+                axes = axes.reshape(1, -1)
+            elif cols * 2 == 1:
+                axes = axes.reshape(-1, 1)
             
             for i, img_name in enumerate(selected_with_bg):
                 row = i // cols
@@ -103,7 +113,7 @@ class BackgroundProcessor:
                 axes[row, col * 2].axis('off')
                 axes[row, col * 2 + 1].axis('off')
             
-            plt.tight_layout()
+            plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust for suptitle
             plt.savefig(os.path.join(src_dir, "preview_with_bg.png"), dpi=150, bbox_inches='tight')
             plt.close()
             logging.info(f"Generated preview_with_bg.png with {len(selected_with_bg)} image pairs\n")
@@ -111,17 +121,24 @@ class BackgroundProcessor:
         # Generate previews for without-background images (original vs normalized)
         without_bg_images = [f for f in os.listdir(dst_dir_without_bg) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
         random.shuffle(without_bg_images)
+        if self.num_previews_without_background == -1:
+            self.num_previews_without_background = len(with_bg_images)
         selected_without_bg = without_bg_images[:min(self.num_previews_without_background, len(without_bg_images))]
         
         if selected_without_bg:
             rows, cols = self._calculate_subplot_dims(len(selected_without_bg))
             fig, axes = plt.subplots(rows, cols * 2, figsize=(cols * 6, rows * 3))
             
-            # Flatten axes for easier indexing
-            if rows == 1 and cols == 1:
+            # Add plot title
+            fig.suptitle(f'Without Background Subset ({dataset_name})', fontsize=16, fontweight='bold')
+            
+            # Ensure axes is always 2D array for consistent indexing
+            if rows == 1 and cols * 2 == 1:
                 axes = np.array([[axes]])
-            elif rows == 1 or cols == 1:
-                axes = axes.reshape(rows, -1)
+            elif rows == 1:
+                axes = axes.reshape(1, -1)
+            elif cols * 2 == 1:
+                axes = axes.reshape(-1, 1)
             
             for i, img_name in enumerate(selected_without_bg):
                 row = i // cols
@@ -152,7 +169,7 @@ class BackgroundProcessor:
                 axes[row, col * 2].axis('off')
                 axes[row, col * 2 + 1].axis('off')
             
-            plt.tight_layout()
+            plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust for suptitle
             plt.savefig(os.path.join(src_dir, "preview_without_bg.png"), dpi=150, bbox_inches='tight')
             plt.close()
             logging.info(f"Generated preview_without_bg.png with {len(selected_without_bg)} image pairs\n")
@@ -166,20 +183,30 @@ class BackgroundProcessor:
         """
         Generates preview images for the with-background and without-background datasets (without normalization).
         """
+        # Get dataset name from src_dir (lowest directory in path)
+        dataset_name = os.path.basename(os.path.normpath(src_dir))
+        
         # Generate previews for with-background images
         with_bg_images = [f for f in os.listdir(dst_dir_with_bg) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
         random.shuffle(with_bg_images)
+        if self.num_previews_with_background == -1:
+            self.num_previews_with_background = len(with_bg_images)
         selected_with_bg = with_bg_images[:min(self.num_previews_with_background, len(with_bg_images))]
         
         if selected_with_bg:
             rows, cols = self._calculate_subplot_dims(len(selected_with_bg))
             fig, axes = plt.subplots(rows, cols, figsize=(cols * 3, rows * 3))
             
-            # Flatten axes for easier indexing
+            # Add plot title
+            fig.suptitle(f'With Background Subset ({dataset_name})', fontsize=16, fontweight='bold')
+            
+            # Ensure axes is always 2D array for consistent indexing
             if rows == 1 and cols == 1:
                 axes = np.array([[axes]])
-            else:
-                axes = axes.reshape(rows, cols)
+            elif rows == 1:
+                axes = axes.reshape(1, -1)
+            elif cols == 1:
+                axes = axes.reshape(-1, 1)
             
             for i, img_name in enumerate(selected_with_bg):
                 row = i // cols
@@ -198,7 +225,7 @@ class BackgroundProcessor:
                 col = i % cols
                 axes[row, col].axis('off')
             
-            plt.tight_layout()
+            plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust for suptitle
             plt.savefig(os.path.join(src_dir, "preview_with_bg.png"), dpi=150, bbox_inches='tight')
             plt.close()
             logging.info(f"Generated preview_with_bg.png with {len(selected_with_bg)} images\n")
@@ -206,17 +233,24 @@ class BackgroundProcessor:
         # Generate previews for without-background images
         without_bg_images = [f for f in os.listdir(dst_dir_without_bg) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
         random.shuffle(without_bg_images)
+        if self.num_previews_without_background == -1:
+            self.num_previews_without_background = len(with_bg_images)
         selected_without_bg = without_bg_images[:min(self.num_previews_without_background, len(without_bg_images))]
         
         if selected_without_bg:
             rows, cols = self._calculate_subplot_dims(len(selected_without_bg))
             fig, axes = plt.subplots(rows, cols, figsize=(cols * 3, rows * 3))
             
-            # Flatten axes for easier indexing
+            # Add plot title
+            fig.suptitle(f'Without Background Subset ({dataset_name})', fontsize=16, fontweight='bold')
+            
+            # Ensure axes is always 2D array for consistent indexing
             if rows == 1 and cols == 1:
                 axes = np.array([[axes]])
-            else:
-                axes = axes.reshape(rows, cols)
+            elif rows == 1:
+                axes = axes.reshape(1, -1)
+            elif cols == 1:
+                axes = axes.reshape(-1, 1)
             
             for i, img_name in enumerate(selected_without_bg):
                 row = i // cols
@@ -235,7 +269,7 @@ class BackgroundProcessor:
                 col = i % cols
                 axes[row, col].axis('off')
             
-            plt.tight_layout()
+            plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust for suptitle
             plt.savefig(os.path.join(src_dir, "preview_without_bg.png"), dpi=150, bbox_inches='tight')
             plt.close()
             logging.info(f"Generated preview_without_bg.png with {len(selected_without_bg)} images\n")
@@ -277,7 +311,7 @@ class BackgroundProcessor:
                 original_image_bytes
             )
             
-            if edited_image is None or edited_image_bytes is None:
+            if edited_image is None:
                 logging.error(f"Background removal failed for image: {file}, skipping.\n")
                 continue
 
@@ -306,7 +340,7 @@ class BackgroundProcessor:
                     original_image_bytes
                 )
 
-                if normalized_image is None or normalized_image_bytes is None:
+                if normalized_image is None:
                     logging.error(f"Background normalization failed for image: {file}, skipping normalization.\n")
                     continue
 

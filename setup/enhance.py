@@ -27,7 +27,7 @@ class ImageEnhancer:
                 self.enhancement_prompt,
                 original_image_bytes
             )
-            if enhanced_image is None or enhanced_image_bytes is None:
+            if enhanced_image is None:
                 logging.error(f"Enhancement failed for image: {img_file}, skipping.\n")
                 continue
             enhanced_image.save(os.path.join(enhanced_dir, img_file))
