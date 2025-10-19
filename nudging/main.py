@@ -11,7 +11,7 @@ config_store = hydra.core.config_store.ConfigStore.instance()
 config_store.store(name="base_config", node=Config)
 
 @hydra.main(config_path="conf", config_name="config", version_base=None)
-def main(cfg: Config) -> None:
+def main(cfg: Config):
     # Load and print configuration
     OmegaConf.resolve(cfg)
     cfg_yaml = OmegaConf.to_yaml(cfg)
@@ -61,6 +61,15 @@ def main(cfg: Config) -> None:
         logging.info(f"Set API key from {cfg.provider.key}\n")
     except FileNotFoundError:
         logging.error(f"API key file not found at: {cfg.provider.key}\n")
+        return
+
+    # Set up image editing provider API key
+    try:
+        with open(cfg.provider_image.key) as infile:
+            os.environ[cfg.provider_image.key_name] = infile.read().strip()
+        logging.info(f"Set API key from {cfg.provider_image.key}")
+    except FileNotFoundError:
+        logging.error(f"API key file not found at: {cfg.provider_image.key}")
         return
 
     # Run the Nudging pipeline if enabled

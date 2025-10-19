@@ -66,7 +66,7 @@ class VisualNudge:
                     if self.enable_tournament_mode and self.save_best_prompts:
                         # Regenerate context image from best prompt so far
                         context_image, context_image_bytes = self.image_editing_model.edit(best_prompt, original_image_bytes)
-                        if context_image is None or context_image_bytes is None:
+                        if context_image is None:
                             logging.error("Context image regeneration failed. Skipping to next iteration.\n")
                             continue
                         logging.info(f"Regenerated context image from best prompt so far:\n{best_prompt}\n")
@@ -82,7 +82,7 @@ class VisualNudge:
                     # Use only the original image
                     edited_image, edited_image_bytes = self.image_editing_model.edit(current_prompt, original_image_bytes)
 
-                if edited_image is None or edited_image_bytes is None:
+                if edited_image is None:
                     logging.error("Image editing failed. Skipping to next iteration.\n")
                     continue
 
@@ -160,7 +160,7 @@ class VisualNudge:
                     if self.enable_tournament_mode and self.save_best_prompts:
                         # Regenerate context image from best prompt so far
                         context_image, context_image_bytes = self.image_editing_model.edit(best_prompt, original_image_bytes)
-                        if context_image is None or context_image_bytes is None:
+                        if context_image is None:
                             logging.error("Context image regeneration failed for final edit.\n")
                             continue
                         logging.info(f"Regenerated context image from best prompt so far:\n{best_prompt}\n")

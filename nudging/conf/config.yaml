@@ -6,6 +6,8 @@ defaults:
   - _self_
   # Provider from LiteLLM (e.g., openai, anthropic)
   - provider: openai
+  # Provider for image editing model (e.g., google, openai)
+  - provider_image: google
   # Image editing model (e.g., nanobanana, instructpix2pix)
   - model: nanobanana-gemini
 
@@ -17,7 +19,7 @@ general:
   # Enable the nudging pipeline
   enable_nudging: true
   # Total number of iterations to run per image
-  iterations: 3
+  iterations: 2
   # Enable previous image context during editing
   enable_editing_context: true
 
@@ -39,7 +41,7 @@ general:
   analysis_dir: ${hydra:runtime.cwd}/results/xxxx
 
   # Directory containing the images to be tested
-  data_dir: ${hydra:runtime.cwd}/data/second_dataset/base
+  data_dir: ${hydra:runtime.cwd}/data/temp
   # Model for all API calls
   model: gpt-4o-mini
   # Temperature for all API calls
