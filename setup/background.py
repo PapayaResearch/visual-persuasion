@@ -122,7 +122,7 @@ class BackgroundProcessor:
         without_bg_images = [f for f in os.listdir(dst_dir_without_bg) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
         random.shuffle(without_bg_images)
         if self.num_previews_without_background == -1:
-            self.num_previews_without_background = len(with_bg_images)
+            self.num_previews_without_background = len(without_bg_images)
         selected_without_bg = without_bg_images[:min(self.num_previews_without_background, len(without_bg_images))]
         
         if selected_without_bg:
@@ -234,7 +234,7 @@ class BackgroundProcessor:
         without_bg_images = [f for f in os.listdir(dst_dir_without_bg) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
         random.shuffle(without_bg_images)
         if self.num_previews_without_background == -1:
-            self.num_previews_without_background = len(with_bg_images)
+            self.num_previews_without_background = len(without_bg_images)
         selected_without_bg = without_bg_images[:min(self.num_previews_without_background, len(without_bg_images))]
         
         if selected_without_bg:

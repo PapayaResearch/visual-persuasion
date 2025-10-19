@@ -4,6 +4,7 @@ import hydra
 from datetime import datetime
 from omegaconf import OmegaConf
 from config import Config
+from utils.misc import print_config
 
 # Initialize Hydra config store
 config_store = hydra.core.config_store.ConfigStore.instance()
@@ -14,6 +15,7 @@ def main(cfg: Config):
     # Load and print configuration
     OmegaConf.resolve(cfg)
     cfg_yaml = OmegaConf.to_yaml(cfg)
+    print_config(cfg)
 
     # Create common directories and paths
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

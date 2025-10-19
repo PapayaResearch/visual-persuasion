@@ -1,0 +1,16 @@
+# Core dependencies
+hydra-core
+omegaconf
+
+# Image processing
+pillow
+scikit-image
+numpy
+matplotlib
+
+# API and LLM
+litellm
+google-genai
+
+# Utilities
+rich

@@ -29,7 +29,7 @@ general:
   split_by_background: true
 
   # Model to be used for processing images
-  model: gpt-5-mini
+  model: gpt-4o-mini
   # Temperature for all API calls
   temperature: 0.2
   # Max tokens for all API calls
@@ -87,11 +87,12 @@ background_processor:
 
   # The prompt for the background removal task
   background_removal_prompt: |
-    Remove the background from the image, leaving only the main subject.
-    The background should be white (#FFFFFF) with no other colors or patterns.
-    Ensure the edges of the subject are clean and well-defined.
+    Edit the image to remove the background with the following requirements:
+    1. Isolate the main subject of the image.
+    2. Replace the background with a plain white color (#FFFFFF).
+    3. Ensure the main subject remains unaltered in appearance.
   # Threshold for SSIM value to consider an image as having a plain background
-  ssim_threshold: 0.6
+  ssim_threshold: 0.7
 
   # Enable background normalization
   enable_background_normalization: true
