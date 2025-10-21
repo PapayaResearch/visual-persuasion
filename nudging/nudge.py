@@ -138,7 +138,7 @@ class VisualNudge:
                     
                     if self.enable_tournament_mode:
                         # In tournament mode, only update context if the new image was preferred
-                        if evaluation.choice == "edited":
+                        if evaluation.choice.lower() == "edited":
                             context_image_bytes = edited_image_bytes
                             best_prompt = current_prompt
                             logging.info("VLM preferred the new image. Updating context for next iteration.\n")

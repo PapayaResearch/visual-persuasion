@@ -18,6 +18,17 @@ class ApiCall:
     delay: int
 
 #######################
+# Schema Settings
+#######################
+
+@dataclass
+class SchemaFactory:
+    # Hydra target for schema factory function
+    _target_: str
+    # Field descriptions for the schema (as kwargs)
+    # These will be passed to create_*_schema functions
+
+#######################
 # Model Components
 #######################
 
@@ -29,31 +40,19 @@ class ImageModel:
     # These will be filled in by the model-specific YAML files
 
 @dataclass
-class EvaluatorModel:
-    # Hydra target for evaluator model class
+class LanguageModel:
+    # Hydra target for language model class
     _target_: str
-    # System prompt for image comparison task
+    # System prompt for the task
     system_prompt: str
+    # Input schema factory configuration
+    input_schema: SchemaFactory
+    # Output schema factory configuration
+    output_schema: SchemaFactory
     # API call configuration
     api_call: ApiCall
-
-@dataclass
-class LossModel:
-    # Hydra target for loss model class
-    _target_: str
-    # System prompt for critique generation
-    system_prompt: str
-    # API call configuration
-    api_call: ApiCall
-
-@dataclass
-class OptimizerModel:
-    # Hydra target for optimizer model class
-    _target_: str
-    # System prompt for prompt optimization
-    system_prompt: str
-    # API call configuration
-    api_call: ApiCall
+    # Enable JSON schema validation for models that don't natively support it
+    enable_json_schema_validation: bool = True
 
 #######################
 # Main Pipeline
@@ -77,12 +76,12 @@ class VisualNudge:
     initial_prompt: str
     # Image editing model configuration
     image_editing_model: ImageModel
-    # Evaluator model configuration
-    evaluator_model: EvaluatorModel
+    # Evaluator language model configuration
+    evaluator_model: LanguageModel
     # Loss model configuration
-    loss_model: LossModel
+    loss_model: LanguageModel
     # Optimizer model configuration
-    optimizer_model: OptimizerModel
+    optimizer_model: LanguageModel
 
 #######################
 # Evaluation Pipeline
@@ -95,7 +94,7 @@ class Evaluate:
     # Number of images to evaluate (set to -1 to evaluate all images in the data directory)
     num_images: int
     # Evaluator model configuration
-    evaluator_model: EvaluatorModel
+    evaluator_model: LanguageModel
 
 #######################
 # Analysis Pipeline
@@ -125,28 +124,16 @@ class Provider:
 
 @dataclass
 class General:
-    # Enable the nudging pipeline
-    enable_nudging: bool
-    # Total number of iterations to run per image
-    iterations: int
-    # Enable previous image context (the last edited image) during editing
-    enable_editing_context: bool
-    # Enable prompt optimization pipeline (disable for zero-shot testing)
-    enable_optimization: bool
-    # Enable tournament mode (keep track of the last chosen image instead of the previous image)
-    enable_tournament_mode: bool
-    # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
-    save_best_prompts: bool
-    # Enable the evaluation pipeline
-    enable_evaluation: bool
-    # Directory to evaluate (only used when enable_nudging is false)
-    eval_dir: str
-    # Enable the analysis pipeline
-    enable_analysis: bool
-    # Directory to analyze (only used when enable_evaluation is false)
-    analysis_dir: str
     # Directory containing the images to be tested
     data_dir: str
+    # Total number of iterations to run per image
+    iterations: int
+    # Enable previous image context during editing
+    enable_editing_context: bool
+    # Directory to evaluate (directory with images used for nudging)
+    eval_dir: str
+    # Directory to analyze (directory with evaluation log files)
+    analysis_dir: str
     # Model for all API calls
     model: str
     # Temperature for all API calls

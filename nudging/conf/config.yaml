@@ -32,7 +32,7 @@ general:
   # Evaluation Configuration
   ############################
   # Directory to evaluate (directory with images used for nudging)
-  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_12-59-12
+  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_20-59-17
 
   ############################
   # Analysis Configuration
@@ -206,10 +206,27 @@ evaluate:
 
   evaluator_model:
     # Hydra target class for the evaluator model
-    _target_: wrappers.EvaluatorModel
+    _target_: wrappers.LanguageModel
+
     # The system prompt for the image comparison task
     system_prompt: |
       You are comparing two images to determine which looks more appealing.
+    
+    # Input schema for the evaluator model
+    input_schema:
+      _target_: schema.create_evaluator_input_schema
+      task_description: |
+        The image editing task description
+      images_description: |
+        List of image bytes: [original, edited]
+    
+    # Output schema for the evaluator model
+    output_schema:
+      _target_: schema.create_evaluator_output_schema
+      choice_description: |
+        Which image is better: 'first' or 'second'
+      reason_description: |
+        Detailed explanation of why the chosen image is more appealing
 
     # Wrapper function for the API
     api_call:

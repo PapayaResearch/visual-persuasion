@@ -2,7 +2,7 @@ import os
 import logging
 import random
 import re
-from wrappers import EvaluatorModel
+from wrappers import LanguageModel
 
 class EvaluationPipeline:
     """
@@ -11,7 +11,7 @@ class EvaluationPipeline:
     def __init__(
         self, 
         num_images: int,
-        evaluator_model: EvaluatorModel
+        evaluator_model: LanguageModel
     ):
         self.num_images = num_images
         self.evaluator_model = evaluator_model
@@ -84,19 +84,18 @@ class EvaluationPipeline:
                 image2_bytes = iter_image_bytes if is_original_first else original_image_bytes
                 
                 # Evaluate the images without telling the VLM which is which
-                evaluation = self.evaluator_model.evaluate("Compare the two images.", image1_bytes, image2_bytes)
+                evaluation = self.evaluator_model.get_response(
+                    task="Compare the two images.",
+                    images=[image1_bytes, image2_bytes]
+                )
 
                 if evaluation is None:
                     logging.error("Evaluation failed. Skipping to next image.\n")
                     all_evaluations += f"ERROR: Evaluation failed for {iter_image_name}. Skipping.\n\n"
                     continue
                 
-                # Parse the choice from the evaluation
-                if 'second' in evaluation.split("REASON")[0].lower():
-                    vlm_choice = "second"
-                else:
-                    vlm_choice = "first"
-                reason_match = re.search(r'(?:\*{0,2})?REASON(?:\*{0,2})?:\s*(.*?)(?=\n\*{0,2}[A-Z]+(?:\*{0,2})?:|$)', evaluation, re.DOTALL | re.IGNORECASE)
+                vlm_choice = evaluation.choice.lower()
+                vlm_reason = evaluation.reason
                 
                 if vlm_choice:
                     # Determine which image was chosen by the VLM
@@ -104,7 +103,7 @@ class EvaluationPipeline:
                         (vlm_choice == "second" and not is_original_first))
                     
                     choice_text = "original" if original_chosen else "edited"
-                    reason_text = reason_match.group(1).strip() if reason_match else "No reason provided"
+                    reason_text = vlm_reason
                     
                     result = f"VLM Choice: {choice_text}\n"
                     result += f"Reason (first: {'original' if is_original_first else 'edited'}, second: {'edited' if is_original_first else 'original'}):\n{reason_text}\n"
