@@ -2,7 +2,7 @@ import os
 import logging
 import random
 import re
-from wrappers import EvaluatorModel, ImageEditingModel
+from wrappers import EvaluatorModel
 
 class EvaluationPipeline:
     """

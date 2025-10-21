@@ -18,25 +18,31 @@ defaults:
 ######################
 
 general:
-  # Enable the nudging pipeline
-  enable_nudging: true
+  ############################
+  # Nudge Configuration
+  ############################
+  # Directory containing the images to be tested
+  data_dir: ${hydra:runtime.cwd}/data/temp
   # Total number of iterations to run per image
   iterations: 2
   # Enable previous image context during editing
   enable_editing_context: true
 
-  # Enable the evaluation pipeline
-  enable_evaluation: true
-  # Directory to evaluate (only used when enable_nudging is false)
-  eval_dir: ${hydra:runtime.cwd}/results/xxxx
+  ############################
+  # Evaluation Configuration
+  ############################
+  # Directory to evaluate (directory with images used for nudging)
+  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_12-59-12
 
-  # Enable the analysis pipeline
-  enable_analysis: true
-  # Directory to analyze (only used when enable_evaluation is false)
-  analysis_dir: ${hydra:runtime.cwd}/results/xxxx
-
-  # Directory containing the images to be tested
-  data_dir: ${hydra:runtime.cwd}/data/temp
+  ############################
+  # Analysis Configuration
+  ############################
+  # Directory to analyze (directory with evaluation log files)
+  analysis_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_12-59-12/evaluation/gpt-4o-mini
+  
+  ############################
+  # API Configuration
+  ############################
   # Model for all API calls
   model: gpt-4o-mini
   # Temperature for all API calls
@@ -191,7 +197,7 @@ evaluate:
 
 analyze:
   # Hydra target class for the analysis pipeline
-  _target_: analysis.EvaluationAnalyzer
+  _target_: analyze.EvaluationAnalyzer
 
 ######################
 # Logging Settings
