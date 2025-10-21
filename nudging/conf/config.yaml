@@ -28,7 +28,7 @@ general:
 
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)
-  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_23-13-48
+  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-22_00-43-34
 
   ## ANALYSIS CONFIGURATION
   # Directory to analyze (directory with evaluation log files)
@@ -203,9 +203,6 @@ nudge:
 evaluate:
   # Hydra target class for the evaluation pipeline
   _target_: nudging.evaluate.EvaluationPipeline
-
-  # Number of images to evaluate (set to -1 to evaluate all images in the data directory)
-  num_images: -1
 
   # Prompt for the evaluator model
   evaluator_prompt: |

@@ -76,7 +76,7 @@ class VisualNudge:
                             logging.error("Context image regeneration failed. Skipping to next iteration.\n")
                             continue
                         logging.info(f"Regenerated context image from best prompt so far:\n{best_prompt}\n")
-                        context_image_save_path = os.path.join(results_dir, f"{base_filename}_iter_{i+1}_context.jpg")
+                        context_image_save_path = os.path.join(results_dir, f"{base_filename}_iter{i+1}context.jpg")
                         context_image.save(context_image_save_path)
                         logging.info(f"Saved context image to: {context_image_save_path}\n")
 
@@ -92,7 +92,7 @@ class VisualNudge:
                     logging.error("Image editing failed. Skipping to next iteration.\n")
                     continue
 
-                edited_image_save_path = os.path.join(results_dir, f"{base_filename}_iter_{i+1}.jpg")
+                edited_image_save_path = os.path.join(results_dir, f"{base_filename}_iter{i+1}.jpg")
                 edited_image.save(edited_image_save_path)
                 logging.info(f"Saved edited image to: {edited_image_save_path}\n")
 
@@ -169,7 +169,7 @@ class VisualNudge:
                             logging.error("Context image regeneration failed for final edit.\n")
                             continue
                         logging.info(f"Regenerated context image from best prompt so far:\n{best_prompt}\n")
-                        context_image_save_path = os.path.join(results_dir, f"{base_filename}_best_context.jpg")
+                        context_image_save_path = os.path.join(results_dir, f"{base_filename}_bestcontext.jpg")
                         context_image.save(context_image_save_path)
                         logging.info(f"Saved context image to: {context_image_save_path}\n")
 

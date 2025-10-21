@@ -61,7 +61,7 @@ class RandomSampling(SamplingStrategy):
 
             # Copy selected images to destination directory
             for image in selected_images:
-                dst_image_path = os.path.join(self.dst_dir, f"{folder_name}_{image}")
+                dst_image_path = os.path.join(self.dst_dir, f"{folder_name.replace('_', '')}_{image.replace('_', '')}")
                 with open(os.path.join(folder_path, image), "rb") as src_f:
                     with open(dst_image_path, "wb") as dst_f:
                         dst_f.write(src_f.read())
@@ -169,7 +169,7 @@ class VLMFiltering(SamplingStrategy):
                 logging.info(f"Selected best image {best_image} (index {best_index}) from chunk {i+1} in folder {folder_name}\n")
                 
                 # Copy the best image to the destination directory
-                dst_image_path = os.path.join(self.dst_dir, f"{folder_name}_{best_image}")
+                dst_image_path = os.path.join(self.dst_dir, f"{folder_name.replace('_', '')}_{best_image.replace('_', '')}")
                 with open(os.path.join(folder_path, best_image), "rb") as src_f:
                     with open(dst_image_path, "wb") as dst_f:
                         dst_f.write(src_f.read())

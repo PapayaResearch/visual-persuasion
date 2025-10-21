@@ -110,8 +110,6 @@ class VisualNudge:
 class Evaluate:
     # Hydra target for evaluation pipeline class
     _target_: str
-    # Number of images to evaluate (set to -1 to evaluate all images in the data directory)
-    num_images: int
     # Prompt for the evaluator model
     evaluator_prompt: str
     # Evaluator model configuration
