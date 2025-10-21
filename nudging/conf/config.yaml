@@ -18,9 +18,7 @@ defaults:
 ######################
 
 general:
-  ############################
-  # Nudge Configuration
-  ############################
+  ## NUDGE CONFIGURATION
   # Directory containing the images to be tested
   data_dir: ${hydra:runtime.cwd}/data/temp
   # Total number of iterations to run per image
@@ -28,21 +26,15 @@ general:
   # Enable previous image context during editing
   enable_editing_context: true
 
-  ############################
-  # Evaluation Configuration
-  ############################
+  ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)
-  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_20-59-17
+  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_21-57-32
 
-  ############################
-  # Analysis Configuration
-  ############################
+  ## ANALYSIS CONFIGURATION
   # Directory to analyze (directory with evaluation log files)
   analysis_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_12-59-12/evaluation/gpt-4o-mini
   
-  ############################
-  # API Configuration
-  ############################
+  ## API CONFIGURATION
   # Model for all API calls
   model: gpt-4o-mini
   # Temperature for all API calls
@@ -217,7 +209,7 @@ evaluate:
     input_schema:
       _target_: schema.create_evaluator_input_schema
       task_description: |
-        The image editing task description
+        The image comparison task description
       images_description: |
         List of image bytes: [first, second]
     

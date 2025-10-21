@@ -2,7 +2,7 @@ import random
 import logging
 import os
 from typing import List
-from wrappers import EvaluatorModel
+from wrappers import LanguageModel
 
 
 class RandomSampling:
@@ -66,7 +66,7 @@ class VLMFiltering:
         num_folders: int,
         num_evaluate_per_folder: int,
         num_process_per_folder: int,
-        evaluator_model: EvaluatorModel,
+        evaluator_model: LanguageModel,
     ):
         self.num_folders = num_folders
         self.num_evaluate_per_folder = num_evaluate_per_folder
@@ -141,7 +141,20 @@ class VLMFiltering:
                     with open(os.path.join(folder_path, img), "rb") as f:
                         image_bytes_list.append(f.read())
                 
-                best_index = self.evaluator_model.evaluate(image_bytes_list)
+                response = self.evaluator_model.get_response(
+                    task="Select the best image from the provided images.",
+                    images=image_bytes_list
+                )
+
+                try:
+                    best_index = int(response.choice) - 1
+                    if not best_index in range(len(images)):
+                        logging.error(f"Evaluator returned invalid index: {response}\nDefaulting to first image.")
+                        best_index = 0  # Default to first image on error
+                except ValueError:
+                    logging.error(f"Evaluator response parsing failed: {response}\nDefaulting to first image.")
+                    best_index = 0  # Default to first image on error
+                
                 best_image = chunk_images[best_index]
                 logging.info(f"Selected best image {best_image} (index {best_index}) from chunk {i+1} in folder {folder_name}\n")
                 

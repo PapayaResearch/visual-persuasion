@@ -58,7 +58,7 @@ def main(cfg: Config):
         return
 
     # Check if the source directory exists
-    src_path = os.path.join(cfg.general.src_dir, cfg.dataset.subfolder)
+    src_path = cfg.general.src_dir
     if not os.path.isdir(src_path):
         logging.error(f"Source directory not found: {src_path}")
         return

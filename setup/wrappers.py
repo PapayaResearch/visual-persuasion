@@ -1,8 +1,13 @@
 from abc import ABC, abstractmethod
 import base64
-import logging
-from typing import List, Tuple
+from typing import Tuple, List, Type
 from PIL import Image
+import io
+import litellm
+import logging
+import json
+from schema import IOSchema
+
 
 class ImageModel(ABC):
     """
@@ -28,37 +33,126 @@ class ImageModel(ABC):
         """
         pass
 
-class EvaluatorModel:
-    """
-    A wrapper for the VLM that evaluates the images and chooses the best one.
-    """
-    def __init__(self, system_prompt: str, api_call: callable):
-        self.system_prompt = system_prompt
-        self.api_call = api_call
 
-    def evaluate(self, images: List[bytes]) -> int:
+class LanguageModel:
+    """
+    A generalized wrapper for LLM calls using structured outputs.
+    
+    Uses Pydantic models for automatic validation and parsing.
+    Supports multiple inputs (text or images) with type-safe outputs.
+    """
+    
+    def __init__(
+        self,
+        system_prompt: str,
+        input_schema: Type[IOSchema],
+        output_schema: Type[IOSchema],
+        api_call: callable,
+        enable_json_schema_validation: bool = True
+    ):
+        self.system_prompt = system_prompt
+        self.input_schema = input_schema
+        self.output_schema = output_schema
+        self.api_call = api_call
+        
+        # Enable JSON schema validation for models that don't natively support it
+        if enable_json_schema_validation:
+            litellm.enable_json_schema_validation = True
+    
+    def _encode_image(self, image_bytes: bytes) -> str:
         """
-        Compares the two images and returns the evaluation.
+        Encodes image bytes to base64 data URL.
+        """
+        # Detect image format
+        try:
+            img = Image.open(io.BytesIO(image_bytes))
+            img_format = img.format.lower() if img.format else 'jpeg'
+        except Exception as e:
+            logging.warning(f"Could not detect image format: {e}, defaulting to jpeg\n")
+            img_format = 'jpeg'
+        
+        # Encode to base64
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        return f"data:image/{img_format};base64,{base64_image}"
+    
+    def _build_messages(self, inputs: IOSchema) -> List[dict]:
+        """
+        Constructs the message list for the API call.
+        
+        Images are sent as separate user messages.
+        Text fields are combined into a single formatted user message.
         """
         messages = [
-            {"role": "system", "content": self.system_prompt},
             {
-                "role": "user",
-                "content": [
-                    *[{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(images[i]).decode('utf-8')}"}} for i in range(len(images))],
-                    {"type": "text", "text": "Evaluate the images and return the index of the best one."}
-                ]
+                "role": "system",
+                "content": self.system_prompt
             }
         ]
-        response = self.api_call(messages)
-        # Parse response to get the index of the best image
-        try:
-            best_index = int(response.strip()) - 1
-            if best_index in range(len(images)):
-                return best_index
-            else:
-                logging.error(f"Evaluator returned invalid index: {response}\nDefaulting to first image.")
-                return 0  # Default to first image on error
-        except ValueError:
-            logging.error(f"Evaluator response parsing failed: {response}\nDefaulting to first image.")
-            return 0  # Default to first image on error
+        
+        # Add image messages first (one message per image)
+        for field_name, field_value in inputs.model_dump().items():
+            if isinstance(field_value, list):
+                # Assume list fields contain image bytes
+                for img_bytes in field_value:
+                    if isinstance(img_bytes, bytes):
+                        messages.append({
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": self._encode_image(img_bytes)
+                                    }
+                                }
+                            ]
+                        })
+            elif isinstance(field_value, bytes):
+                # Single image bytes field
+                messages.append({
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": self._encode_image(field_value)
+                            }
+                        }
+                    ]
+                })
+        
+        # Add text fields as a single formatted message
+        text_content = inputs.to_formatted_string()
+        if text_content:
+            messages.append({
+                "role": "user",
+                "content": text_content
+            })
+        
+        return messages
+    
+    def get_response(self, **kwargs) -> IOSchema:
+        """
+        Main method to call the LLM with structured output.
+        """
+        # Validate inputs using input_schema
+        validated_inputs = self.input_schema(**kwargs)
+        
+        # Build messages from validated inputs
+        messages = self._build_messages(validated_inputs)
+        
+        # Call the API with response_format set to the output schema
+        response = self.api_call(
+            messages=messages,
+            response_format=self.output_schema
+        )
+
+        if response is None:
+            return None
+        
+        # Parse the response
+        content = response.choices[0].message.content
+        
+        parsed_json = json.loads(content)
+        result = self.output_schema(**parsed_json)
+        
+        return result

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Type, Literal, cast
+from typing import List, Type, Literal
 
 
 class IOSchema(BaseModel):
