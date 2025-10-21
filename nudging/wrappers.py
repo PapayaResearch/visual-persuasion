@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
 import base64
-from typing import Tuple, List, Union, Type
-from pydantic import BaseModel, Field
+from typing import Tuple, List, Type
 from PIL import Image
 import io
 import litellm
 import logging
 import json
+from schema import IOSchema, EvaluatorInput, EvaluationOutput, LossInput, CritiqueOutput, OptimizerInput, OptimizedPromptOutput
+
 
 class ImageModel(ABC):
     """
@@ -32,6 +33,7 @@ class ImageModel(ABC):
         """
         pass
 
+
 class LanguageModel:
     """
     A generalized wrapper for LLM calls using structured outputs.
@@ -44,12 +46,14 @@ class LanguageModel:
         self,
         system_prompt: str,
         api_call: callable,
-        output_model: Type[BaseModel],
+        input_schema: Type[IOSchema],
+        output_schema: Type[IOSchema],
         enable_json_schema_validation: bool = True
     ):
         self.system_prompt = system_prompt
         self.api_call = api_call
-        self.output_model = output_model
+        self.input_schema = input_schema
+        self.output_schema = output_schema
         
         # Enable JSON schema validation for models that don't natively support it
         if enable_json_schema_validation:
@@ -71,51 +75,62 @@ class LanguageModel:
         base64_image = base64.b64encode(image_bytes).decode('utf-8')
         return f"data:image/{img_format};base64,{base64_image}"
     
-    def _format_input(self, input_item: Union[str, bytes]) -> dict:
-        """
-        Formats a single input item into the appropriate message content format.
-        """
-        if isinstance(input_item, bytes):
-            # Image input
-            return {
-                "type": "image_url",
-                "image_url": {
-                    "url": self._encode_image(input_item)
-                }
-            }
-        else:
-            # Text input
-            return {
-                "type": "text",
-                "text": str(input_item)
-            }
-    
-    def _build_messages(self, inputs: List[Union[str, bytes]]) -> List[dict]:
+    def _build_messages(self, inputs: IOSchema) -> List[dict]:
         """
         Constructs the message list for the API call.
+        
+        Images are sent as separate user messages.
+        Text fields are combined into a single formatted user message.
         """
         messages = [
             {
                 "role": "system",
                 "content": self.system_prompt
-            },
-            {
-                "role": "user",
-                "content": [self._format_input(inp) for inp in inputs]
             }
         ]
+        
+        # Add image messages first (one message per image)
+        for field_name, field_value in inputs.model_dump().items():
+            if isinstance(field_value, list):
+                # Assume list fields contain image bytes
+                for img_bytes in field_value:
+                    if isinstance(img_bytes, bytes):
+                        messages.append({
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": self._encode_image(img_bytes)
+                                    }
+                                }
+                            ]
+                        })
+        
+        # Add text fields as a single formatted message
+        text_content = inputs.to_formatted_string()
+        if text_content:
+            messages.append({
+                "role": "user",
+                "content": text_content
+            })
+        
         return messages
     
-    def get_response(self, inputs: List[Union[str, bytes]]) -> BaseModel:
+    def get_response(self, **kwargs) -> IOSchema:
         """
         Main method to call the LLM with structured output.
         """
-        messages = self._build_messages(inputs)
+        # Validate inputs using input_schema
+        validated_inputs = self.input_schema(**kwargs)
         
-        # Call the API with response_format set to the Pydantic model
+        # Build messages from validated inputs
+        messages = self._build_messages(validated_inputs)
+        
+        # Call the API with response_format set to the output schema
         response = self.api_call(
             messages=messages,
-            response_format=self.output_model
+            response_format=self.output_schema
         )
 
         if response is None:
@@ -125,31 +140,14 @@ class LanguageModel:
         content = response.choices[0].message.content
         
         parsed_json = json.loads(content)
-        result = self.output_model(**parsed_json)
+        result = self.output_schema(**parsed_json)
         
         return result
 
-# Define output schema
-class EvaluationOutput(BaseModel):
-    choice: str = Field(
-        description="Which image is better: 'original' or 'edited'"
-    )
-    reason: str = Field(
-        description="Detailed explanation of why the chosen image is more appealing, focusing on specific visual qualities"
-    )
 
-class CritiqueOutput(BaseModel):
-    issue: str = Field(
-        description="The main reason why the edited image was not better than the original, based on the evaluator's feedback"
-    )
-    suggestions: str = Field(
-        description="Concrete, actionable suggestions for improving the next iteration, formatted as a bulleted list"
-    )
-
-class OptimizedPromptOutput(BaseModel):
-    prompt: str = Field(
-        description="The refined image editing instruction, incorporating feedback while keeping successful elements. Must be under 100 words and clearly state what changes to make."
-    )
+######################
+# Model Wrappers
+######################
 
 class EvaluatorModel:
     """
@@ -159,14 +157,19 @@ class EvaluatorModel:
         self.wrapper = LanguageModel(
             system_prompt=system_prompt,
             api_call=api_call,
-            output_model=EvaluationOutput
+            input_schema=EvaluatorInput,
+            output_schema=EvaluationOutput
         )
 
-    def evaluate(self, task: str, original_bytes: bytes, edited_bytes: bytes) -> EvaluationOutput:
+    def evaluate(self, task: str, images: List[bytes]) -> EvaluationOutput:
         """
         Compare original and edited images.
         """
-        return self.wrapper.get_response([task, original_bytes, edited_bytes])
+        return self.wrapper.get_response(
+            task=task,
+            images=images
+        )
+
 
 class LossModel:
     """
@@ -176,14 +179,19 @@ class LossModel:
         self.wrapper = LanguageModel(
             system_prompt=system_prompt,
             api_call=api_call,
-            output_model=CritiqueOutput
+            input_schema=LossInput,
+            output_schema=CritiqueOutput
         )
 
-    def get_critique(self, context: str) -> CritiqueOutput:
+    def get_critique(self, choice: str, reason: str) -> CritiqueOutput:
         """
-        Generates a critique based on the current prompt and the VLM's evaluation.
+        Generates a critique based on the evaluator's choice and reason.
         """
-        return self.wrapper.get_response([context])
+        return self.wrapper.get_response(
+            choice=choice,
+            reason=reason
+        )
+
 
 class OptimizerModel:
     """
@@ -193,12 +201,15 @@ class OptimizerModel:
         self.wrapper = LanguageModel(
             system_prompt=system_prompt,
             api_call=api_call,
-            output_model=OptimizedPromptOutput
+            input_schema=OptimizerInput,
+            output_schema=OptimizedPromptOutput
         )
 
-    def update_prompt(self, current_prompt: str, critique: str) -> OptimizedPromptOutput:
+    def update_prompt(self, current_prompt: str, suggestions: str) -> OptimizedPromptOutput:
         """
-        Generates a new prompt based on the old prompt and the critique.
+        Generates a new prompt based on the current prompt and feedback.
         """
-        context = f"Current prompt: {current_prompt}\n\nFeedback: {critique}"
-        return self.wrapper.get_response([context])
+        return self.wrapper.get_response(
+            current_prompt=current_prompt,
+            suggestions=suggestions
+        )

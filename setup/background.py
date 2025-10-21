@@ -1,7 +1,7 @@
 import os
 import io
 import logging
-from wrappers import ImageEditingModel
+from wrappers import ImageModel
 from typing import Tuple
 
 import numpy as np
@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 class BackgroundProcessor:
     def __init__(
         self,
-        image_editing_model: ImageEditingModel,
+        image_editing_model: ImageModel,
         num_previews_with_background: int,
         num_previews_without_background: int,
         background_removal_prompt: str,

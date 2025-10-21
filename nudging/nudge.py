@@ -59,7 +59,7 @@ class VisualNudge:
             for i in range(self.iterations):
                 logging.info("-" * 30 + "\n")
                 logging.info(f">> ITERATION {i + 1}/{self.iterations} <<\n")
-                logging.info(f"Prompt:\n{current_prompt}\n")
+                logging.info(f"PROMPT:\n{current_prompt}\n")
 
                 # 1. Edit image with current prompt
                 if self.enable_editing_context and context_image_bytes:
@@ -95,51 +95,50 @@ class VisualNudge:
                     if self.enable_tournament_mode and context_image_bytes:
                         # Use the previous and current edited images
                         evaluation = self.evaluator_model.evaluate(
-                            "Compare the original and edited images.",
-                            context_image_bytes,
-                            edited_image_bytes
+                            task="Compare the original and edited images.",
+                            images=[context_image_bytes, edited_image_bytes]
                         )
                     else:
                         # Use the original and current edited images
                         evaluation = self.evaluator_model.evaluate(
-                            "Compare the original and edited images.",
-                            original_image_bytes,
-                            edited_image_bytes
+                            task="Compare the original and edited images.",
+                            images=[original_image_bytes, edited_image_bytes]
                         )
                     
                     if evaluation is None:
                         logging.error("Evaluation failed. Skipping to next iteration.\n")
                         continue
 
-                    vlm_choice = evaluation.choice
-                    vlm_reason = evaluation.reason
-                    evaluation = f"CHOICE: {vlm_choice}\nREASON: {vlm_reason}"
-
-                    logging.info(f"VLM Evaluation:\n{evaluation}\n")
+                    logging.info(f"{evaluation}\n")
 
                     # 3. Get critique (loss)
-                    critique = self.loss_model.get_critique(evaluation)
+                    critique = self.loss_model.get_critique(
+                        choice=evaluation.choice,
+                        reason=evaluation.reason,
+                    )
 
                     if critique is None:
                         logging.error("Critique generation failed. Skipping to next iteration.")
                         continue
 
-                    critique = f"ISSUE: {critique.issue}\nSUGGESTIONS: {critique.suggestions}"
-
-                    logging.info(f"Critique (Loss):\n{critique}\n")
+                    logging.info(f"{critique}\n")
 
                     # 4. Get new prompt from optimizer
-                    new_prompt = self.optimizer_model.update_prompt(current_prompt, critique)
+                    response = self.optimizer_model.update_prompt(
+                        current_prompt=current_prompt,
+                        suggestions=critique.suggestions
+                    )
 
-                    if new_prompt is None:
+                    if response is None:
                         logging.error("Prompt optimization failed. Skipping to next iteration.")
                         continue
-
-                    new_prompt = new_prompt.prompt
+                    
+                    logging.info(f"{response}\n")
+                    new_prompt = response.new_prompt
                     
                     if self.enable_tournament_mode:
                         # In tournament mode, only update context if the new image was preferred
-                        if vlm_choice == "edited":
+                        if evaluation.choice == "edited":
                             context_image_bytes = edited_image_bytes
                             best_prompt = current_prompt
                             logging.info("VLM preferred the new image. Updating context for next iteration.\n")
@@ -152,8 +151,6 @@ class VisualNudge:
 
                     # Update the prompt for the next iteration
                     current_prompt = new_prompt
-                    
-                    logging.info(f"Optimized Prompt:\n{current_prompt}\n")
 
             if context_image_bytes:
                 logging.info("\n--- Finalizing Best Image ---\n")
