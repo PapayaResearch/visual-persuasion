@@ -83,11 +83,28 @@ nudge:
 
   evaluator_model:
     # Hydra target class for the evaluator model
-    _target_: wrappers.EvaluatorModel
+    _target_: wrappers.LanguageModel
+
     # The system prompt for the image comparison task
     system_prompt: |
       You are comparing two images to determine which looks more appealing.
       The first image is the original, and the second is an edited version.
+    
+    # Input schema for the evaluator model
+    input_schema:
+      _target_: schema.create_evaluator_input_schema
+      task_description: |
+        The image editing task description
+      images_description: |
+        List of image bytes: [original, edited]
+    
+    # Output schema for the evaluator model
+    output_schema:
+      _target_: schema.create_evaluator_output_schema
+      choice_description: |
+        Which image is better: 'original' or 'edited'
+      reason_description: |
+        Detailed explanation of why the chosen image is more appealing
 
     # Wrapper function for the API
     api_call:
@@ -104,12 +121,27 @@ nudge:
 
   loss_model:
     # Hydra target class for the loss model
-    _target_: wrappers.LossModel
+    _target_: wrappers.LanguageModel
+
     # The system prompt for the loss generation task
     system_prompt: |
       You are helping to improve photos by providing constructive feedback.
       Analyze why the evaluator made their choice and identify specific areas for improvement.
       Focus on actionable suggestions that could make the next iteration better.
+
+    # Input schema for the loss model
+    input_schema:
+      _target_: schema.create_loss_input_schema
+      choice_description: |
+        Which image was chosen as better
+      reason_description: |
+        Reason for the choice
+    
+    # Output schema for the loss model
+    output_schema:
+      _target_: schema.create_loss_output_schema
+      suggestions_description: |
+        Concrete, actionable suggestions for improving the next iteration, formatted as a bulleted list
 
     # Wrapper function for the API
     api_call:
@@ -126,12 +158,27 @@ nudge:
 
   optimizer_model:
     # Hydra target class for the optimizer model
-    _target_: wrappers.OptimizerModel
+    _target_: wrappers.LanguageModel
+
     # The system prompt for the prompt optimization task
     system_prompt: |
       You are refining an image editing instruction based on feedback.
       Incorporate the suggested improvements while preserving what worked well.
       Keep the instruction clear, specific, and under 100 words.
+
+    # Input schema for the optimizer model
+    input_schema:
+      _target_: schema.create_optimizer_input_schema
+      current_prompt_description: |
+        The current image editing prompt
+      suggestions_description: |
+        Suggestions for improvement
+    
+    # Output schema for the optimizer model
+    output_schema:
+      _target_: schema.create_optimizer_output_schema
+      new_prompt_description: |
+        The refined image editing instruction, incorporating feedback while keeping successful elements
 
     # Wrapper function for the API
     api_call:

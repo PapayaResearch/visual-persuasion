@@ -2,7 +2,7 @@ import os
 import io
 import logging
 from PIL import Image
-from wrappers import ImageModel, EvaluatorModel, LossModel, OptimizerModel
+from wrappers import ImageModel, LanguageModel
 
 class VisualNudge:
     """
@@ -18,9 +18,9 @@ class VisualNudge:
         save_best_prompts: bool,
         initial_prompt: str,
         image_editing_model: ImageModel,
-        evaluator_model: EvaluatorModel, 
-        loss_model: LossModel, 
-        optimizer_model: OptimizerModel,
+        evaluator_model: LanguageModel,
+        loss_model: LanguageModel, 
+        optimizer_model: LanguageModel,
     ):
         self.enable_optimization = enable_optimization
         self.iterations = iterations
@@ -94,13 +94,13 @@ class VisualNudge:
                     # 2. Evaluate the edit
                     if self.enable_tournament_mode and context_image_bytes:
                         # Use the previous and current edited images
-                        evaluation = self.evaluator_model.evaluate(
+                        evaluation = self.evaluator_model.get_response(
                             task="Compare the original and edited images.",
                             images=[context_image_bytes, edited_image_bytes]
                         )
                     else:
                         # Use the original and current edited images
-                        evaluation = self.evaluator_model.evaluate(
+                        evaluation = self.evaluator_model.get_response(
                             task="Compare the original and edited images.",
                             images=[original_image_bytes, edited_image_bytes]
                         )
@@ -112,7 +112,7 @@ class VisualNudge:
                     logging.info(f"{evaluation}\n")
 
                     # 3. Get critique (loss)
-                    critique = self.loss_model.get_critique(
+                    critique = self.loss_model.get_response(
                         choice=evaluation.choice,
                         reason=evaluation.reason,
                     )
@@ -124,7 +124,7 @@ class VisualNudge:
                     logging.info(f"{critique}\n")
 
                     # 4. Get new prompt from optimizer
-                    response = self.optimizer_model.update_prompt(
+                    response = self.optimizer_model.get_response(
                         current_prompt=current_prompt,
                         suggestions=critique.suggestions
                     )

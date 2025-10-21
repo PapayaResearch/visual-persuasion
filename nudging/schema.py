@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Type
 
 
 class IOSchema(BaseModel):
@@ -30,43 +30,71 @@ class IOSchema(BaseModel):
         return self.to_formatted_string()
 
 
-class EvaluatorInput(IOSchema):
-    """Input schema for evaluator model."""
-    task: str = Field(description="The image editing task description")
-    images: List[bytes] = Field(description="List of image bytes: [original, edited]")
+def create_evaluator_input_schema(task_description: str, images_description: str) -> Type[IOSchema]:
+    """
+    Creates an EvaluatorInput schema class with configurable field descriptions.
+    """
+    class EvaluatorInput(IOSchema):
+        """Input schema for evaluator model."""
+        task: str = Field(description=task_description)
+        images: List[bytes] = Field(description=images_description)
+    
+    return EvaluatorInput
 
 
-class LossInput(IOSchema):
-    """Input schema for loss model."""
-    choice: str = Field(description="Which image was chosen as better")
-    reason: str = Field(description="Reason for the choice")
+def create_evaluator_output_schema(choice_description: str, reason_description: str) -> Type[IOSchema]:
+    """
+    Creates an EvaluatorOutput schema class with configurable field descriptions.
+    """
+    class EvaluatorOutput(IOSchema):
+        """Output schema for evaluator model."""
+        choice: str = Field(description=choice_description)
+        reason: str = Field(description=reason_description)
+    
+    return EvaluatorOutput
 
 
-class OptimizerInput(IOSchema):
-    """Input schema for optimizer model."""
-    current_prompt: str = Field(description="The current image editing prompt")
-    suggestions: str = Field(description="Suggestions for improvement")
+def create_loss_input_schema(choice_description: str, reason_description: str) -> Type[IOSchema]:
+    """
+    Creates a LossInput schema class with configurable field descriptions.
+    """
+    class LossInput(IOSchema):
+        """Input schema for loss model."""
+        choice: str = Field(description=choice_description)
+        reason: str = Field(description=reason_description)
+    
+    return LossInput
 
 
-class EvaluationOutput(IOSchema):
-    """Output schema for evaluator model."""
-    choice: str = Field(
-        description="Which image is better: 'original' or 'edited'"
-    )
-    reason: str = Field(
-        description="Detailed explanation of why the chosen image is more appealing"
-    )
+def create_loss_output_schema(suggestions_description: str) -> Type[IOSchema]:
+    """
+    Creates a CritiqueOutput schema class with configurable field descriptions.
+    """
+    class LossOutput(IOSchema):
+        """Output schema for loss model."""
+        suggestions: str = Field(description=suggestions_description)
+    
+    return LossOutput
 
 
-class CritiqueOutput(IOSchema):
-    """Output schema for loss model."""
-    suggestions: str = Field(
-        description="Concrete, actionable suggestions for improving the next iteration, formatted as a bulleted list"
-    )
+def create_optimizer_input_schema(current_prompt_description: str, suggestions_description: str) -> Type[IOSchema]:
+    """
+    Creates an OptimizerInput schema class with configurable field descriptions.
+    """
+    class OptimizerInput(IOSchema):
+        """Input schema for optimizer model."""
+        current_prompt: str = Field(description=current_prompt_description)
+        suggestions: str = Field(description=suggestions_description)
+    
+    return OptimizerInput
 
 
-class OptimizedPromptOutput(IOSchema):
-    """Output schema for optimizer model."""
-    new_prompt: str = Field(
-        description="The refined image editing instruction, incorporating feedback while keeping successful elements"
-    )
+def create_optimizer_output_schema(new_prompt_description: str) -> Type[IOSchema]:
+    """
+    Creates an OptimizedPromptOutput schema class with configurable field descriptions.
+    """
+    class OptimizedPromptOutput(IOSchema):
+        """Output schema for optimizer model."""
+        new_prompt: str = Field(description=new_prompt_description)
+    
+    return OptimizedPromptOutput

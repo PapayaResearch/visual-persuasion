@@ -6,7 +6,7 @@ import io
 import litellm
 import logging
 import json
-from schema import IOSchema, EvaluatorInput, EvaluationOutput, LossInput, CritiqueOutput, OptimizerInput, OptimizedPromptOutput
+from schema import IOSchema
 
 
 class ImageModel(ABC):
@@ -45,15 +45,15 @@ class LanguageModel:
     def __init__(
         self,
         system_prompt: str,
-        api_call: callable,
         input_schema: Type[IOSchema],
         output_schema: Type[IOSchema],
+        api_call: callable,
         enable_json_schema_validation: bool = True
     ):
         self.system_prompt = system_prompt
-        self.api_call = api_call
         self.input_schema = input_schema
         self.output_schema = output_schema
+        self.api_call = api_call
         
         # Enable JSON schema validation for models that don't natively support it
         if enable_json_schema_validation:
@@ -143,73 +143,3 @@ class LanguageModel:
         result = self.output_schema(**parsed_json)
         
         return result
-
-
-######################
-# Model Wrappers
-######################
-
-class EvaluatorModel:
-    """
-    A wrapper for the VLM that evaluates the edited image.
-    """
-    def __init__(self, system_prompt: str, api_call: callable):
-        self.wrapper = LanguageModel(
-            system_prompt=system_prompt,
-            api_call=api_call,
-            input_schema=EvaluatorInput,
-            output_schema=EvaluationOutput
-        )
-
-    def evaluate(self, task: str, images: List[bytes]) -> EvaluationOutput:
-        """
-        Compare original and edited images.
-        """
-        return self.wrapper.get_response(
-            task=task,
-            images=images
-        )
-
-
-class LossModel:
-    """
-    A wrapper for the LLM that generates a critique (the "loss").
-    """
-    def __init__(self, system_prompt: str, api_call: callable):
-        self.wrapper = LanguageModel(
-            system_prompt=system_prompt,
-            api_call=api_call,
-            input_schema=LossInput,
-            output_schema=CritiqueOutput
-        )
-
-    def get_critique(self, choice: str, reason: str) -> CritiqueOutput:
-        """
-        Generates a critique based on the evaluator's choice and reason.
-        """
-        return self.wrapper.get_response(
-            choice=choice,
-            reason=reason
-        )
-
-
-class OptimizerModel:
-    """
-    A wrapper for the LLM that updates the prompt.
-    """
-    def __init__(self, system_prompt: str, api_call: callable):
-        self.wrapper = LanguageModel(
-            system_prompt=system_prompt,
-            api_call=api_call,
-            input_schema=OptimizerInput,
-            output_schema=OptimizedPromptOutput
-        )
-
-    def update_prompt(self, current_prompt: str, suggestions: str) -> OptimizedPromptOutput:
-        """
-        Generates a new prompt based on the current prompt and feedback.
-        """
-        return self.wrapper.get_response(
-            current_prompt=current_prompt,
-            suggestions=suggestions
-        )
