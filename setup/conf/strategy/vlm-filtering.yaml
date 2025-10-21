@@ -3,6 +3,8 @@ _target_: setup.strategy.VLMFiltering
 num_folders: ${dataset.num_folders}
 num_evaluate_per_folder: ${dataset.num_evaluate_per_folder}
 num_process_per_folder: ${dataset.num_process_per_folder}
+evaluator_prompt: |
+  Select the best image from the provided images.
 evaluator_model:
   _target_: shared.wrappers.LanguageModel
   system_prompt: |

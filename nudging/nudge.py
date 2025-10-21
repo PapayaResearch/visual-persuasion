@@ -18,6 +18,7 @@ class VisualNudge:
         save_best_prompts: bool,
         initial_prompt: str,
         image_editing_model: ImageModel,
+        evaluator_prompt: str,
         evaluator_model: LanguageModel,
         loss_model: LanguageModel, 
         optimizer_model: LanguageModel,
@@ -29,6 +30,7 @@ class VisualNudge:
         self.save_best_prompts = save_best_prompts
         self.initial_prompt = initial_prompt
         self.image_editing_model = image_editing_model
+        self.evaluator_prompt = evaluator_prompt
         self.evaluator_model = evaluator_model
         self.loss_model = loss_model
         self.optimizer_model = optimizer_model
@@ -95,13 +97,13 @@ class VisualNudge:
                     if self.enable_tournament_mode and context_image_bytes:
                         # Use the previous and current edited images
                         evaluation = self.evaluator_model.get_response(
-                            task="Compare the original and edited images.",
+                            task=self.evaluator_prompt,
                             images=[context_image_bytes, edited_image_bytes]
                         )
                     else:
                         # Use the original and current edited images
                         evaluation = self.evaluator_model.get_response(
-                            task="Compare the original and edited images.",
+                            task=self.evaluator_prompt,
                             images=[original_image_bytes, edited_image_bytes]
                         )
                     

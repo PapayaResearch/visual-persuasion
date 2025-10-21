@@ -11,9 +11,11 @@ class EvaluationPipeline:
     def __init__(
         self, 
         num_images: int,
+        evaluator_prompt: str,
         evaluator_model: LanguageModel
     ):
         self.num_images = num_images
+        self.evaluator_prompt = evaluator_prompt
         self.evaluator_model = evaluator_model
     
     def run(self, image_dir: str, model: str):
@@ -85,7 +87,7 @@ class EvaluationPipeline:
                 
                 # Evaluate the images without telling the VLM which is which
                 evaluation = self.evaluator_model.get_response(
-                    task="Compare the two images.",
+                    task=self.evaluator_prompt,
                     images=[image1_bytes, image2_bytes]
                 )
 

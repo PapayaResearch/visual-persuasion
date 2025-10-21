@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Union
 
 #######################
 # API Settings
@@ -14,6 +15,17 @@ class ApiCall:
     temperature: float
     # Maximum tokens in API response
     max_tokens: int
+    # Delay before API calls to avoid rate limits
+    delay: int
+
+@dataclass
+class ImageApiCall:
+    # Hydra target for API call function
+    _target_: str
+    # API key environment variable name
+    key_name: str
+    # Model name for API calls
+    model: str
     # Delay before API calls to avoid rate limits
     delay: int
 
@@ -33,11 +45,20 @@ class SchemaFactory:
 #######################
 
 @dataclass
-class ImageModel:
-    # Hydra target for image editing model class
+class Gemini:
+    # Hydra target for Gemini model class
     _target_: str
-    # Additional model-specific parameters (from model configs)
-    # These will be filled in by the model-specific YAML files
+    # API key environment variable name
+    key_name: str
+    # Model name
+    model: str
+
+@dataclass
+class LiteLLM:
+    # Hydra target for LiteLLM model class
+    _target_: str
+    # API call configuration
+    api_call: ImageApiCall
 
 @dataclass
 class LanguageModel:
@@ -53,6 +74,19 @@ class LanguageModel:
     api_call: ApiCall
     # Enable JSON schema validation for models that don't natively support it
     enable_json_schema_validation: bool = True
+
+#######################
+# Strategy Settings
+#######################
+
+@dataclass
+class Strategy:
+    # Enable prompt optimization pipeline (disable for zero-shot testing)
+    enable_optimization: bool
+    # Enable tournament mode (keep track of the last chosen image instead of the previous image)
+    enable_tournament_mode: bool
+    # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
+    save_best_prompts: bool
 
 #######################
 # Main Pipeline
@@ -74,8 +108,10 @@ class VisualNudge:
     save_best_prompts: bool
     # Initial prompt for image editing
     initial_prompt: str
-    # Image editing model configuration
-    image_editing_model: ImageModel
+    # Image editing model configuration (Gemini or LiteLLM)
+    image_editing_model: Union[Gemini, LiteLLM]
+    # Prompt for the evaluator model
+    evaluator_prompt: str
     # Evaluator language model configuration
     evaluator_model: LanguageModel
     # Loss model configuration
@@ -93,6 +129,8 @@ class Evaluate:
     _target_: str
     # Number of images to evaluate (set to -1 to evaluate all images in the data directory)
     num_images: int
+    # Prompt for the evaluator model
+    evaluator_prompt: str
     # Evaluator model configuration
     evaluator_model: LanguageModel
 
@@ -170,6 +208,8 @@ class Config:
     provider: Provider
     # API provider configuration for image models
     provider_image: Provider
+    # Strategy configuration
+    strategy: Strategy
     # General experiment settings
     general: General
     # Logging configuration

@@ -66,11 +66,13 @@ class VLMFiltering:
         num_folders: int,
         num_evaluate_per_folder: int,
         num_process_per_folder: int,
+        evaluator_prompt: str,
         evaluator_model: LanguageModel,
     ):
         self.num_folders = num_folders
         self.num_evaluate_per_folder = num_evaluate_per_folder
         self.num_process_per_folder = num_process_per_folder
+        self.evaluator_prompt = evaluator_prompt
         self.evaluator_model = evaluator_model
 
     def create_dataset(self, all_folders: List[str], dst_dir: str):
@@ -142,7 +144,7 @@ class VLMFiltering:
                         image_bytes_list.append(f.read())
                 
                 response = self.evaluator_model.get_response(
-                    task="Select the best image from the provided images.",
+                    task=self.evaluator_prompt,
                     images=image_bytes_list
                 )
 

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Union
 
 #######################
 # API Settings
@@ -8,12 +9,10 @@ from dataclasses import dataclass
 class ApiCall:
     # Hydra target for API call function
     _target_: str
+    # API key environment variable name
+    key_name: str
     # Model name for API calls
     model: str
-    # Sampling temperature for responses
-    temperature: float
-    # Maximum tokens in API response
-    max_tokens: int
     # Delay before API calls to avoid rate limits
     delay: int
 
@@ -33,11 +32,20 @@ class SchemaFactory:
 #######################
 
 @dataclass
-class ImageModel:
-    # Hydra target for image editing model class
+class Gemini:
+    # Hydra target for Gemini model class
     _target_: str
-    # Additional model-specific parameters (from model configs)
-    # These will be filled in by the model-specific YAML files
+    # API key environment variable name
+    key_name: str
+    # Model name
+    model: str
+
+@dataclass
+class LiteLLM:
+    # Hydra target for LiteLLM model class
+    _target_: str
+    # API call configuration
+    api_call: ApiCall
 
 @dataclass
 class LanguageModel:
@@ -51,15 +59,13 @@ class LanguageModel:
     output_schema: SchemaFactory
     # API call configuration
     api_call: ApiCall
-    # Enable JSON schema validation for models that don't natively support it
-    enable_json_schema_validation: bool = True
 
 @dataclass
 class ImageEnhancer:
     # Hydra target for image enhancement class
     _target_: str
-    # Model to be used for image enhancement
-    enhancement_model: ImageModel
+    # Model to be used for image enhancement (Gemini or LiteLLM)
+    enhancement_model: Union[Gemini, LiteLLM]
     # The prompt for enhancing the original images
     enhancement_prompt: str
 
@@ -67,8 +73,8 @@ class ImageEnhancer:
 class BackgroundProcessor:
     # Hydra target for background processing class
     _target_: str
-    # Model to be used for background processing
-    image_editing_model: ImageModel
+    # Model to be used for background processing (Gemini or LiteLLM)
+    image_editing_model: Union[Gemini, LiteLLM]
     # Maximum number of images to preview from the with-background subset (set to -1 to preview all)
     num_previews_with_background: int
     # Maximum number of images to preview from the without-background subset (set to -1 to preview all)
@@ -90,11 +96,23 @@ class BackgroundProcessor:
 class RandomSampling:
     # Hydra target for random sampling strategy
     _target_: str
+    # Number of image folders to process (set to -1 to process all)
+    num_folders: int
+    # Number of images to finally select for processing from each folder (set to -1 to choose all)
+    num_process_per_folder: int
 
 @dataclass
 class VLMFiltering:
     # Hydra target for VLM filtering strategy
     _target_: str
+    # Number of image folders to process (set to -1 to process all)
+    num_folders: int
+    # Number of images to evaluate from each folder (set to -1 to evaluate all)
+    num_evaluate_per_folder: int
+    # Number of images to finally select for processing from each folder (set to -1 to choose all)
+    num_process_per_folder: int
+    # Prompt for the evaluator model
+    evaluator_prompt: str
     # Evaluator model configuration
     evaluator_model: LanguageModel
 
@@ -162,7 +180,7 @@ class Config:
     # API provider configuration for image models
     provider_image: Provider
     # Strategy configuration (RandomSampling or VLMFiltering)
-    strategy: RandomSampling  # Or VLMFiltering
+    strategy: Union[RandomSampling, VLMFiltering]
     # General experiment settings
     general: General
     # Image enhancement configuration

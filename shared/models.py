@@ -16,6 +16,7 @@ class Gemini(ImageModel):
         
     def edit(self, prompt: str, image_bytes: bytes):            
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        prompt += "\nReturn a single image as output, do not give any options."
 
         # API call
         try:
@@ -46,6 +47,7 @@ class Gemini(ImageModel):
     def edit_with_context(self, prompt: str, image_bytes: bytes, context_image_bytes: bytes):
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         context_image = Image.open(io.BytesIO(context_image_bytes)).convert("RGB")
+        prompt += "\nReturn a single image as output, do not give any options."
 
         # API call
         try:
