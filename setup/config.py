@@ -18,6 +18,17 @@ class ApiCall:
     delay: int
 
 #######################
+# Schema Settings
+#######################
+
+@dataclass
+class SchemaFactory:
+    # Hydra target for schema factory function
+    _target_: str
+    # Field descriptions for the schema (as kwargs)
+    # These will be passed to create_*_schema functions
+
+#######################
 # Model Components
 #######################
 
@@ -27,6 +38,21 @@ class ImageModel:
     _target_: str
     # Additional model-specific parameters (from model configs)
     # These will be filled in by the model-specific YAML files
+
+@dataclass
+class LanguageModel:
+    # Hydra target for language model class
+    _target_: str
+    # System prompt for the task
+    system_prompt: str
+    # Input schema factory configuration
+    input_schema: SchemaFactory
+    # Output schema factory configuration
+    output_schema: SchemaFactory
+    # API call configuration
+    api_call: ApiCall
+    # Enable JSON schema validation for models that don't natively support it
+    enable_json_schema_validation: bool = True
 
 @dataclass
 class ImageEnhancer:
@@ -61,11 +87,16 @@ class BackgroundProcessor:
 #######################
 
 @dataclass
-class Strategy:
-    # Hydra target for strategy class
+class RandomSampling:
+    # Hydra target for random sampling strategy
     _target_: str
-    # Additional strategy-specific parameters
-    # These will be filled in by the strategy-specific YAML files
+
+@dataclass
+class VLMFiltering:
+    # Hydra target for VLM filtering strategy
+    _target_: str
+    # Evaluator model configuration
+    evaluator_model: LanguageModel
 
 #######################
 # Dataset Settings
@@ -75,8 +106,6 @@ class Strategy:
 class Dataset:
     # Name of the dataset to be processed
     name: str
-    # Subfolder within the source directory containing the image folders
-    subfolder: str
     # Number of image folders to process (set to -1 to process all)
     num_folders: int
     # Number of images to evaluate from each folder if there is filtering involved (set to -1 to evaluate all)
@@ -130,8 +159,10 @@ class Config:
     dataset: Dataset
     # API provider configuration
     provider: Provider
-    # Strategy configuration
-    strategy: Strategy
+    # API provider configuration for image models
+    provider_image: Provider
+    # Strategy configuration (RandomSampling or VLMFiltering)
+    strategy: RandomSampling  # Or VLMFiltering
     # General experiment settings
     general: General
     # Image enhancement configuration

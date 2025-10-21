@@ -168,6 +168,8 @@ class Config:
     analyze: Analyze
     # API provider configuration
     provider: Provider
+    # API provider configuration for image models
+    provider_image: Provider
     # General experiment settings
     general: General
     # Logging configuration
