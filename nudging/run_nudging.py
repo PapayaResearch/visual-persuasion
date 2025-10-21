@@ -4,7 +4,7 @@ import hydra
 from datetime import datetime
 from omegaconf import OmegaConf
 from config import Config
-from utils.misc import print_config
+from shared.misc import print_config
 
 # Initialize Hydra config store
 config_store = hydra.core.config_store.ConfigStore.instance()

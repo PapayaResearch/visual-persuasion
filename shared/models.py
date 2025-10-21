@@ -1,4 +1,4 @@
-from wrappers import ImageModel
+from shared.wrappers import ImageModel
 import logging
 import os
 import io

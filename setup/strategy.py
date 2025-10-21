@@ -2,7 +2,7 @@ import random
 import logging
 import os
 from typing import List
-from wrappers import LanguageModel
+from shared.wrappers import LanguageModel
 
 
 class RandomSampling:

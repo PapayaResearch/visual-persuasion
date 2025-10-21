@@ -2,7 +2,7 @@ import os
 import io
 import logging
 from PIL import Image
-from wrappers import ImageModel, LanguageModel
+from shared.wrappers import ImageModel, LanguageModel
 
 class VisualNudge:
     """

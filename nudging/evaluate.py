@@ -2,7 +2,7 @@ import os
 import logging
 import random
 import re
-from wrappers import LanguageModel
+from shared.wrappers import LanguageModel
 
 class EvaluationPipeline:
     """

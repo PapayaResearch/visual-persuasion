@@ -59,7 +59,7 @@ dataset:
 
 image_enhancer:
   # Hydra target class for image enhancement
-  _target_: enhance.ImageEnhancer
+  _target_: setup.enhance.ImageEnhancer
   # Model to be used for image enhancement
   enhancement_model: ${model}
   # The prompt for enhancing the original images
@@ -73,7 +73,7 @@ image_enhancer:
 
 background_processor:
   # Hydra target class for background processing
-  _target_: background.BackgroundProcessor
+  _target_: setup.background.BackgroundProcessor
 
   # Model to be used for background processing
   image_editing_model: ${model}

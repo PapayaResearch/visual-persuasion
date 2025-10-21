@@ -1,12 +1,40 @@
 from abc import ABC, abstractmethod
 import base64
 from typing import Tuple, List, Type
+from pydantic import BaseModel
 from PIL import Image
 import io
 import litellm
 import logging
 import json
-from schema import IOSchema
+
+
+class IOSchema(BaseModel):
+    """
+    Base class for all input and output schemas.
+    Provides automatic formatting for logging and message construction.
+    """
+    
+    def to_formatted_string(self) -> str:
+        """
+        Converts the schema to a formatted string for logging or message construction.
+        Only includes string fields, skips lists (used for images).
+        """
+        parts = []
+        for field_name, field_value in self.model_dump().items():
+            # Skip None values, list fields (images), and bytes fields (images)
+            if field_value is None or isinstance(field_value, (list, bytes)):
+                continue
+            
+            # Format: FIELD_NAME:\nvalue\n\n
+            formatted_field = f"{field_name.upper()}:\n{field_value}\n\n"
+            parts.append(formatted_field)
+        
+        return "".join(parts).strip()
+    
+    def __str__(self) -> str:
+        """String representation using formatted output."""
+        return self.to_formatted_string()
 
 
 class ImageModel(ABC):

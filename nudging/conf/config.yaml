@@ -28,11 +28,11 @@ general:
 
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)
-  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_21-57-32
+  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_23-13-48
 
   ## ANALYSIS CONFIGURATION
   # Directory to analyze (directory with evaluation log files)
-  analysis_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_12-59-12/evaluation/gpt-4o-mini
+  analysis_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_23-13-48/evaluation/gpt-4o-mini
   
   ## API CONFIGURATION
   # Model for all API calls
@@ -50,7 +50,7 @@ general:
 
 nudge:
   # Hydra target class for the main pipeline orchestrator
-  _target_: nudge.VisualNudge
+  _target_: nudging.nudge.VisualNudge
 
   # Total number of iterations to run per image
   iterations: ${general.iterations}
@@ -75,7 +75,7 @@ nudge:
 
   evaluator_model:
     # Hydra target class for the evaluator model
-    _target_: wrappers.LanguageModel
+    _target_: shared.wrappers.LanguageModel
 
     # The system prompt for the image comparison task
     system_prompt: |
@@ -84,7 +84,7 @@ nudge:
     
     # Input schema for the evaluator model
     input_schema:
-      _target_: schema.create_evaluator_input_schema
+      _target_: nudging.schema.create_evaluator_input_schema
       task_description: |
         The image editing task description
       images_description: |
@@ -92,7 +92,7 @@ nudge:
     
     # Output schema for the evaluator model
     output_schema:
-      _target_: schema.create_evaluator_output_schema
+      _target_: nudging.schema.create_evaluator_output_schema
       choice_description: |
         Which image is better: 'original' or 'edited'
       choice_options: ['original', 'edited']
@@ -102,7 +102,7 @@ nudge:
     # Wrapper function for the API
     api_call:
       # Hydra target class for the API call
-      _target_: api.create_text_api_call
+      _target_: shared.api.create_text_api_call
       # The VLM used to compare the original and edited images
       model: ${general.model}
       # Sampling temperature for the model's output
@@ -114,7 +114,7 @@ nudge:
 
   loss_model:
     # Hydra target class for the loss model
-    _target_: wrappers.LanguageModel
+    _target_: shared.wrappers.LanguageModel
 
     # The system prompt for the loss generation task
     system_prompt: |
@@ -124,7 +124,7 @@ nudge:
 
     # Input schema for the loss model
     input_schema:
-      _target_: schema.create_loss_input_schema
+      _target_: nudging.schema.create_loss_input_schema
       choice_description: |
         Which image was chosen as better
       reason_description: |
@@ -132,14 +132,14 @@ nudge:
     
     # Output schema for the loss model
     output_schema:
-      _target_: schema.create_loss_output_schema
+      _target_: nudging.schema.create_loss_output_schema
       suggestions_description: |
         Concrete, actionable suggestions for improving the next iteration, formatted as a bulleted list
 
     # Wrapper function for the API
     api_call:
       # Hydra target class for the API call
-      _target_: api.create_text_api_call
+      _target_: shared.api.create_text_api_call
       # The LLM used to generate the critique (loss)
       model: ${general.model}
       # Sampling temperature for the model's output
@@ -151,7 +151,7 @@ nudge:
 
   optimizer_model:
     # Hydra target class for the optimizer model
-    _target_: wrappers.LanguageModel
+    _target_: shared.wrappers.LanguageModel
 
     # The system prompt for the prompt optimization task
     system_prompt: |
@@ -161,7 +161,7 @@ nudge:
 
     # Input schema for the optimizer model
     input_schema:
-      _target_: schema.create_optimizer_input_schema
+      _target_: nudging.schema.create_optimizer_input_schema
       current_prompt_description: |
         The current image editing prompt
       suggestions_description: |
@@ -169,14 +169,14 @@ nudge:
     
     # Output schema for the optimizer model
     output_schema:
-      _target_: schema.create_optimizer_output_schema
+      _target_: nudging.schema.create_optimizer_output_schema
       new_prompt_description: |
         The refined image editing instruction, incorporating feedback while keeping successful elements
 
     # Wrapper function for the API
     api_call:
       # Hydra target class for the API call
-      _target_: api.create_text_api_call
+      _target_: shared.api.create_text_api_call
       # The LLM used to generate the new, optimized prompt
       model: ${general.model}
       # Sampling temperature for the model's output
@@ -192,14 +192,14 @@ nudge:
 
 evaluate:
   # Hydra target class for the evaluation pipeline
-  _target_: evaluate.EvaluationPipeline
+  _target_: nudging.evaluate.EvaluationPipeline
 
   # Number of images to evaluate (set to -1 to evaluate all images in the data directory)
   num_images: -1
 
   evaluator_model:
     # Hydra target class for the evaluator model
-    _target_: wrappers.LanguageModel
+    _target_: shared.wrappers.LanguageModel
 
     # The system prompt for the image comparison task
     system_prompt: |
@@ -207,7 +207,7 @@ evaluate:
     
     # Input schema for the evaluator model
     input_schema:
-      _target_: schema.create_evaluator_input_schema
+      _target_: nudging.schema.create_evaluator_input_schema
       task_description: |
         The image comparison task description
       images_description: |
@@ -215,7 +215,7 @@ evaluate:
     
     # Output schema for the evaluator model
     output_schema:
-      _target_: schema.create_evaluator_output_schema
+      _target_: nudging.schema.create_evaluator_output_schema
       choice_description: |
         Which image is better: 'first' or 'second'
       choice_options: ['first', 'second']
@@ -225,7 +225,7 @@ evaluate:
     # Wrapper function for the API
     api_call:
       # Hydra target class for the API call
-      _target_: api.create_text_api_call
+      _target_: shared.api.create_text_api_call
       # The VLM used to compare the original and edited images
       model: ${general.model}
       # Sampling temperature for the model's output
@@ -241,7 +241,7 @@ evaluate:
 
 analyze:
   # Hydra target class for the analysis pipeline
-  _target_: analyze.EvaluationAnalyzer
+  _target_: nudging.analyze.EvaluationAnalyzer
 
 ######################
 # Logging Settings

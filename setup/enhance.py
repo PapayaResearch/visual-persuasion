@@ -1,6 +1,6 @@
 import os
 import logging
-from wrappers import ImageModel
+from shared.wrappers import ImageModel
 
 class ImageEnhancer:
     def __init__(

@@ -1,7 +1,7 @@
 import os
 import io
 import logging
-from wrappers import ImageModel
+from shared.wrappers import ImageModel
 from typing import Tuple
 
 import numpy as np
