@@ -1,0 +1,4 @@
+# Zero-Shot Nudging Strategy Configuration
+enable_optimization: false
+enable_tournament_mode: false
+save_best_prompts: false

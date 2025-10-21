@@ -8,8 +8,10 @@ defaults:
   - provider: openai
   # Provider for image editing model (e.g., google, openai)
   - provider_image: google
-  # Image editing model (e.g., nanobanana, instructpix2pix)
+  # Image editing model (e.g., nanobanana-gemini, nanobanana-litellm)
   - model: nanobanana-gemini
+  # Strategy for nudging (e.g., zero-shot, prompt-optimization, tournament-of-images, tournament-of-prompts)
+  - strategy: prompt-optimization
 
 ######################
 # General Settings
@@ -22,13 +24,6 @@ general:
   iterations: 2
   # Enable previous image context during editing
   enable_editing_context: true
-
-  # Enable prompt optimization pipeline (disable for zero-shot testing)
-  enable_optimization: true
-  # Enable tournament mode (keep track of the last chosen image instead of the previous image)
-  enable_tournament_mode: true
-  # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
-  save_best_prompts: true
 
   # Enable the evaluation pipeline
   enable_evaluation: true
@@ -65,11 +60,11 @@ nudge:
   enable_editing_context: ${general.enable_editing_context}
 
   # Enable prompt optimization pipeline (disable for zero-shot testing)
-  enable_optimization: ${general.enable_optimization}
+  enable_optimization: ${strategy.enable_optimization}
   # Enable tournament mode (keep track of the last chosen image instead of the previous image)
-  enable_tournament_mode: ${general.enable_tournament_mode}
+  enable_tournament_mode: ${strategy.enable_tournament_mode}
   # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
-  save_best_prompts: ${general.save_best_prompts}
+  save_best_prompts: ${strategy.save_best_prompts}
 
   # The initial prompt for the image editing task
   initial_prompt: |
