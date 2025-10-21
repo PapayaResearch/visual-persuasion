@@ -106,6 +106,19 @@ class LanguageModel:
                                 }
                             ]
                         })
+            elif isinstance(field_value, bytes):
+                # Single image bytes field
+                messages.append({
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": self._encode_image(field_value)
+                            }
+                        }
+                    ]
+                })
         
         # Add text fields as a single formatted message
         text_content = inputs.to_formatted_string()
