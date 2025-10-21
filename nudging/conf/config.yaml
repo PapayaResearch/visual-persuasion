@@ -28,11 +28,11 @@ general:
 
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)
-  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-22_00-43-34
+  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-22_01-15-54
 
   ## ANALYSIS CONFIGURATION
   # Directory to analyze (directory with evaluation log files)
-  analysis_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-21_23-13-48/evaluation/gpt-4o-mini
+  analysis_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-22_01-15-54/evaluation/gpt-4o-mini
   
   ## API CONFIGURATION
   # Model for all API calls
@@ -253,6 +253,8 @@ evaluate:
 analyze:
   # Hydra target class for the analysis pipeline
   _target_: nudging.analyze.EvaluationAnalyzer
+  # Number of preview images to generate
+  num_previews: 5
 
 ######################
 # Logging Settings
