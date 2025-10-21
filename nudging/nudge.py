@@ -2,7 +2,7 @@ import os
 import io
 import logging
 from PIL import Image
-from wrappers import ImageEditingModel, EvaluatorModel, LossModel, OptimizerModel
+from wrappers import ImageModel, EvaluatorModel, LossModel, OptimizerModel
 
 class VisualNudge:
     """
@@ -17,7 +17,7 @@ class VisualNudge:
         enable_tournament_mode: bool,
         save_best_prompts: bool,
         initial_prompt: str,
-        image_editing_model: ImageEditingModel,
+        image_editing_model: ImageModel,
         evaluator_model: EvaluatorModel, 
         loss_model: LossModel, 
         optimizer_model: OptimizerModel,
@@ -106,34 +106,36 @@ class VisualNudge:
                             original_image_bytes,
                             edited_image_bytes
                         )
-
-                    if evaluation is None or evaluation.strip() == "":
+                    
+                    if evaluation is None:
                         logging.error("Evaluation failed. Skipping to next iteration.\n")
                         continue
 
-                    logging.info(f"VLM Evaluation:\n{evaluation}\n")
+                    vlm_choice = evaluation.choice
+                    vlm_reason = evaluation.reason
+                    evaluation = f"CHOICE: {vlm_choice}\nREASON: {vlm_reason}"
 
-                    # Parse the choice from the evaluation
-                    if 'edited' in evaluation.split("REASON")[0].lower():
-                        vlm_choice = "edited"
-                    else:
-                        vlm_choice = "original"
+                    logging.info(f"VLM Evaluation:\n{evaluation}\n")
 
                     # 3. Get critique (loss)
                     critique = self.loss_model.get_critique(evaluation)
 
-                    if critique is None or critique.strip() == "":
+                    if critique is None:
                         logging.error("Critique generation failed. Skipping to next iteration.")
                         continue
+
+                    critique = f"ISSUE: {critique.issue}\nSUGGESTIONS: {critique.suggestions}"
 
                     logging.info(f"Critique (Loss):\n{critique}\n")
 
                     # 4. Get new prompt from optimizer
                     new_prompt = self.optimizer_model.update_prompt(current_prompt, critique)
 
-                    if new_prompt is None or new_prompt.strip() == "":
+                    if new_prompt is None:
                         logging.error("Prompt optimization failed. Skipping to next iteration.")
                         continue
+
+                    new_prompt = new_prompt.prompt
                     
                     if self.enable_tournament_mode:
                         # In tournament mode, only update context if the new image was preferred

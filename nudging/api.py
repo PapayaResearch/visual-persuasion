@@ -13,18 +13,24 @@ def create_text_api_call(
     """
     Factory for creating the api_call function for text generation tasks.
     """
-    def api_call(messages):
+    def api_call(messages, response_format=None):
         """
         Calls the LLM API with the provided messages.
         """
-        time.sleep(delay) # Delay before each call
+        time.sleep(delay)  # Delay before each call
         try:
-            return litellm.completion(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens
-            ).choices[0].message.content
+            kwargs = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            
+            # Add response_format if provided (for structured outputs)
+            if response_format is not None:
+                kwargs["response_format"] = response_format
+            
+            return litellm.completion(**kwargs)
         except Exception as e:
             logging.error(f"Litellm API call failed: {e}\n")
             return None

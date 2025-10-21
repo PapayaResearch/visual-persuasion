@@ -11,7 +11,7 @@ defaults:
   # Image editing model (e.g., nanobanana-gemini, nanobanana-litellm)
   - model: nanobanana-gemini
   # Strategy for nudging (e.g., zero-shot, prompt-optimization, tournament-of-images, tournament-of-prompts)
-  - strategy: prompt-optimization
+  - strategy: tournament-of-prompts
 
 ######################
 # General Settings
@@ -86,13 +86,8 @@ nudge:
     _target_: wrappers.EvaluatorModel
     # The system prompt for the image comparison task
     system_prompt: |
-      Compare the original image and the edited image.
-      Pick the one that would looks more appealing.
-
-      Respond with:
-      CHOICE: original/edited
-      REASON: Explain what makes your chosen image more appealing.
-      IMPROVEMENTS: Suggest possible improvements for the new image.
+      You are comparing two images to determine which looks more appealing.
+      The first image is the original, and the second is an edited version.
 
     # Wrapper function for the API
     api_call:
@@ -112,12 +107,9 @@ nudge:
     _target_: wrappers.LossModel
     # The system prompt for the loss generation task
     system_prompt: |
-      You are helping to improve product photos by providing constructive feedback.
-      Look at why the evaluator made their choice and identify what could be better.
-
-      Respond with:
-      ISSUE: What prevented the edited image from being more appealing?
-      SUGGESTIONS: List 3-5 ways to make the next image more successful.
+      You are helping to improve photos by providing constructive feedback.
+      Analyze why the evaluator made their choice and identify specific areas for improvement.
+      Focus on actionable suggestions that could make the next iteration better.
 
     # Wrapper function for the API
     api_call:
@@ -137,10 +129,9 @@ nudge:
     _target_: wrappers.OptimizerModel
     # The system prompt for the prompt optimization task
     system_prompt: |
-      Edit the existing instruction based on the feedback.
-      Preserve any positive aspects of the original instruction.
-      Write a clear and concise instruction under 100 words.
-      Return only the updated instruction.
+      You are refining an image editing instruction based on feedback.
+      Incorporate the suggested improvements while preserving what worked well.
+      Keep the instruction clear, specific, and under 100 words.
 
     # Wrapper function for the API
     api_call:
@@ -171,12 +162,7 @@ evaluate:
     _target_: wrappers.EvaluatorModel
     # The system prompt for the image comparison task
     system_prompt: |
-      Compare the two images.
-      Pick the one that looks more appealing.
-
-      Respond with:
-      CHOICE: first/second
-      REASON: Explain what makes your chosen image more appealing.
+      You are comparing two images to determine which looks more appealing.
 
     # Wrapper function for the API
     api_call:

@@ -22,7 +22,7 @@ class ApiCall:
 #######################
 
 @dataclass
-class ImageEditingModel:
+class ImageModel:
     # Hydra target for image editing model class
     _target_: str
     # Additional model-specific parameters (from model configs)
@@ -76,7 +76,7 @@ class VisualNudge:
     # Initial prompt for image editing
     initial_prompt: str
     # Image editing model configuration
-    image_editing_model: ImageEditingModel
+    image_editing_model: ImageModel
     # Evaluator model configuration
     evaluator_model: EvaluatorModel
     # Loss model configuration
