@@ -22,7 +22,7 @@ class ApiCall:
 #######################
 
 @dataclass
-class ImageEditingModel:
+class ImageModel:
     # Hydra target for image editing model class
     _target_: str
     # Additional model-specific parameters (from model configs)
@@ -33,7 +33,7 @@ class ImageEnhancer:
     # Hydra target for image enhancement class
     _target_: str
     # Model to be used for image enhancement
-    enhancement_model: ImageEditingModel
+    enhancement_model: ImageModel
     # The prompt for enhancing the original images
     enhancement_prompt: str
 
@@ -42,7 +42,7 @@ class BackgroundProcessor:
     # Hydra target for background processing class
     _target_: str
     # Model to be used for background processing
-    image_editing_model: ImageEditingModel
+    image_editing_model: ImageModel
     # Maximum number of images to preview from the with-background subset (set to -1 to preview all)
     num_previews_with_background: int
     # Maximum number of images to preview from the without-background subset (set to -1 to preview all)

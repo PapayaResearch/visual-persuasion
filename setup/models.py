@@ -1,4 +1,4 @@
-from wrappers import ImageEditingModel
+from wrappers import ImageModel
 import logging
 import os
 import io
@@ -6,7 +6,7 @@ from PIL import Image
 import base64
 from google import genai
 
-class Gemini(ImageEditingModel):
+class Gemini(ImageModel):
     """
     Implementation of Gemini-based image models for image editing.
     """
@@ -73,7 +73,7 @@ class Gemini(ImageEditingModel):
         
         return edited_image, edited_image_bytes
 
-class LiteLLM(ImageEditingModel):
+class LiteLLM(ImageModel):
     """
     Implementation of LiteLLM-based image models for image editing.
     """

@@ -4,7 +4,7 @@ import logging
 from typing import List, Tuple
 from PIL import Image
 
-class ImageEditingModel(ABC):
+class ImageModel(ABC):
     """
     Abstract base class for all image editing models.
     """

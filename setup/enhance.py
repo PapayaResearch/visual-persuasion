@@ -1,11 +1,11 @@
 import os
 import logging
-from wrappers import ImageEditingModel
+from wrappers import ImageModel
 
 class ImageEnhancer:
     def __init__(
         self,
-        enhancement_model: ImageEditingModel,
+        enhancement_model: ImageModel,
         enhancement_prompt: str
     ):
         self.enhancement_model = enhancement_model
