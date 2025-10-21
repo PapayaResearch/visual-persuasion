@@ -123,6 +123,8 @@ class Evaluate:
 class Analyze:
     # Hydra target class for the analysis pipeline
     _target_: str
+    # Number of preview images to generate
+    num_previews: 5
 
 #######################
 # Provider Settings

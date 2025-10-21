@@ -20,7 +20,7 @@ defaults:
 general:
   ## NUDGE CONFIGURATION
   # Directory containing the images to be tested
-  data_dir: ${hydra:runtime.cwd}/data/temp
+  data_dir: ${hydra:runtime.cwd}/data/test_dataset/with_background
   # Total number of iterations to run per image
   iterations: 2
   # Enable previous image context during editing
