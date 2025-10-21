@@ -54,8 +54,12 @@ nudge:
 
   # Total number of iterations to run per image
   iterations: ${general.iterations}
+
   # Enable previous image context during editing
   enable_editing_context: ${general.enable_editing_context}
+  # Additional prompt for editing context
+  editing_context_prompt: |
+    The first image is the original, the second image is the previous edit.
 
   # Enable prompt optimization pipeline (disable for zero-shot testing)
   enable_optimization: ${strategy.enable_optimization}
@@ -68,6 +72,9 @@ nudge:
   initial_prompt: |
     Make this product photo look more appealing.
     Keep the product itself exactly unchanged.
+  # Additional prompt to retain background state during editing
+  background_state_prompt: |
+    If the image does not have a background, do not add one.
 
   # Use the selected model from the defaults section
   image_editing_model: ${model}

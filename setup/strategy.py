@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import random
 import logging
 import os
@@ -5,7 +6,14 @@ from typing import List
 from shared.wrappers import LanguageModel
 
 
-class RandomSampling:
+class SamplingStrategy(ABC):
+    @abstractmethod
+    def create_dataset(self, all_folders: List[str], dst_dir: str):
+        """Abstract method to create a dataset from given folders."""
+        pass
+
+
+class RandomSampling(SamplingStrategy):
     def __init__(
         self,
         num_folders: int,
@@ -60,7 +68,7 @@ class RandomSampling:
                 logging.info(f"Copied image {image} from folder {folder_name}\n")
 
 
-class VLMFiltering:
+class VLMFiltering(SamplingStrategy):
     def __init__(
         self,
         num_folders: int,

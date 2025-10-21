@@ -14,9 +14,11 @@ class VisualNudge:
         enable_optimization: bool,
         iterations: int,
         enable_editing_context: bool,
+        editing_context_prompt: str,
         enable_tournament_mode: bool,
         save_best_prompts: bool,
         initial_prompt: str,
+        background_state_prompt: str,
         image_editing_model: ImageModel,
         evaluator_prompt: str,
         evaluator_model: LanguageModel,
@@ -26,9 +28,11 @@ class VisualNudge:
         self.enable_optimization = enable_optimization
         self.iterations = iterations
         self.enable_editing_context = enable_editing_context
+        self.editing_context_prompt = editing_context_prompt
         self.enable_tournament_mode = enable_tournament_mode
         self.save_best_prompts = save_best_prompts
         self.initial_prompt = initial_prompt
+        self.background_state_prompt = background_state_prompt
         self.image_editing_model = image_editing_model
         self.evaluator_prompt = evaluator_prompt
         self.evaluator_model = evaluator_model
@@ -67,7 +71,7 @@ class VisualNudge:
                 if self.enable_editing_context and context_image_bytes:
                     if self.enable_tournament_mode and self.save_best_prompts:
                         # Regenerate context image from best prompt so far
-                        context_image, context_image_bytes = self.image_editing_model.edit(best_prompt, original_image_bytes)
+                        context_image, context_image_bytes = self.image_editing_model.edit(f"{best_prompt}\n{self.background_state_prompt}", original_image_bytes)
                         if context_image is None:
                             logging.error("Context image regeneration failed. Skipping to next iteration.\n")
                             continue
@@ -78,11 +82,11 @@ class VisualNudge:
 
                     # Use original and previous edited images for context
                     logging.info("Using previous edited image for context during editing\n")
-                    edited_prompt = current_prompt + "\nThe first image is the original, the second image is the previous edit."
-                    edited_image, edited_image_bytes = self.image_editing_model.edit_with_context(edited_prompt, original_image_bytes, context_image_bytes)
+                    edited_prompt = f"{current_prompt}\n{self.editing_context_prompt}"
+                    edited_image, edited_image_bytes = self.image_editing_model.edit_with_context(f"{edited_prompt}\n{self.background_state_prompt}", original_image_bytes, context_image_bytes)
                 else:
                     # Use only the original image
-                    edited_image, edited_image_bytes = self.image_editing_model.edit(current_prompt, original_image_bytes)
+                    edited_image, edited_image_bytes = self.image_editing_model.edit(f"{current_prompt}\n{self.background_state_prompt}", original_image_bytes)
 
                 if edited_image is None:
                     logging.error("Image editing failed. Skipping to next iteration.\n")
@@ -160,7 +164,7 @@ class VisualNudge:
                 if self.enable_editing_context:
                     if self.enable_tournament_mode and self.save_best_prompts:
                         # Regenerate context image from best prompt so far
-                        context_image, context_image_bytes = self.image_editing_model.edit(best_prompt, original_image_bytes)
+                        context_image, context_image_bytes = self.image_editing_model.edit(f"{best_prompt}\n{self.background_state_prompt}", original_image_bytes)
                         if context_image is None:
                             logging.error("Context image regeneration failed for final edit.\n")
                             continue
@@ -171,11 +175,11 @@ class VisualNudge:
 
                     # Using original and previous edited images for context
                     logging.info("Using previous edited image for context during final edit\n")
-                    edited_prompt = current_prompt + "\nThe first image is the original, the second image is the previous edit."
-                    best_image, _ = self.image_editing_model.edit_with_context(edited_prompt, original_image_bytes, context_image_bytes)
+                    edited_prompt = f"{current_prompt}\n{self.editing_context_prompt}"
+                    best_image, _ = self.image_editing_model.edit_with_context(f"{edited_prompt}\n{self.background_state_prompt}", original_image_bytes, context_image_bytes)
                 else:
                     # Use only the original image
-                    best_image, _ = self.image_editing_model.edit(current_prompt, original_image_bytes)
+                    best_image, _ = self.image_editing_model.edit(f"{current_prompt}\n{self.background_state_prompt}", original_image_bytes)
 
                 # Save the best image
                 if best_image is None:

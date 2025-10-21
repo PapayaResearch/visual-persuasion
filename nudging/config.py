@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Union
 
 #######################
 # API Settings
@@ -15,17 +14,6 @@ class ApiCall:
     temperature: float
     # Maximum tokens in API response
     max_tokens: int
-    # Delay before API calls to avoid rate limits
-    delay: int
-
-@dataclass
-class ImageApiCall:
-    # Hydra target for API call function
-    _target_: str
-    # API key environment variable name
-    key_name: str
-    # Model name for API calls
-    model: str
     # Delay before API calls to avoid rate limits
     delay: int
 
@@ -45,20 +33,11 @@ class SchemaFactory:
 #######################
 
 @dataclass
-class Gemini:
-    # Hydra target for Gemini model class
+class ImageModel:
+    # Hydra target for image editing model class
     _target_: str
-    # API key environment variable name
-    key_name: str
-    # Model name
-    model: str
-
-@dataclass
-class LiteLLM:
-    # Hydra target for LiteLLM model class
-    _target_: str
-    # API call configuration
-    api_call: ImageApiCall
+    # Additional model-specific parameters (from model configs)
+    # These will be filled in by the model-specific YAML files
 
 @dataclass
 class LanguageModel:
@@ -100,6 +79,8 @@ class VisualNudge:
     iterations: int
     # Enable previous image context (the last edited image) during editing
     enable_editing_context: bool
+    # Additional prompt for editing context
+    editing_context_prompt: str
     # Enable prompt optimization pipeline (disable for zero-shot testing)
     enable_optimization: bool
     # Enable tournament mode (keep track of the last chosen image instead of the previous image)
@@ -108,8 +89,10 @@ class VisualNudge:
     save_best_prompts: bool
     # Initial prompt for image editing
     initial_prompt: str
-    # Image editing model configuration (Gemini or LiteLLM)
-    image_editing_model: Union[Gemini, LiteLLM]
+    # Additional prompt to retain background state during editing
+    background_state_prompt: str
+    # Image editing model configuration
+    image_editing_model: ImageModel
     # Prompt for the evaluator model
     evaluator_prompt: str
     # Evaluator language model configuration
