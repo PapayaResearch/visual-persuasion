@@ -103,6 +103,7 @@ nudge:
       _target_: schema.create_evaluator_output_schema
       choice_description: |
         Which image is better: 'original' or 'edited'
+      choice_options: ['original', 'edited']
       reason_description: |
         Detailed explanation of why the chosen image is more appealing
 
@@ -225,6 +226,7 @@ evaluate:
       _target_: schema.create_evaluator_output_schema
       choice_description: |
         Which image is better: 'first' or 'second'
+      choice_options: ['first', 'second']
       reason_description: |
         Detailed explanation of why the chosen image is more appealing
 

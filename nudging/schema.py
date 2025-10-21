@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Type
+from typing import List, Type, Literal, cast
 
 
 class IOSchema(BaseModel):
@@ -42,15 +42,14 @@ def create_evaluator_input_schema(task_description: str, images_description: str
     return EvaluatorInput
 
 
-def create_evaluator_output_schema(choice_description: str, reason_description: str) -> Type[IOSchema]:
+def create_evaluator_output_schema(choice_description: str, choice_options: List[str], reason_description: str) -> Type[IOSchema]:
     """
     Creates an EvaluatorOutput schema class with configurable field descriptions.
     """
     class EvaluatorOutput(IOSchema):
-        """Output schema for evaluator model."""
-        choice: str = Field(description=choice_description)
+        choice: Literal[*choice_options] = Field(description=choice_description) # type: ignore
         reason: str = Field(description=reason_description)
-    
+
     return EvaluatorOutput
 
 
