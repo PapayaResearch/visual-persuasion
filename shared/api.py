@@ -1,28 +1,36 @@
 import litellm
 import time
 import logging
+import os
+from typing import Callable
 
 def create_text_api_call(
-        model,
-        temperature,
-        max_tokens,
-        delay
-):
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        delay: float
+) -> Callable:
     """
     Factory for creating the api_call function for text generation tasks.
     """
-    def api_call(messages):
+    def api_call(messages, response_format=None):
         """
         Calls the LLM API with the provided messages.
         """
-        time.sleep(delay) # Delay before each call
+        time.sleep(delay)  # Delay before each call
         try:
-            return litellm.completion(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens
-            ).choices[0].message.content
+            kwargs = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            
+            # Add response_format if provided (for structured outputs)
+            if response_format is not None:
+                kwargs["response_format"] = response_format
+            
+            return litellm.completion(**kwargs)
         except Exception as e:
             logging.error(f"Litellm API call failed: {e}\n")
             return None
@@ -30,20 +38,13 @@ def create_text_api_call(
     return api_call
 
 def create_image_api_call(
-        key,
-        model,
-        delay
-):
+        key_name: str,
+        model: str,
+        delay: float
+) -> Callable:
     """
     Factory for creating the api_call function for image generation tasks.
     """
-    # Set up provider API key
-    try:
-        with open(key) as infile:
-            api_key = infile.read().strip()
-    except FileNotFoundError:
-        raise Exception(f"API key file not found at: {key}")
-
     def api_call(messages):
         """
         Calls the LLM API with the provided messages.
@@ -51,7 +52,7 @@ def create_image_api_call(
         time.sleep(delay) # Delay before each call
         try:
             return litellm.completion(
-                api_key=api_key,
+                api_key=os.environ[key_name],
                 model=model,
                 messages=messages
             ).choices[0].message

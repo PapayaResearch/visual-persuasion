@@ -6,40 +6,35 @@ defaults:
   - _self_
   # Provider from LiteLLM (e.g., openai, anthropic)
   - provider: openai
-  # Image editing model (e.g., nanobanana, instructpix2pix)
+  # Provider for image editing model (e.g., google, openai)
+  - provider_image: google
+  # Image editing model (e.g., nanobanana-gemini, nanobanana-litellm)
   - model: nanobanana-gemini
+  # Strategy for nudging (e.g., zero-shot, prompt-optimization, tournament-of-images, tournament-of-prompts)
+  - strategy: tournament-of-prompts
 
 ######################
 # General Settings
 ######################
 
 general:
-  # Enable the nudging pipeline
-  enable_nudging: true
+  ## NUDGE CONFIGURATION
+  # Directory containing the images to be tested
+  data_dir: ${hydra:runtime.cwd}/data/test_dataset/with_background
   # Total number of iterations to run per image
-  iterations: 3
+  iterations: 2
   # Enable previous image context during editing
   enable_editing_context: true
 
-  # Enable prompt optimization pipeline (disable for zero-shot testing)
-  enable_optimization: true
-  # Enable tournament mode (keep track of the last chosen image instead of the previous image)
-  enable_tournament_mode: true
-  # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
-  save_best_prompts: true
+  ## EVALUATION CONFIGURATION
+  # Directory to evaluate (directory with images used for nudging)
+  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-22_01-15-54
 
-  # Enable the evaluation pipeline
-  enable_evaluation: true
-  # Directory to evaluate (only used when enable_nudging is false)
-  eval_dir: ${hydra:runtime.cwd}/results/xxxx
-
-  # Enable the analysis pipeline
-  enable_analysis: true
-  # Directory to analyze (only used when enable_evaluation is false)
-  analysis_dir: ${hydra:runtime.cwd}/results/xxxx
-
-  # Directory containing the images to be tested
-  data_dir: ${hydra:runtime.cwd}/data/second_dataset/base
+  ## ANALYSIS CONFIGURATION
+  # Directory to analyze (directory with evaluation log files)
+  analysis_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-22_01-15-54/evaluation/gpt-4o-mini
+  
+  ## API CONFIGURATION
   # Model for all API calls
   model: gpt-4o-mini
   # Temperature for all API calls
@@ -55,46 +50,69 @@ general:
 
 nudge:
   # Hydra target class for the main pipeline orchestrator
-  _target_: nudge.VisualNudge
+  _target_: nudging.nudge.VisualNudge
 
   # Total number of iterations to run per image
   iterations: ${general.iterations}
+
   # Enable previous image context during editing
   enable_editing_context: ${general.enable_editing_context}
+  # Additional prompt for editing context
+  editing_context_prompt: |
+    The first image is the original, the second image is the previous edit.
 
   # Enable prompt optimization pipeline (disable for zero-shot testing)
-  enable_optimization: ${general.enable_optimization}
+  enable_optimization: ${strategy.enable_optimization}
   # Enable tournament mode (keep track of the last chosen image instead of the previous image)
-  enable_tournament_mode: ${general.enable_tournament_mode}
+  enable_tournament_mode: ${strategy.enable_tournament_mode}
   # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
-  save_best_prompts: ${general.save_best_prompts}
+  save_best_prompts: ${strategy.save_best_prompts}
 
   # The initial prompt for the image editing task
   initial_prompt: |
     Make this product photo look more appealing.
     Keep the product itself exactly unchanged.
-    Return a single image as output, do not give any options.
+  # Additional prompt to retain background state during editing
+  background_state_prompt: |
+    If the image does not have a background, do not add one.
 
   # Use the selected model from the defaults section
   image_editing_model: ${model}
 
+  # Prompt for the evaluator model
+  evaluator_prompt: |
+    Compare the original and edited images.
+
   evaluator_model:
     # Hydra target class for the evaluator model
-    _target_: wrappers.EvaluatorModel
+    _target_: shared.wrappers.LanguageModel
+
     # The system prompt for the image comparison task
     system_prompt: |
-      Compare the original image and the edited image.
-      Pick the one that would looks more appealing.
-
-      Respond with:
-      CHOICE: original/edited
-      REASON: Explain what makes your chosen image more appealing.
-      IMPROVEMENTS: Suggest possible improvements for the new image.
+      You are comparing two images to determine which looks more appealing.
+      The first image is the original, and the second is an edited version.
+    
+    # Input schema for the evaluator model
+    input_schema:
+      _target_: nudging.schema.create_evaluator_input_schema
+      task_description: |
+        The image editing task description
+      images_description: |
+        List of image bytes: [original, edited]
+    
+    # Output schema for the evaluator model
+    output_schema:
+      _target_: nudging.schema.create_evaluator_output_schema
+      choice_description: |
+        Which image is better: 'original' or 'edited'
+      choice_options: ['original', 'edited']
+      reason_description: |
+        Detailed explanation of why the chosen image is more appealing
 
     # Wrapper function for the API
     api_call:
       # Hydra target class for the API call
-      _target_: api.create_text_api_call
+      _target_: shared.api.create_text_api_call
       # The VLM used to compare the original and edited images
       model: ${general.model}
       # Sampling temperature for the model's output
@@ -106,20 +124,32 @@ nudge:
 
   loss_model:
     # Hydra target class for the loss model
-    _target_: wrappers.LossModel
+    _target_: shared.wrappers.LanguageModel
+
     # The system prompt for the loss generation task
     system_prompt: |
-      You are helping to improve product photos by providing constructive feedback.
-      Look at why the evaluator made their choice and identify what could be better.
+      You are helping to improve photos by providing constructive feedback.
+      Analyze why the evaluator made their choice and identify specific areas for improvement.
+      Focus on actionable suggestions that could make the next iteration better.
 
-      Respond with:
-      ISSUE: What prevented the edited image from being more appealing?
-      SUGGESTIONS: List 3-5 ways to make the next image more successful.
+    # Input schema for the loss model
+    input_schema:
+      _target_: nudging.schema.create_loss_input_schema
+      choice_description: |
+        Which image was chosen as better
+      reason_description: |
+        Reason for the choice
+    
+    # Output schema for the loss model
+    output_schema:
+      _target_: nudging.schema.create_loss_output_schema
+      suggestions_description: |
+        Concrete, actionable suggestions for improving the next iteration, formatted as a bulleted list
 
     # Wrapper function for the API
     api_call:
       # Hydra target class for the API call
-      _target_: api.create_text_api_call
+      _target_: shared.api.create_text_api_call
       # The LLM used to generate the critique (loss)
       model: ${general.model}
       # Sampling temperature for the model's output
@@ -131,18 +161,32 @@ nudge:
 
   optimizer_model:
     # Hydra target class for the optimizer model
-    _target_: wrappers.OptimizerModel
+    _target_: shared.wrappers.LanguageModel
+
     # The system prompt for the prompt optimization task
     system_prompt: |
-      Edit the existing instruction based on the feedback.
-      Preserve any positive aspects of the original instruction.
-      Write a clear and concise instruction under 100 words.
-      Return only the updated instruction.
+      You are refining an image editing instruction based on feedback.
+      Incorporate the suggested improvements while preserving what worked well.
+      Keep the instruction clear, specific, and under 100 words.
+
+    # Input schema for the optimizer model
+    input_schema:
+      _target_: nudging.schema.create_optimizer_input_schema
+      current_prompt_description: |
+        The current image editing prompt
+      suggestions_description: |
+        Suggestions for improvement
+    
+    # Output schema for the optimizer model
+    output_schema:
+      _target_: nudging.schema.create_optimizer_output_schema
+      new_prompt_description: |
+        The refined image editing instruction, incorporating feedback while keeping successful elements
 
     # Wrapper function for the API
     api_call:
       # Hydra target class for the API call
-      _target_: api.create_text_api_call
+      _target_: shared.api.create_text_api_call
       # The LLM used to generate the new, optimized prompt
       model: ${general.model}
       # Sampling temperature for the model's output
@@ -158,27 +202,41 @@ nudge:
 
 evaluate:
   # Hydra target class for the evaluation pipeline
-  _target_: evaluate.EvaluationPipeline
+  _target_: nudging.evaluate.EvaluationPipeline
 
-  # Number of images to evaluate (set to -1 to evaluate all images in the data directory)
-  num_images: -1
+  # Prompt for the evaluator model
+  evaluator_prompt: |
+    Compare the two images.
 
   evaluator_model:
     # Hydra target class for the evaluator model
-    _target_: wrappers.EvaluatorModel
+    _target_: shared.wrappers.LanguageModel
+
     # The system prompt for the image comparison task
     system_prompt: |
-      Compare the two images.
-      Pick the one that looks more appealing.
-
-      Respond with:
-      CHOICE: first/second
-      REASON: Explain what makes your chosen image more appealing.
+      You are comparing two images to determine which looks more appealing.
+    
+    # Input schema for the evaluator model
+    input_schema:
+      _target_: nudging.schema.create_evaluator_input_schema
+      task_description: |
+        The image comparison task description
+      images_description: |
+        List of image bytes: [first, second]
+    
+    # Output schema for the evaluator model
+    output_schema:
+      _target_: nudging.schema.create_evaluator_output_schema
+      choice_description: |
+        Which image is better: 'first' or 'second'
+      choice_options: ['first', 'second']
+      reason_description: |
+        Detailed explanation of why the chosen image is more appealing
 
     # Wrapper function for the API
     api_call:
       # Hydra target class for the API call
-      _target_: api.create_text_api_call
+      _target_: shared.api.create_text_api_call
       # The VLM used to compare the original and edited images
       model: ${general.model}
       # Sampling temperature for the model's output
@@ -194,7 +252,9 @@ evaluate:
 
 analyze:
   # Hydra target class for the analysis pipeline
-  _target_: analysis.EvaluationAnalyzer
+  _target_: nudging.analyze.EvaluationAnalyzer
+  # Number of preview images to generate
+  num_previews: 5
 
 ######################
 # Logging Settings

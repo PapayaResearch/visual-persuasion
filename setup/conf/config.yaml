@@ -19,7 +19,7 @@ defaults:
 
 general:
   # Directory containing the folders of images to process
-  src_dir: ${hydra:runtime.cwd}/data
+  src_dir: ${hydra:runtime.cwd}/data/test_dataset
   # Destination directory for saving the processed images
   dst_dir: ${hydra:runtime.cwd}/../nudging/data
 
@@ -29,7 +29,7 @@ general:
   split_by_background: true
 
   # Model to be used for processing images
-  model: gpt-5-mini
+  model: gpt-4o-mini
   # Temperature for all API calls
   temperature: 0.2
   # Max tokens for all API calls
@@ -42,17 +42,15 @@ general:
 ######################
 
 dataset:
-  # Name of the dataset to be processed
+  # Name of the dataset (used for creating destination subfolder)
   name: test_dataset
-  # Subfolder within the source directory containing the image folders
-  subfolder: images
 
   # Number of image folders to process (set to -1 to process all)
   num_folders: -1
   # Number of images to evaluate from each folder if there is filtering involved (set to -1 to evaluate all)
-  num_evaluate_per_folder: 20
+  num_evaluate_per_folder: 2
   # Number of images to finally select for processing from each folder (set to -1 to choose all)
-  num_process_per_folder: 10
+  num_process_per_folder: 1
   # The total number of images in the resulting dataset will be num_folders * num_process_per_folder
 
 #######################
@@ -61,7 +59,7 @@ dataset:
 
 image_enhancer:
   # Hydra target class for image enhancement
-  _target_: enhance.ImageEnhancer
+  _target_: setup.enhance.ImageEnhancer
   # Model to be used for image enhancement
   enhancement_model: ${model}
   # The prompt for enhancing the original images
@@ -75,7 +73,7 @@ image_enhancer:
 
 background_processor:
   # Hydra target class for background processing
-  _target_: background.BackgroundProcessor
+  _target_: setup.background.BackgroundProcessor
 
   # Model to be used for background processing
   image_editing_model: ${model}
@@ -87,9 +85,10 @@ background_processor:
 
   # The prompt for the background removal task
   background_removal_prompt: |
-    Remove the background from the image, leaving only the main subject.
-    The background should be white (#FFFFFF) with no other colors or patterns.
-    Ensure the edges of the subject are clean and well-defined.
+    Edit the image to remove the background with the following requirements:
+    1. Isolate the main subject of the image.
+    2. Replace the background with a plain white color (#FFFFFF).
+    3. Ensure the main subject remains unaltered in appearance.
   # Threshold for SSIM value to consider an image as having a plain background
   ssim_threshold: 0.6
 

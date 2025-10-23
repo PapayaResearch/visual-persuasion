@@ -1,4 +1,4 @@
-from wrappers import ImageEditingModel
+from shared.wrappers import ImageModel
 import logging
 import os
 import io
@@ -6,7 +6,7 @@ from PIL import Image
 import base64
 from google import genai
 
-class Gemini(ImageEditingModel):
+class Gemini(ImageModel):
     """
     Implementation of Gemini-based image models for image editing.
     """
@@ -16,6 +16,7 @@ class Gemini(ImageEditingModel):
         
     def edit(self, prompt: str, image_bytes: bytes):            
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        prompt += "\nReturn a single image as output, do not give any options."
 
         # API call
         try:
@@ -46,6 +47,7 @@ class Gemini(ImageEditingModel):
     def edit_with_context(self, prompt: str, image_bytes: bytes, context_image_bytes: bytes):
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         context_image = Image.open(io.BytesIO(context_image_bytes)).convert("RGB")
+        prompt += "\nReturn a single image as output, do not give any options."
 
         # API call
         try:
@@ -73,7 +75,7 @@ class Gemini(ImageEditingModel):
         
         return edited_image, edited_image_bytes
 
-class LiteLLM(ImageEditingModel):
+class LiteLLM(ImageModel):
     """
     Implementation of LiteLLM-based image models for image editing.
     """

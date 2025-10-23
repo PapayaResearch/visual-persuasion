@@ -8,32 +8,54 @@ from dataclasses import dataclass
 class ApiCall:
     # Hydra target for API call function
     _target_: str
+    # API key environment variable name
+    key_name: str
     # Model name for API calls
     model: str
-    # Sampling temperature for responses
-    temperature: float
-    # Maximum tokens in API response
-    max_tokens: int
     # Delay before API calls to avoid rate limits
     delay: int
+
+#######################
+# Schema Settings
+#######################
+
+@dataclass
+class SchemaFactory:
+    # Hydra target for schema factory function
+    _target_: str
+    # Field descriptions for the schema (as kwargs)
+    # These will be passed to create_*_schema functions
 
 #######################
 # Model Components
 #######################
 
 @dataclass
-class ImageEditingModel:
+class ImageModel:
     # Hydra target for image editing model class
     _target_: str
     # Additional model-specific parameters (from model configs)
     # These will be filled in by the model-specific YAML files
 
 @dataclass
+class LanguageModel:
+    # Hydra target for language model class
+    _target_: str
+    # System prompt for the task
+    system_prompt: str
+    # Input schema factory configuration
+    input_schema: SchemaFactory
+    # Output schema factory configuration
+    output_schema: SchemaFactory
+    # API call configuration
+    api_call: ApiCall
+
+@dataclass
 class ImageEnhancer:
     # Hydra target for image enhancement class
     _target_: str
     # Model to be used for image enhancement
-    enhancement_model: ImageEditingModel
+    enhancement_model: ImageModel
     # The prompt for enhancing the original images
     enhancement_prompt: str
 
@@ -42,7 +64,7 @@ class BackgroundProcessor:
     # Hydra target for background processing class
     _target_: str
     # Model to be used for background processing
-    image_editing_model: ImageEditingModel
+    image_editing_model: ImageModel
     # Maximum number of images to preview from the with-background subset (set to -1 to preview all)
     num_previews_with_background: int
     # Maximum number of images to preview from the without-background subset (set to -1 to preview all)
@@ -61,10 +83,10 @@ class BackgroundProcessor:
 #######################
 
 @dataclass
-class Strategy:
-    # Hydra target for strategy class
+class SamplingStrategy:
+    # Hydra target for sampling strategy class
     _target_: str
-    # Additional strategy-specific parameters
+    # Additional strategy-specific parameters (from strategy configs)
     # These will be filled in by the strategy-specific YAML files
 
 #######################
@@ -75,8 +97,6 @@ class Strategy:
 class Dataset:
     # Name of the dataset to be processed
     name: str
-    # Subfolder within the source directory containing the image folders
-    subfolder: str
     # Number of image folders to process (set to -1 to process all)
     num_folders: int
     # Number of images to evaluate from each folder if there is filtering involved (set to -1 to evaluate all)
@@ -130,8 +150,10 @@ class Config:
     dataset: Dataset
     # API provider configuration
     provider: Provider
-    # Strategy configuration
-    strategy: Strategy
+    # API provider configuration for image models
+    provider_image: Provider
+    # Strategy configuration (instantiated from strategy YAML files)
+    strategy: SamplingStrategy
     # General experiment settings
     general: General
     # Image enhancement configuration

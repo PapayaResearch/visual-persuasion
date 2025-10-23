@@ -1,11 +1,19 @@
+from abc import ABC, abstractmethod
 import random
 import logging
 import os
 from typing import List
-from wrappers import EvaluatorModel
+from shared.wrappers import LanguageModel
 
 
-class RandomSampling:
+class SamplingStrategy(ABC):
+    @abstractmethod
+    def create_dataset(self, all_folders: List[str], dst_dir: str):
+        """Abstract method to create a dataset from given folders."""
+        pass
+
+
+class RandomSampling(SamplingStrategy):
     def __init__(
         self,
         num_folders: int,
@@ -53,24 +61,26 @@ class RandomSampling:
 
             # Copy selected images to destination directory
             for image in selected_images:
-                dst_image_path = os.path.join(self.dst_dir, f"{folder_name}_{image}")
+                dst_image_path = os.path.join(self.dst_dir, f"{folder_name.replace('_', '')}_{image.replace('_', '')}")
                 with open(os.path.join(folder_path, image), "rb") as src_f:
                     with open(dst_image_path, "wb") as dst_f:
                         dst_f.write(src_f.read())
                 logging.info(f"Copied image {image} from folder {folder_name}\n")
 
 
-class VLMFiltering:
+class VLMFiltering(SamplingStrategy):
     def __init__(
         self,
         num_folders: int,
         num_evaluate_per_folder: int,
         num_process_per_folder: int,
-        evaluator_model: EvaluatorModel,
+        evaluator_prompt: str,
+        evaluator_model: LanguageModel,
     ):
         self.num_folders = num_folders
         self.num_evaluate_per_folder = num_evaluate_per_folder
         self.num_process_per_folder = num_process_per_folder
+        self.evaluator_prompt = evaluator_prompt
         self.evaluator_model = evaluator_model
 
     def create_dataset(self, all_folders: List[str], dst_dir: str):
@@ -141,12 +151,25 @@ class VLMFiltering:
                     with open(os.path.join(folder_path, img), "rb") as f:
                         image_bytes_list.append(f.read())
                 
-                best_index = self.evaluator_model.evaluate(image_bytes_list)
+                response = self.evaluator_model.get_response(
+                    task=self.evaluator_prompt,
+                    images=image_bytes_list
+                )
+
+                try:
+                    best_index = int(response.choice) - 1
+                    if not best_index in range(len(images)):
+                        logging.error(f"Evaluator returned invalid index: {response}\nDefaulting to first image.")
+                        best_index = 0  # Default to first image on error
+                except ValueError:
+                    logging.error(f"Evaluator response parsing failed: {response}\nDefaulting to first image.")
+                    best_index = 0  # Default to first image on error
+                
                 best_image = chunk_images[best_index]
                 logging.info(f"Selected best image {best_image} (index {best_index}) from chunk {i+1} in folder {folder_name}\n")
                 
                 # Copy the best image to the destination directory
-                dst_image_path = os.path.join(self.dst_dir, f"{folder_name}_{best_image}")
+                dst_image_path = os.path.join(self.dst_dir, f"{folder_name.replace('_', '')}_{best_image.replace('_', '')}")
                 with open(os.path.join(folder_path, best_image), "rb") as src_f:
                     with open(dst_image_path, "wb") as dst_f:
                         dst_f.write(src_f.read())
