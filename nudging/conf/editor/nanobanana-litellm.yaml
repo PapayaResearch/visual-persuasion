@@ -1,0 +1,13 @@
+_target_: utils.models.LiteLLM
+api_call:
+  _target_: utils.api.create_api_call
+  model: gemini/gemini-2.5-flash-image-preview
+  delay: 0
+  temperature: null
+  max_tokens: null
+  reasoning_effort: null
+  additional_drop_params:
+    - temperature
+    - max_tokens
+    - reasoning_effort
+  return_message_only: true

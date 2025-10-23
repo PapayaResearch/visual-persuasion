@@ -1,0 +1,10 @@
+_target_: utils.api.create_api_call
+model: gpt-5-nano-2025-08-07
+delay: 0
+temperature: null
+max_tokens: null
+reasoning_effort: medium
+additional_drop_params:
+    - temperature
+    - max_tokens
+return_message_only: false

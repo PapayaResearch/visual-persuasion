@@ -1,6 +1,6 @@
 import os
 import logging
-from shared.wrappers import ImageModel
+from utils.wrappers import ImageModel
 
 class ImageEnhancer:
     def __init__(
@@ -22,7 +22,8 @@ class ImageEnhancer:
         image_files = [f for f in os.listdir(base_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
         for img_file in image_files:
             img_path = os.path.join(base_dir, img_file)
-            original_image_bytes = open(img_path, 'rb').read()
+            with open(img_path, 'rb') as f:
+                original_image_bytes = f.read()
             enhanced_image, enhanced_image_bytes = self.enhancement_model.edit(
                 self.enhancement_prompt,
                 original_image_bytes
@@ -32,4 +33,4 @@ class ImageEnhancer:
                 continue
             enhanced_image.save(os.path.join(enhanced_dir, img_file))
 
-        print(f"Enhanced images saved to {enhanced_dir}")
+        logging.info(f"Enhanced images saved to {enhanced_dir}")

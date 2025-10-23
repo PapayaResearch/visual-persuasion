@@ -1,0 +1,10 @@
+_target_: utils.api.create_api_call
+model: bedrock/us.deepseek.v3-v1:0
+delay: 0
+temperature: 0.1
+max_tokens: null
+reasoning_effort: null
+additional_drop_params:
+    - max_tokens
+    - reasoning_effort
+return_message_only: false

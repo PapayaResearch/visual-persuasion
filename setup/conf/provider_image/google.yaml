@@ -1,4 +1,0 @@
-# Google API configuration
-name: google
-key: ${hydra:runtime.cwd}/keys/goo.txt
-key_name: GEMINI_API_KEY

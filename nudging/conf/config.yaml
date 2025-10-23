@@ -4,12 +4,10 @@
 
 defaults:
   - _self_
-  # Provider from LiteLLM (e.g., openai, anthropic)
-  - provider: openai
-  # Provider for image editing model (e.g., google, openai)
-  - provider_image: google
-  # Image editing model (e.g., nanobanana-gemini, nanobanana-litellm)
-  - model: nanobanana-gemini
+  # LLM model for evaluator/loss/optimizer (e.g., gpt-5)
+  - llm: gpt-5
+  # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
+  - editor: nanobanana-gemini
   # Strategy for nudging (e.g., zero-shot, prompt-optimization, tournament-of-images, tournament-of-prompts)
   - strategy: tournament-of-prompts
 
@@ -28,21 +26,11 @@ general:
 
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)
-  eval_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-22_01-15-54
+  eval_dir: ${hydra:runtime.cwd}/results/nudging/gpt-4o-mini/2025-10-22_01-15-54
 
   ## ANALYSIS CONFIGURATION
   # Directory to analyze (directory with evaluation log files)
-  analysis_dir: ${hydra:runtime.cwd}/results/nudging/openai/gpt-4o-mini/2025-10-22_01-15-54/evaluation/gpt-4o-mini
-  
-  ## API CONFIGURATION
-  # Model for all API calls
-  model: gpt-4o-mini
-  # Temperature for all API calls
-  temperature: 0.2
-  # Max tokens for all API calls
-  max_tokens: 300
-  # Standard delay in seconds before making an API call
-  delay: 0
+  analysis_dir: ${hydra:runtime.cwd}/results/nudging/gpt-4o-mini/2025-10-22_01-15-54/evaluation/gpt-4o-mini
 
 ######################
 # Nudge Settings
@@ -76,8 +64,8 @@ nudge:
   background_state_prompt: |
     If the image does not have a background, do not add one.
 
-  # Use the selected model from the defaults section
-  image_editing_model: ${model}
+  # Use the selected editor from the defaults section
+  image_editing_model: ${editor}
 
   # Prompt for the evaluator model
   evaluator_prompt: |
@@ -85,13 +73,13 @@ nudge:
 
   evaluator_model:
     # Hydra target class for the evaluator model
-    _target_: shared.wrappers.LanguageModel
+    _target_: utils.wrappers.LanguageModel
 
     # The system prompt for the image comparison task
     system_prompt: |
       You are comparing two images to determine which looks more appealing.
       The first image is the original, and the second is an edited version.
-    
+
     # Input schema for the evaluator model
     input_schema:
       _target_: nudging.schema.create_evaluator_input_schema
@@ -99,7 +87,7 @@ nudge:
         The image editing task description
       images_description: |
         List of image bytes: [original, edited]
-    
+
     # Output schema for the evaluator model
     output_schema:
       _target_: nudging.schema.create_evaluator_output_schema
@@ -109,22 +97,12 @@ nudge:
       reason_description: |
         Detailed explanation of why the chosen image is more appealing
 
-    # Wrapper function for the API
-    api_call:
-      # Hydra target class for the API call
-      _target_: shared.api.create_text_api_call
-      # The VLM used to compare the original and edited images
-      model: ${general.model}
-      # Sampling temperature for the model's output
-      temperature: ${general.temperature}
-      # Max tokens for the evaluator VLM response
-      max_tokens: ${general.max_tokens}
-      # Delay in seconds before making an API call
-      delay: ${general.delay}
+    # Wrapper function for the API - uses LLM config
+    api_call: ${llm}
 
   loss_model:
     # Hydra target class for the loss model
-    _target_: shared.wrappers.LanguageModel
+    _target_: utils.wrappers.LanguageModel
 
     # The system prompt for the loss generation task
     system_prompt: |
@@ -139,29 +117,19 @@ nudge:
         Which image was chosen as better
       reason_description: |
         Reason for the choice
-    
+
     # Output schema for the loss model
     output_schema:
       _target_: nudging.schema.create_loss_output_schema
       suggestions_description: |
         Concrete, actionable suggestions for improving the next iteration, formatted as a bulleted list
 
-    # Wrapper function for the API
-    api_call:
-      # Hydra target class for the API call
-      _target_: shared.api.create_text_api_call
-      # The LLM used to generate the critique (loss)
-      model: ${general.model}
-      # Sampling temperature for the model's output
-      temperature: ${general.temperature}
-      # Max tokens for the critique response
-      max_tokens: ${general.max_tokens}
-      # Delay in seconds before making an API call
-      delay: ${general.delay}
+    # Wrapper function for the API - uses LLM config
+    api_call: ${llm}
 
   optimizer_model:
     # Hydra target class for the optimizer model
-    _target_: shared.wrappers.LanguageModel
+    _target_: utils.wrappers.LanguageModel
 
     # The system prompt for the prompt optimization task
     system_prompt: |
@@ -176,25 +144,15 @@ nudge:
         The current image editing prompt
       suggestions_description: |
         Suggestions for improvement
-    
+
     # Output schema for the optimizer model
     output_schema:
       _target_: nudging.schema.create_optimizer_output_schema
       new_prompt_description: |
         The refined image editing instruction, incorporating feedback while keeping successful elements
 
-    # Wrapper function for the API
-    api_call:
-      # Hydra target class for the API call
-      _target_: shared.api.create_text_api_call
-      # The LLM used to generate the new, optimized prompt
-      model: ${general.model}
-      # Sampling temperature for the model's output
-      temperature: ${general.temperature}
-      # Max tokens for the new prompt
-      max_tokens: ${general.max_tokens}
-      # Delay in seconds before making an API call
-      delay: ${general.delay}
+    # Wrapper function for the API - uses LLM config
+    api_call: ${llm}
 
 ######################
 # Evaluation Settings
@@ -210,12 +168,12 @@ evaluate:
 
   evaluator_model:
     # Hydra target class for the evaluator model
-    _target_: shared.wrappers.LanguageModel
+    _target_: utils.wrappers.LanguageModel
 
     # The system prompt for the image comparison task
     system_prompt: |
       You are comparing two images to determine which looks more appealing.
-    
+
     # Input schema for the evaluator model
     input_schema:
       _target_: nudging.schema.create_evaluator_input_schema
@@ -223,7 +181,7 @@ evaluate:
         The image comparison task description
       images_description: |
         List of image bytes: [first, second]
-    
+
     # Output schema for the evaluator model
     output_schema:
       _target_: nudging.schema.create_evaluator_output_schema
@@ -233,18 +191,8 @@ evaluate:
       reason_description: |
         Detailed explanation of why the chosen image is more appealing
 
-    # Wrapper function for the API
-    api_call:
-      # Hydra target class for the API call
-      _target_: shared.api.create_text_api_call
-      # The VLM used to compare the original and edited images
-      model: ${general.model}
-      # Sampling temperature for the model's output
-      temperature: ${general.temperature}
-      # Max tokens for the evaluator VLM response
-      max_tokens: ${general.max_tokens}
-      # Delay in seconds before making an API call
-      delay: ${general.delay}
+    # Wrapper function for the API - uses LLM config
+    api_call: ${llm}
 
 ######################
 # Analysis Settings

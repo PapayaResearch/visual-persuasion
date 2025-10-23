@@ -1,6 +1,6 @@
 from pydantic import Field
 from typing import List, Type, Literal
-from shared.wrappers import IOSchema
+from utils.wrappers import IOSchema
 
 
 def create_evaluator_input_schema(task_description: str, images_description: str) -> Type[IOSchema]:
@@ -11,7 +11,7 @@ def create_evaluator_input_schema(task_description: str, images_description: str
         """Input schema for evaluator model."""
         task: str = Field(description=task_description)
         images: List[bytes] = Field(description=images_description)
-    
+
     return EvaluatorInput
 
 
@@ -34,7 +34,7 @@ def create_loss_input_schema(choice_description: str, reason_description: str) -
         """Input schema for loss model."""
         choice: str = Field(description=choice_description)
         reason: str = Field(description=reason_description)
-    
+
     return LossInput
 
 
@@ -45,7 +45,7 @@ def create_loss_output_schema(suggestions_description: str) -> Type[IOSchema]:
     class LossOutput(IOSchema):
         """Output schema for loss model."""
         suggestions: str = Field(description=suggestions_description)
-    
+
     return LossOutput
 
 
@@ -57,7 +57,7 @@ def create_optimizer_input_schema(current_prompt_description: str, suggestions_d
         """Input schema for optimizer model."""
         current_prompt: str = Field(description=current_prompt_description)
         suggestions: str = Field(description=suggestions_description)
-    
+
     return OptimizerInput
 
 
@@ -68,5 +68,5 @@ def create_optimizer_output_schema(new_prompt_description: str) -> Type[IOSchema
     class OptimizedPromptOutput(IOSchema):
         """Output schema for optimizer model."""
         new_prompt: str = Field(description=new_prompt_description)
-    
+
     return OptimizedPromptOutput

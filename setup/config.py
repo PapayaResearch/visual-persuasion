@@ -8,12 +8,20 @@ from dataclasses import dataclass
 class ApiCall:
     # Hydra target for API call function
     _target_: str
-    # API key environment variable name
-    key_name: str
     # Model name for API calls
     model: str
     # Delay before API calls to avoid rate limits
-    delay: int
+    delay: float
+    # Temperature for API calls
+    temperature: float
+    # Maximum tokens for API calls
+    max_tokens: int
+    # Reasoning effort for API calls
+    reasoning_effort: str
+    # Additional parameters to drop for specific models
+    additional_drop_params: list
+    # Return only message content instead of full response
+    return_message_only: bool
 
 #######################
 # Schema Settings
@@ -105,19 +113,6 @@ class Dataset:
     num_process_per_folder: int
 
 #######################
-# Provider Settings
-#######################
-
-@dataclass
-class Provider:
-    # Provider name
-    name: str
-    # Path to API key file
-    key: str
-    # Environment variable name for API key
-    key_name: str
-
-#######################
 # General Settings
 #######################
 
@@ -131,14 +126,6 @@ class General:
     enhance_image_quality: bool
     # Enable splitting of dataset by background type
     split_by_background: bool
-    # Model to be used for processing images
-    model: str
-    # Temperature for all API calls
-    temperature: float
-    # Max tokens for all API calls
-    max_tokens: int
-    # Standard delay in seconds before making an API call
-    delay: int
 
 ######################
 # Main Config
@@ -146,12 +133,12 @@ class General:
 
 @dataclass
 class Config:
+    # LLM API call configuration
+    llm: ApiCall
+    # Image editor model configuration
+    editor: ImageModel
     # Dataset configuration
     dataset: Dataset
-    # API provider configuration
-    provider: Provider
-    # API provider configuration for image models
-    provider_image: Provider
     # Strategy configuration (instantiated from strategy YAML files)
     strategy: SamplingStrategy
     # General experiment settings

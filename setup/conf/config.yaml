@@ -4,12 +4,10 @@
 
 defaults:
   - _self_
-  # Provider from LiteLLM (e.g., openai, anthropic)
-  - provider: openai
-  # Provider for image editing model (e.g., google, openai)
-  - provider_image: google
-  # Image editing model (e.g., nanobanana-gemini, nanobanana-litellm)
-  - model: nanobanana-gemini
+  # LLM model for VLM filtering (e.g., gpt-5)
+  - llm: gpt-5-mini
+  # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
+  - editor: nanobanana-gemini
   # Strategy for processing images (e.g., vlm-filtering, random-sampling)
   - strategy: vlm-filtering
 
@@ -27,15 +25,6 @@ general:
   enhance_image_quality: true
   # Enable splitting of dataset by background type
   split_by_background: true
-
-  # Model to be used for processing images
-  model: gpt-4o-mini
-  # Temperature for all API calls
-  temperature: 0.2
-  # Max tokens for all API calls
-  max_tokens: 100
-  # Standard delay in seconds before making an API call
-  delay: 0
 
 ######################
 # Dataset Settings
@@ -61,7 +50,7 @@ image_enhancer:
   # Hydra target class for image enhancement
   _target_: setup.enhance.ImageEnhancer
   # Model to be used for image enhancement
-  enhancement_model: ${model}
+  enhancement_model: ${editor}
   # The prompt for enhancing the original images
   enhancement_prompt: |
     Upscale the image and enhance its quality.
@@ -76,7 +65,7 @@ background_processor:
   _target_: setup.background.BackgroundProcessor
 
   # Model to be used for background processing
-  image_editing_model: ${model}
+  image_editing_model: ${editor}
 
   # Maximum number of images to preview from the with-background subset (set to -1 to preview all)
   num_previews_with_background: -1

@@ -2,7 +2,7 @@ import os
 import io
 import logging
 from PIL import Image
-from shared.wrappers import ImageModel, LanguageModel
+from utils.wrappers import ImageModel, LanguageModel
 
 class VisualNudge:
     """
@@ -10,7 +10,7 @@ class VisualNudge:
     Hydra instantiates this class and its model dependencies automatically.
     """
     def __init__(
-        self, 
+        self,
         enable_optimization: bool,
         iterations: int,
         enable_editing_context: bool,
@@ -22,7 +22,7 @@ class VisualNudge:
         image_editing_model: ImageModel,
         evaluator_prompt: str,
         evaluator_model: LanguageModel,
-        loss_model: LanguageModel, 
+        loss_model: LanguageModel,
         optimizer_model: LanguageModel,
     ):
         self.enable_optimization = enable_optimization
@@ -54,7 +54,7 @@ class VisualNudge:
             original_save_path = os.path.join(results_dir, f"{base_filename}_iter-0-original.jpg")
             original_image.save(original_save_path)
             logging.info(f"Saved original image to: {original_save_path}\n")
-            
+
             current_prompt = self.initial_prompt
             logging.info("\n--- Starting Run ---\n")
 
@@ -83,7 +83,7 @@ class VisualNudge:
                     # Use original and previous edited images for context
                     logging.info("Using previous edited image for context during editing\n")
                     edited_prompt = f"{current_prompt}\n{self.editing_context_prompt}"
-                    edited_image, edited_image_bytes = self.image_editing_model.edit_with_context(f"{edited_prompt}\n{self.background_state_prompt}", original_image_bytes, context_image_bytes)
+                    edited_image, edited_image_bytes = self.image_editing_model.edit(f"{edited_prompt}\n{self.background_state_prompt}", original_image_bytes, context_image_bytes)
                 else:
                     # Use only the original image
                     edited_image, edited_image_bytes = self.image_editing_model.edit(f"{current_prompt}\n{self.background_state_prompt}", original_image_bytes)
@@ -110,7 +110,7 @@ class VisualNudge:
                             task=self.evaluator_prompt,
                             images=[original_image_bytes, edited_image_bytes]
                         )
-                    
+
                     if evaluation is None:
                         logging.error("Evaluation failed. Skipping to next iteration.\n")
                         continue
@@ -138,10 +138,10 @@ class VisualNudge:
                     if response is None:
                         logging.error("Prompt optimization failed. Skipping to next iteration.")
                         continue
-                    
+
                     logging.info(f"{response}\n")
                     new_prompt = response.new_prompt
-                    
+
                     if self.enable_tournament_mode:
                         # In tournament mode, only update context if the new image was preferred
                         if evaluation.choice.lower() == "edited":
@@ -176,7 +176,7 @@ class VisualNudge:
                     # Using original and previous edited images for context
                     logging.info("Using previous edited image for context during final edit\n")
                     edited_prompt = f"{current_prompt}\n{self.editing_context_prompt}"
-                    best_image, _ = self.image_editing_model.edit_with_context(f"{edited_prompt}\n{self.background_state_prompt}", original_image_bytes, context_image_bytes)
+                    best_image, _ = self.image_editing_model.edit(f"{edited_prompt}\n{self.background_state_prompt}", original_image_bytes, context_image_bytes)
                 else:
                     # Use only the original image
                     best_image, _ = self.image_editing_model.edit(f"{current_prompt}\n{self.background_state_prompt}", original_image_bytes)
@@ -188,7 +188,7 @@ class VisualNudge:
                 best_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-n-edit.jpg")
                 best_image.save(best_image_save_path)
                 logging.info(f"Saved best image to: {best_image_save_path}\n")
-                           
+
             logging.info("-" * 30 + "\n")
 
         return results_dir

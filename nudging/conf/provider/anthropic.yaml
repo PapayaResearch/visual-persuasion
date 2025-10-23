@@ -1,4 +1,0 @@
-# Anthropic API configuration
-name: anthropic
-key: ${hydra:runtime.cwd}/keys/ant.txt
-key_name: ANTHROPIC_API_KEY

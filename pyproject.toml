@@ -10,15 +10,16 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "hydra-core>=1.3.0",
-    "litellm>=1.40.0",        # Updated: Modern version with JSON schema support
+    "litellm>=1.40.0",
     "pillow>=10.0.0",
     "pydantic>=2.0.0",
     "matplotlib>=3.7.0",
     "numpy>=1.24.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [tool.setuptools.packages.find]
-include = ["shared*", "nudging*", "setup*"]
+include = ["utils*", "nudging*", "setup*"]
 
 [tool.setuptools.package-data]
 nudging = ["conf/**/*.yaml"]

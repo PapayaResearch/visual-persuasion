@@ -10,12 +10,18 @@ class ApiCall:
     _target_: str
     # Model name for API calls
     model: str
+    # Delay before API calls to avoid rate limits
+    delay: float
     # Sampling temperature for responses
     temperature: float
     # Maximum tokens in API response
     max_tokens: int
-    # Delay before API calls to avoid rate limits
-    delay: int
+    # Reasoning effort for API calls
+    reasoning_effort: str
+    # Additional parameters to drop for specific models
+    additional_drop_params: list
+    # Return only message content instead of full response
+    return_message_only: bool
 
 #######################
 # Schema Settings
@@ -127,19 +133,6 @@ class Analyze:
     num_previews: 5
 
 #######################
-# Provider Settings
-#######################
-
-@dataclass
-class Provider:
-    # Provider name
-    name: str
-    # Path to API key file
-    key: str
-    # Environment variable name for API key
-    key_name: str
-
-#######################
 # General Settings
 #######################
 
@@ -155,14 +148,6 @@ class General:
     eval_dir: str
     # Directory to analyze (directory with evaluation log files)
     analysis_dir: str
-    # Model for all API calls
-    model: str
-    # Temperature for all API calls
-    temperature: float
-    # Max tokens for all API calls
-    max_tokens: int
-    # Standard delay in seconds before making an API call
-    delay: int
 
 #######################
 # Logging Settings
@@ -181,16 +166,16 @@ class Logging:
 
 @dataclass
 class Config:
+    # LLM API call configuration
+    llm: ApiCall
+    # Image editor model configuration
+    editor: ImageModel
     # Main pipeline configuration
     nudge: VisualNudge
     # Evaluation pipeline configuration
     evaluate: Evaluate
     # Analysis pipeline configuration
     analyze: Analyze
-    # API provider configuration
-    provider: Provider
-    # API provider configuration for image models
-    provider_image: Provider
     # Strategy configuration
     strategy: Strategy
     # General experiment settings

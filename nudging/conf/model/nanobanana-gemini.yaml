@@ -1,4 +1,0 @@
-# Nano Banana model configuration
-_target_: shared.models.Gemini
-key_name: GEMINI_API_KEY
-model: gemini-2.5-flash-image-preview

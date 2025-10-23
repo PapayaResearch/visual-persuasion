@@ -1,6 +1,6 @@
 from pydantic import Field
 from typing import List, Type
-from shared.wrappers import IOSchema
+from utils.wrappers import IOSchema
 
 
 def create_evaluator_input_schema(task_description: str, images_description: str) -> Type[IOSchema]:
@@ -11,7 +11,7 @@ def create_evaluator_input_schema(task_description: str, images_description: str
         """Input schema for evaluator model."""
         task: str = Field(description=task_description)
         images: List[bytes] = Field(description=images_description)
-    
+
     return EvaluatorInput
 
 

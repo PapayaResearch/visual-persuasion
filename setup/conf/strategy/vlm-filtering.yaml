@@ -6,7 +6,7 @@ num_process_per_folder: ${dataset.num_process_per_folder}
 evaluator_prompt: |
   Select the best image from the provided images.
 evaluator_model:
-  _target_: shared.wrappers.LanguageModel
+  _target_: utils.wrappers.LanguageModel
   system_prompt: |
     Your task is to help select the most appealing image from a given set.
     Return only the index (1-based) of the selected image.
@@ -20,9 +20,4 @@ evaluator_model:
     _target_: setup.schema.create_evaluator_output_schema
     choice_description: |
       Which image is the most appealing: '1', '2', ..., 'N'
-  api_call:
-    _target_: shared.api.create_text_api_call
-    model: ${general.model}
-    temperature: ${general.temperature}
-    max_tokens: ${general.max_tokens}
-    delay: ${general.delay}  
+  api_call: ${llm}

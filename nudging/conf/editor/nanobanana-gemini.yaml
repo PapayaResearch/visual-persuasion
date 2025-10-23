@@ -1,0 +1,2 @@
+_target_: utils.models.Gemini
+model: gemini-2.5-flash-image-preview
