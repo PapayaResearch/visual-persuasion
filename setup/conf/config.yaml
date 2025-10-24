@@ -9,7 +9,7 @@ defaults:
   # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
   - editor: nanobanana-gemini
   # Strategy for processing images (e.g., vlm-filtering, random-sampling)
-  - strategy: random-sampling
+  - strategy: vlm-filtering
 
 ######################
 # General Settings
