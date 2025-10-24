@@ -42,16 +42,14 @@ def main(cfg: Config):
     logging.getLogger("LiteLLM").setLevel(logging.WARNING)
     logging.info(f"Logging to: {log_file}")
 
-    analysis_dir = cfg.general.analysis_dir
-
-    logging.info(f"Starting analysis on results in: {analysis_dir}\n")
+    csv_path = cfg.general.analysis_csv
 
     # Create analysis pipeline
     analysis_pipeline = hydra.utils.instantiate(cfg.analyze)
 
     # Run analysis
-    analysis_results_dir = analysis_pipeline.run(analysis_dir)
-    logging.info(f"Analysis completed: {analysis_results_dir}\n")
+    analysis_pipeline.run(csv_path)
+    logging.info(f"Analysis completed: {os.path.dirname(csv_path)}\n")
 
 if __name__ == "__main__":
     main()
