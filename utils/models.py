@@ -1,5 +1,4 @@
 import logging
-import os
 import io
 import base64
 from PIL import Image
@@ -10,8 +9,9 @@ class Gemini(ImageModel):
     """
     Implementation of Gemini-based image models for image editing.
     """
-    def __init__(self, model: str):
+    def __init__(self, model: str, max_retries: int):
         self.model = model
+        self.max_retries = max_retries
         self.client = genai.Client()
 
     def edit(self, prompt: str, image_bytes: bytes, context_image_bytes: bytes = None):
@@ -25,26 +25,29 @@ class Gemini(ImageModel):
             contents.append(context_image)
 
         # API call
-        try:
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=contents,
-            )
-        except Exception as e:
-            logging.error(f"Gemini API call failed: {e}\n")
-            return None, None
+        response = None
 
-        if response is None or not hasattr(response, 'candidates') or not response.candidates:
-            logging.error("Gemini API call failed: No response or candidates\n")
-            return None, None
+        for attempt in range(self.max_retries):
+            if attempt == self.max_retries:
+                logging.error("Image Model API call failed after maximum retries.\n")
+                return None, None
+            # Try to get a response
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model,
+                    contents=contents,
+                )
+            except Exception as e:
+                continue
+            # Break if response is obtained
+            if response is not None:
+                break
 
         edited_image = None
         edited_image_bytes = None
 
         for part in response.candidates[0].content.parts:
-            if part.text is not None:
-                logging.info(f"Image Model Response:\n{part.text}\n")
-            elif part.inline_data is not None:
+            if part.inline_data is not None:
                 edited_image_bytes = part.inline_data.data
                 edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
 
@@ -82,24 +85,18 @@ class LiteLLM(ImageModel):
         messages = [{"role": "user", "content": content}]
 
         # API call
-        response = self.api_call(messages)
+        try:
+            response = self.api_call(messages)
+        except Exception as e:
+            logging.error(f"Image Model API call failed: {e}\n")
+            return None, None
 
         if response is None:
-            logging.error("LiteLLM API call failed: No response\n")
+            logging.error("Image Model API call failed: No response\n")
             return None, None
 
-        if not hasattr(response, 'image') or response.image is None:
-            logging.error("LiteLLM API call failed: No image in response\n")
-            return None, None
+        image_string = response.choices[0].message.images[0]["image_url"]["url"].split(',', 1)[1]
 
-        image_string = response.image["url"].split(',', 1)[1]
-
-        if not hasattr(response, 'content') or response.content is None:
-            text_response = ""
-        else:
-            text_response = response.content
-
-        logging.info(f"Image Model Response:\n{text_response}\n")
         edited_image_bytes = base64.b64decode(image_string)
         edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
 
