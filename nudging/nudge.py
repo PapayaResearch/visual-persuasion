@@ -57,15 +57,11 @@ class VisualNudge:
             logging.info(f"Saved original image to: {original_save_path}\n")
 
             current_prompt = self.initial_prompt
-            logging.info("\n--- Starting Run ---\n")
-
-            # Store the most recent successful iteration for context if needed
-            context_image_bytes = None
             best_prompt = current_prompt
+            context_image_bytes = None
 
-            for i in range(self.iterations):
-                logging.info("-" * 30 + "\n")
-                logging.info(f">> ITERATION {i + 1}/{self.iterations} <<\n")
+            for iter in range(self.iterations + 1):
+                logging.info("\n>> ITERATION " + ("BEST" if iter == self.iterations else f"{iter + 1}/{self.iterations}") + " <<\n")
                 logging.info(f"PROMPT:\n{current_prompt}\n")
 
                 # 1. Edit image with current prompt
@@ -76,13 +72,11 @@ class VisualNudge:
                         if not context_image:
                             logging.error("Context image regeneration failed. Skipping to next iteration.\n")
                             continue
-                        logging.info(f"Regenerated context image from best prompt so far:\n{best_prompt}\n")
-                        context_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-{i+1}-context.jpg")
+                        context_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-{iter+1}-context.jpg")
                         context_image.save(context_image_save_path)
-                        logging.info(f"Saved context image to: {context_image_save_path}\n")
+                        logging.info(f"Regenerated and saved context image to: {context_image_save_path}\n")
 
                     # Use original and previous edited images for context
-                    logging.info("Using previous edited image for context during editing\n")
                     edited_prompt = f"{current_prompt}\n{self.editing_context_prompt}"
                     edited_image, edited_image_bytes = self.image_editing_model.edit(f"{edited_prompt}\n{self.background_state_prompt}", original_image_bytes, context_image_bytes)
                 else:
@@ -92,8 +86,14 @@ class VisualNudge:
                 if not edited_image:
                     logging.error("Image editing failed. Skipping to next iteration.\n")
                     continue
+                
+                if iter == self.iterations:
+                    best_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-n-edit.jpg")
+                    edited_image.save(best_image_save_path)
+                    logging.info(f"Saved best image to: {best_image_save_path}\n")
+                    break
 
-                edited_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-{i+1}-edit.jpg")
+                edited_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-{iter+1}-edit.jpg")
                 edited_image.save(edited_image_save_path)
                 logging.info(f"Saved edited image to: {edited_image_save_path}\n")
 
@@ -115,7 +115,6 @@ class VisualNudge:
                     if not evaluation:
                         logging.error("Evaluation failed. Skipping to next iteration.\n")
                         continue
-
                     logging.info(f"{evaluation}\n")
 
                     # 3. Get critique (loss)
@@ -127,7 +126,6 @@ class VisualNudge:
                     if not critique:
                         logging.error("Critique generation failed. Skipping to next iteration.")
                         continue
-
                     logging.info(f"{critique}\n")
 
                     # 4. Get new prompt from optimizer
@@ -137,10 +135,10 @@ class VisualNudge:
                     )
 
                     if not response:
-                        logging.error("Prompt optimization failed. Skipping to next iteration.")
+                        logging.error("Prompt optimization failed. Skipping to next iteration.\n")
                         continue
-
                     logging.info(f"{response}\n")
+
                     new_prompt = response.new_prompt
 
                     if self.enable_tournament_mode:
@@ -158,38 +156,5 @@ class VisualNudge:
 
                     # Update the prompt for the next iteration
                     current_prompt = new_prompt
-
-            if context_image_bytes:
-                logging.info("\n--- Finalizing Best Image ---\n")
-
-                if self.enable_editing_context:
-                    if self.enable_tournament_mode and self.save_best_prompts:
-                        # Regenerate context image from best prompt so far
-                        context_image, context_image_bytes = self.image_editing_model.edit(f"{best_prompt}\n{self.background_state_prompt}", original_image_bytes)
-                        if not context_image:
-                            logging.error("Context image regeneration failed for final edit.\n")
-                            continue
-                        logging.info(f"Regenerated context image from best prompt so far:\n{best_prompt}\n")
-                        context_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-n-context.jpg")
-                        context_image.save(context_image_save_path)
-                        logging.info(f"Saved context image to: {context_image_save_path}\n")
-
-                    # Using original and previous edited images for context
-                    logging.info("Using previous edited image for context during final edit\n")
-                    edited_prompt = f"{current_prompt}\n{self.editing_context_prompt}"
-                    best_image, _ = self.image_editing_model.edit(f"{edited_prompt}\n{self.background_state_prompt}", original_image_bytes, context_image_bytes)
-                else:
-                    # Use only the original image
-                    best_image, _ = self.image_editing_model.edit(f"{current_prompt}\n{self.background_state_prompt}", original_image_bytes)
-
-                # Save the best image
-                if not best_image:
-                    logging.error("Final best image generation failed.\n")
-                    continue
-                best_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-n-edit.jpg")
-                best_image.save(best_image_save_path)
-                logging.info(f"Saved best image to: {best_image_save_path}\n")
-
-            logging.info("-" * 30 + "\n")
 
         return results_dir

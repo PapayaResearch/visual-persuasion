@@ -18,7 +18,7 @@ defaults:
 general:
   ## NUDGE CONFIGURATION
   # Directory containing the images to be tested
-  data_dir: ${hydra:runtime.cwd}/data/test_dataset/with_background
+  data_dir: ${hydra:runtime.cwd}/data/temp
   # Total number of iterations to run per image
   iterations: 2
   # Enable previous image context during editing
@@ -77,7 +77,7 @@ nudge:
 
     # The system prompt for the image comparison task
     system_prompt: |
-      You are comparing two images to determine which looks more appealing.
+      You are comparing two images to determine which is better.
       The first image is the original, and the second is an edited version.
 
     # Input schema for the evaluator model
@@ -172,7 +172,7 @@ evaluate:
 
     # The system prompt for the image comparison task
     system_prompt: |
-      You are comparing two images to determine which looks more appealing.
+      You are comparing two images to determine which is better.
 
     # Input schema for the evaluator model
     input_schema:

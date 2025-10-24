@@ -55,18 +55,17 @@ def main(cfg: Config):
     # Get list of images from data directory
     data_dir = cfg.general.data_dir
     image_paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir)
-                    if os.path.isfile(os.path.join(data_dir, f))]
+                    if os.path.isfile(os.path.join(data_dir, f))
+                    and f.lower().endswith(('.jpg', '.jpeg', '.png'))]
 
-    # Instantiate the entire VisualNudge pipeline
-    logging.info("Instantiating VisualNudge pipeline...\n")
+    # Instantiate the nudging pipeline
     nudge_pipeline = hydra.utils.instantiate(cfg.nudge)
-    logging.info("Pipeline instantiated\n")
 
-    logging.info(f"Starting visual nudge run with {len(image_paths)} image(s) from {data_dir}\n")
+    # Run the nudging pipeline
+    logging.info(f"Starting nudging run with {len(image_paths)} image(s) from {data_dir}\n")
+    nudge_pipeline.run(image_paths, results_dir)
 
-    # Pass runtime-specific parameters to the run method
-    nudge_results_dir = nudge_pipeline.run(image_paths, results_dir)
-    logging.info(f"Visual nudge run completed: {nudge_results_dir}\n")
+    logging.info(f"Nudging run completed: {results_dir}\n")
 
 if __name__ == "__main__":
     main()
