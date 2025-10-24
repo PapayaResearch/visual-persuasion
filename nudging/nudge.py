@@ -156,5 +156,3 @@ class VisualNudge:
 
                     # Update the prompt for the next iteration
                     current_prompt = new_prompt
-
-        return results_dir

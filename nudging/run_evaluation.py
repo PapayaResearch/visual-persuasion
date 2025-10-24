@@ -18,6 +18,7 @@ config_store.store(name="base_config", node=Config)
 def main(cfg: Config):
     # Load and print configuration
     OmegaConf.resolve(cfg)
+    cfg_yaml = OmegaConf.to_yaml(cfg)
     print_config(cfg)
 
     # Create common directories and paths
@@ -42,16 +43,34 @@ def main(cfg: Config):
     logging.getLogger("LiteLLM").setLevel(logging.WARNING)
     logging.info(f"Logging to: {log_file}")
 
-    eval_dir = cfg.general.eval_dir
+    # Get list of images from data directory
+    data_dir = cfg.general.eval_dir
+    image_paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir)
+                    if os.path.isfile(os.path.join(data_dir, f))
+                    and f.lower().endswith(('.jpg', '.jpeg', '.png'))]
 
-    logging.info(f"Starting evaluation on results in: {eval_dir}\n")
+    # Create the results directory
+    results_dir = os.path.join(
+        data_dir,
+        "evaluation",
+        cfg.evaluate.evaluator_model.api_call.model,
+        current_date
+    )
+    os.makedirs(results_dir, exist_ok=True)
+    # Save config to output directories
+    with open(os.path.join(results_dir, "config.yaml"), "w") as outfile:
+        outfile.write(cfg_yaml)
+    with open(os.path.join(os.path.dirname(log_file), "config.yaml"), "w") as outfile:
+        outfile.write(cfg_yaml)
 
     # Create evaluation pipeline
     eval_pipeline = hydra.utils.instantiate(cfg.evaluate)
 
     # Run evaluation
-    eval_results_dir = eval_pipeline.run(eval_dir, cfg.evaluate.evaluator_model.api_call.model)
-    logging.info(f"Evaluation completed: {eval_results_dir}\n")
+    logging.info(f"Starting evaluation on results in: {data_dir}\n")
+    eval_pipeline.run(image_paths, results_dir)
+
+    logging.info(f"Evaluation completed: {results_dir}\n")
 
 if __name__ == "__main__":
     main()

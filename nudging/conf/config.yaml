@@ -7,7 +7,7 @@ defaults:
   # LLM model for evaluator/loss/optimizer (e.g., gpt-5)
   - llm: gpt-5
   # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
-  - editor: nanobanana-litellm
+  - editor: nanobanana-gemini
   # Strategy for nudging (e.g., zero-shot, prompt-optimization, tournament-of-images, tournament-of-prompts)
   - strategy: tournament-of-prompts
 
@@ -26,7 +26,7 @@ general:
 
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)
-  eval_dir: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/2025-10-24_11-18-58
+  eval_dir: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/2025-10-24_14-54-32
 
   ## ANALYSIS CONFIGURATION
   # Directory to analyze (directory with evaluation log files)
@@ -193,6 +193,8 @@ evaluate:
 
     # Wrapper function for the API - uses LLM config
     api_call: ${llm}
+    # Enable returning usage data from the API
+    return_usage_data: true
 
 ######################
 # Analysis Settings
