@@ -25,29 +25,28 @@ class Gemini(ImageModel):
             contents.append(context_image)
 
         # API call
-        response = None
-
         for attempt in range(self.max_retries):
             if attempt == self.max_retries:
                 logging.error("Gemini API call failed: maximum retries exceeded.\n")
                 return None, None
             # Try to get a response
+            response = None
             try:
                 response = self.client.models.generate_content(
                     model=self.model,
                     contents=contents,
                 )
+                if response:
+                    break
             except Exception as e:
+                logging.error(f"Gemini API call failed (attempt {attempt + 1}/{self.max_retries}): {e}\n")
                 continue
-            # Break if response is obtained
-            if response:
-                break
 
         edited_image = None
         edited_image_bytes = None
 
         for part in response.candidates[0].content.parts:
-            if not part.inline_data:
+            if part.inline_data:
                 edited_image_bytes = part.inline_data.data
                 edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
 

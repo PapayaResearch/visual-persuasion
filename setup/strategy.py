@@ -138,10 +138,6 @@ class VLMFiltering(SamplingStrategy):
 
                 # Get current chunk of images
                 chunk_images = selected_images[start_idx:end_idx]
-
-                if not chunk_images:
-                    continue
-
                 logging.info(f"Evaluating chunk {i+1}/{actual_num_process} with {len(chunk_images)} images in folder {folder_name}\n")
 
                 # Evaluate the chunk images and choose the best one
