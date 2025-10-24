@@ -32,5 +32,6 @@ class ImageEnhancer:
                 logging.error(f"Enhancement failed for image: {img_file}, skipping.\n")
                 continue
             enhanced_image.save(os.path.join(enhanced_dir, img_file))
+            logging.info(f"Enhanced image {img_file} and copied to enhanced directory.\n")
 
-        logging.info(f"Enhanced images saved to {enhanced_dir}")
+        logging.info(f"Enhanced images saved to {enhanced_dir}\n")

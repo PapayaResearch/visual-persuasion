@@ -7,9 +7,9 @@ defaults:
   # LLM model for VLM filtering (e.g., gpt-5)
   - llm: gpt-5-mini
   # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
-  - editor: nanobanana-litellm
+  - editor: nanobanana-gemini
   # Strategy for processing images (e.g., vlm-filtering, random-sampling)
-  - strategy: vlm-filtering
+  - strategy: random-sampling
 
 ######################
 # General Settings

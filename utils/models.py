@@ -13,6 +13,8 @@ class Gemini(ImageModel):
         self.model = model
         self.max_retries = max_retries
         self.client = genai.Client()
+        # Suppress regular logs from Gemini SDK
+        logging.getLogger('google_genai.models').setLevel(logging.WARNING)
 
     def edit(self, prompt: str, image_bytes: bytes, context_image_bytes: bytes = None):
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
