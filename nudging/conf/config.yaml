@@ -7,7 +7,7 @@ defaults:
   # LLM model for evaluator/loss/optimizer (e.g., gpt-5)
   - llm: gpt-5
   # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
-  - editor: nanobanana-gemini
+  - editor: nanobanana-litellm
   # Strategy for nudging (e.g., zero-shot, prompt-optimization, tournament-of-images, tournament-of-prompts)
   - strategy: tournament-of-prompts
 
@@ -30,7 +30,7 @@ general:
 
   ## ANALYSIS CONFIGURATION
   # Directory to analyze (directory with evaluation log files)
-  analysis_dir: ${hydra:runtime.cwd}/results/nudging/gpt-4o-mini/2025-10-22_01-15-54/evaluation/gpt-4o-mini
+  analysis_dir: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/2025-10-24_11-18-58/evaluation/gpt-5-2025-08-07/2025-10-24_12-55-37
 
 ######################
 # Nudge Settings
