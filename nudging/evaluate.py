@@ -2,6 +2,7 @@ import os
 import logging
 import random
 import itertools
+import pandas as pd
 from typing import List
 from collections import defaultdict
 from utils.wrappers import LanguageModel
@@ -22,6 +23,9 @@ class EvaluationPipeline:
         """
         Runs the evaluation pipeline for each image.
         """
+        # Initialize DataFrame to collect all results
+        results_data = []
+        
         # Group images by class
         class_groups = defaultdict(list)
         for img_path in image_paths:
@@ -86,10 +90,13 @@ class EvaluationPipeline:
                 img1_chosen = ((vlm_choice == "first" and is_img1_first) or
                                (vlm_choice == "second" and not is_img1_first))
 
+                choice = base1 if img1_chosen else base2
+                first = base1 if is_img1_first else base2
+                second = base2 if is_img1_first else base1
+
                 result = (
-                    f"Choice: {base1 if img1_chosen else base2}\n"
-                    f"Reason (first={base1 if is_img1_first else base2}, "
-                    f"second={base2 if is_img1_first else base1}):\n"
+                    f"Choice: {choice}\n"
+                    f"Reason (first={first}, second={second}):\n"
                     f"{vlm_reason}\n"
                 )
                 logging.info(result)
@@ -97,17 +104,40 @@ class EvaluationPipeline:
                 # Append this result to our collection for this class
                 all_evaluations += result + "\n" + "-" * 40 + "\n\n"
 
-                # Log usage data
+                # Extract usage data
                 completion_tokens = usage.completion_tokens
                 prompt_tokens = usage.prompt_tokens
                 total_tokens = usage.total_tokens
-                if not usage.completion_tokens_details:
-                    reasoning_tokens = 0
-                else:
+                reasoning_tokens = 0
+                if usage.completion_tokens_details:
                     reasoning_tokens = usage.completion_tokens_details.reasoning_tokens
+
+                # Add record to results data
+                results_data.append({
+                    'image_class': image_class,
+                    'base1': base1,
+                    'base2': base2,
+                    'choice': choice,
+                    'reason': vlm_reason,
+                    'first': first,
+                    'second': second,
+                    'completion_tokens': completion_tokens,
+                    'prompt_tokens': prompt_tokens,
+                    'total_tokens': total_tokens,
+                    'reasoning_tokens': reasoning_tokens
+                })
 
             # After processing all comparisons, save the combined results to a single log file
             log_save_path = os.path.join(results_dir, f"{image_class}.log")
             with open(log_save_path, "w", encoding="utf-8") as log_file:
                 log_file.write(all_evaluations)
             logging.info(f"Saved all evaluation results to: {log_save_path}\n")
+
+        # Export results to CSV
+        results_df = pd.DataFrame(results_data, columns=[
+            'image_class', 'base1', 'base2', 'choice', 'reason', 'first', 'second',
+            'completion_tokens', 'prompt_tokens', 'total_tokens', 'reasoning_tokens'
+        ])
+        csv_save_path = os.path.join(results_dir, 'results.csv')
+        results_df.to_csv(csv_save_path, index=False, encoding='utf-8')
+        logging.info(f"Saved results CSV with {len(results_df)} records to: {csv_save_path}\n")

@@ -26,7 +26,7 @@ general:
 
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)
-  eval_dir: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/2025-10-24_14-54-32
+  eval_dir: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/2025-10-24_14-58-16
 
   ## ANALYSIS CONFIGURATION
   # Directory to analyze (directory with evaluation log files)
