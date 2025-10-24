@@ -74,12 +74,14 @@ class LanguageModel:
         input_schema: Type[IOSchema],
         output_schema: Type[IOSchema],
         api_call: callable,
+        return_usage_data: bool = False,
         enable_json_schema_validation: bool = True
     ):
         self.system_prompt = system_prompt
         self.input_schema = input_schema
         self.output_schema = output_schema
         self.api_call = api_call
+        self.return_usage_data = return_usage_data
 
         # Enable JSON schema validation for models that don't natively support it
         if enable_json_schema_validation:
@@ -170,6 +172,8 @@ class LanguageModel:
             )
         except Exception as e:
             logging.error(f"Language Model API call failed: {e}\n")
+            if self.return_usage_data:
+                return None, None
             return None
 
         # Parse the response
@@ -178,4 +182,6 @@ class LanguageModel:
         parsed_json = json.loads(content)
         result = self.output_schema(**parsed_json)
 
+        if self.return_usage_data:
+            return result, response.usage
         return result

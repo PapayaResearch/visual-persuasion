@@ -97,6 +97,15 @@ class EvaluationPipeline:
                 # Append this result to our collection for this class
                 all_evaluations += result + "\n" + "-" * 40 + "\n\n"
 
+                # Log usage data
+                completion_tokens = usage.completion_tokens
+                prompt_tokens = usage.prompt_tokens
+                total_tokens = usage.total_tokens
+                if not usage.completion_tokens_details:
+                    reasoning_tokens = 0
+                else:
+                    reasoning_tokens = usage.completion_tokens_details.reasoning_tokens
+
             # After processing all comparisons, save the combined results to a single log file
             log_save_path = os.path.join(results_dir, f"{image_class}.log")
             with open(log_save_path, "w", encoding="utf-8") as log_file:
