@@ -2,6 +2,7 @@ import os
 import io
 import logging
 from PIL import Image
+from typing import List
 from utils.wrappers import ImageModel, LanguageModel
 
 class VisualNudge:
@@ -39,7 +40,7 @@ class VisualNudge:
         self.loss_model = loss_model
         self.optimizer_model = optimizer_model
 
-    def run(self, image_paths: list, results_dir: str):
+    def run(self, image_paths: List[str], results_dir: str):
         """
         Runs the optimization loop for each image.
         """
@@ -72,7 +73,7 @@ class VisualNudge:
                     if self.enable_tournament_mode and self.save_best_prompts:
                         # Regenerate context image from best prompt so far
                         context_image, context_image_bytes = self.image_editing_model.edit(f"{best_prompt}\n{self.background_state_prompt}", original_image_bytes)
-                        if context_image is None:
+                        if not context_image:
                             logging.error("Context image regeneration failed. Skipping to next iteration.\n")
                             continue
                         logging.info(f"Regenerated context image from best prompt so far:\n{best_prompt}\n")
@@ -88,7 +89,7 @@ class VisualNudge:
                     # Use only the original image
                     edited_image, edited_image_bytes = self.image_editing_model.edit(f"{current_prompt}\n{self.background_state_prompt}", original_image_bytes)
 
-                if edited_image is None:
+                if not edited_image:
                     logging.error("Image editing failed. Skipping to next iteration.\n")
                     continue
 
@@ -111,7 +112,7 @@ class VisualNudge:
                             images=[original_image_bytes, edited_image_bytes]
                         )
 
-                    if evaluation is None:
+                    if not evaluation:
                         logging.error("Evaluation failed. Skipping to next iteration.\n")
                         continue
 
@@ -123,7 +124,7 @@ class VisualNudge:
                         reason=evaluation.reason,
                     )
 
-                    if critique is None:
+                    if not critique:
                         logging.error("Critique generation failed. Skipping to next iteration.")
                         continue
 
@@ -135,7 +136,7 @@ class VisualNudge:
                         suggestions=critique.suggestions
                     )
 
-                    if response is None:
+                    if not response:
                         logging.error("Prompt optimization failed. Skipping to next iteration.")
                         continue
 
@@ -165,7 +166,7 @@ class VisualNudge:
                     if self.enable_tournament_mode and self.save_best_prompts:
                         # Regenerate context image from best prompt so far
                         context_image, context_image_bytes = self.image_editing_model.edit(f"{best_prompt}\n{self.background_state_prompt}", original_image_bytes)
-                        if context_image is None:
+                        if not context_image:
                             logging.error("Context image regeneration failed for final edit.\n")
                             continue
                         logging.info(f"Regenerated context image from best prompt so far:\n{best_prompt}\n")
@@ -182,7 +183,7 @@ class VisualNudge:
                     best_image, _ = self.image_editing_model.edit(f"{current_prompt}\n{self.background_state_prompt}", original_image_bytes)
 
                 # Save the best image
-                if best_image is None:
+                if not best_image:
                     logging.error("Final best image generation failed.\n")
                     continue
                 best_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-n-edit.jpg")

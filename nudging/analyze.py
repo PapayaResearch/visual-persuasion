@@ -169,14 +169,8 @@ class EvaluationAnalyzer:
 
             if base_type in image_files:
                 img_path = os.path.join(self.image_dir, image_files[base_type])
-                try:
-                    img = Image.open(img_path)
-                    ax_img.imshow(img)
-                except Exception as e:
-                    logging.error(f"Failed to load image {img_path}: {e}\n")
-                    ax_img.text(0.5, 0.5, 'Error\nloading\nimage',
-                            ha='center', va='center', transform=ax_img.transAxes,
-                            fontsize=9, color='red')
+                img = Image.open(img_path)
+                ax_img.imshow(img)
             else:
                 # Missing image
                 ax_img.text(0.5, 0.5, 'Missing',
@@ -195,7 +189,7 @@ class EvaluationAnalyzer:
 
     def generate_preview(self, output_dir: str) -> str:
         """Generate a preview image showing sample images from different classes and base types."""
-        if self.df.empty or self.image_dir is None:
+        if self.df.empty or not self.image_dir:
             logging.warning("No data or image directory available for preview generation.\n")
             return ""
 
@@ -256,16 +250,9 @@ class EvaluationAnalyzer:
                 if class_name in image_files and base_type in image_files[class_name]:
                     img_file = image_files[class_name][base_type]
                     img_path = os.path.join(self.image_dir, img_file)
-
-                    try:
-                        img = Image.open(img_path)
-                        ax.imshow(img)
-                        ax.set_title(f"{base_type}", fontsize=10)
-                    except Exception as e:
-                        logging.error(f"Failed to load image {img_path}: {e}\n")
-                        ax.text(0.5, 0.5, 'Error loading\nimage',
-                               ha='center', va='center', transform=ax.transAxes, fontsize=10)
-                        ax.set_title(f"{base_type}", fontsize=10)
+                    img = Image.open(img_path)
+                    ax.imshow(img)
+                    ax.set_title(f"{base_type}", fontsize=10)
                 else:
                     # Missing image
                     ax.text(0.5, 0.5, 'Missing',

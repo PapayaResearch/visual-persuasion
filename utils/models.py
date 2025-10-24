@@ -29,7 +29,7 @@ class Gemini(ImageModel):
 
         for attempt in range(self.max_retries):
             if attempt == self.max_retries:
-                logging.error("Image Model API call failed after maximum retries.\n")
+                logging.error("Gemini API call failed: maximum retries exceeded.\n")
                 return None, None
             # Try to get a response
             try:
@@ -40,14 +40,14 @@ class Gemini(ImageModel):
             except Exception as e:
                 continue
             # Break if response is obtained
-            if response is not None:
+            if response:
                 break
 
         edited_image = None
         edited_image_bytes = None
 
         for part in response.candidates[0].content.parts:
-            if part.inline_data is not None:
+            if not part.inline_data:
                 edited_image_bytes = part.inline_data.data
                 edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
 
@@ -89,10 +89,6 @@ class LiteLLM(ImageModel):
             response = self.api_call(messages)
         except Exception as e:
             logging.error(f"Image Model API call failed: {e}\n")
-            return None, None
-
-        if response is None:
-            logging.error("Image Model API call failed: No response\n")
             return None, None
 
         image_string = response.choices[0].message.images[0]["image_url"]["url"].split(',', 1)[1]

@@ -21,8 +21,8 @@ class IOSchema(BaseModel):
         """
         parts = []
         for field_name, field_value in self.model_dump().items():
-            # Skip None values, list fields (images), and bytes fields (images)
-            if field_value is None or isinstance(field_value, (list, bytes)):
+            # Skip images
+            if isinstance(field_value, (list, bytes)):
                 continue
 
             # Format: FIELD_NAME:\nvalue\n\n

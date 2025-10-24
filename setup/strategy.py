@@ -155,15 +155,11 @@ class VLMFiltering(SamplingStrategy):
                     images=image_bytes_list
                 )
 
-                try:
-                    best_index = int(response.choice) - 1
-                    if not best_index in range(len(images)):
-                        logging.error(f"Evaluator returned invalid index: {response}\nDefaulting to first image.")
-                        best_index = 0  # Default to first image on error
-                except ValueError:
-                    logging.error(f"Evaluator response parsing failed: {response}\nDefaulting to first image.")
-                    best_index = 0  # Default to first image on error
+                if not response:
+                    logging.error(f"Evaluator returned no response, defaulting to first image.\n")
+                    best_index = 0
 
+                best_index = int(response.choice) - 1
                 best_image = chunk_images[best_index]
                 logging.info(f"Selected best image {best_image} (index {best_index}) from chunk {i+1} in folder {folder_name}\n")
 

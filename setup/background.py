@@ -15,16 +15,14 @@ class BackgroundProcessor:
     def __init__(
         self,
         image_editing_model: ImageModel,
-        num_previews_with_background: int,
-        num_previews_without_background: int,
+        max_previews: int,
         background_removal_prompt: str,
         ssim_threshold: float,
         enable_background_normalization: bool,
         background_normalization_prompt: str
     ):
         self.image_editing_model = image_editing_model
-        self.num_previews_with_background = num_previews_with_background
-        self.num_previews_without_background = num_previews_without_background
+        self.max_previews = max_previews
         self.background_removal_prompt = background_removal_prompt
         self.ssim_threshold = ssim_threshold
         self.enable_background_normalization = enable_background_normalization
@@ -65,9 +63,9 @@ class BackgroundProcessor:
         # Generate previews for with-background images (original vs normalized)
         with_bg_images = [f for f in os.listdir(dst_dir_with_bg) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
         random.shuffle(with_bg_images)
-        if self.num_previews_with_background == -1:
-            self.num_previews_with_background = len(with_bg_images)
-        selected_with_bg = with_bg_images[:min(self.num_previews_with_background, len(with_bg_images))]
+
+        num_previews = self.max_previews if (self.max_previews != -1 and self.max_previews < len(with_bg_images)) else len(with_bg_images)
+        selected_with_bg = with_bg_images[:num_previews]
 
         if selected_with_bg:
             rows, cols = self._calculate_subplot_dims(len(selected_with_bg))
@@ -121,9 +119,9 @@ class BackgroundProcessor:
         # Generate previews for without-background images (original vs normalized)
         without_bg_images = [f for f in os.listdir(dst_dir_without_bg) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
         random.shuffle(without_bg_images)
-        if self.num_previews_without_background == -1:
-            self.num_previews_without_background = len(without_bg_images)
-        selected_without_bg = without_bg_images[:min(self.num_previews_without_background, len(without_bg_images))]
+
+        num_previews = self.max_previews if (self.max_previews != -1 and self.max_previews < len(without_bg_images)) else len(without_bg_images)
+        selected_without_bg = without_bg_images[:num_previews]
 
         if selected_without_bg:
             rows, cols = self._calculate_subplot_dims(len(selected_without_bg))
@@ -189,9 +187,9 @@ class BackgroundProcessor:
         # Generate previews for with-background images
         with_bg_images = [f for f in os.listdir(dst_dir_with_bg) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
         random.shuffle(with_bg_images)
-        if self.num_previews_with_background == -1:
-            self.num_previews_with_background = len(with_bg_images)
-        selected_with_bg = with_bg_images[:min(self.num_previews_with_background, len(with_bg_images))]
+
+        num_previews = self.max_previews if (self.max_previews != -1 and self.max_previews < len(with_bg_images)) else len(with_bg_images)
+        selected_with_bg = with_bg_images[:num_previews]
 
         if selected_with_bg:
             rows, cols = self._calculate_subplot_dims(len(selected_with_bg))
@@ -233,9 +231,9 @@ class BackgroundProcessor:
         # Generate previews for without-background images
         without_bg_images = [f for f in os.listdir(dst_dir_without_bg) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
         random.shuffle(without_bg_images)
-        if self.num_previews_without_background == -1:
-            self.num_previews_without_background = len(without_bg_images)
-        selected_without_bg = without_bg_images[:min(self.num_previews_without_background, len(without_bg_images))]
+
+        num_previews = self.max_previews if (self.max_previews != -1 and self.max_previews < len(without_bg_images)) else len(without_bg_images)
+        selected_without_bg = without_bg_images[:num_previews]
 
         if selected_without_bg:
             rows, cols = self._calculate_subplot_dims(len(selected_without_bg))
@@ -311,7 +309,7 @@ class BackgroundProcessor:
                 original_image_bytes
             )
 
-            if edited_image is None:
+            if not edited_image:
                 logging.error(f"Background removal failed for image: {file}, skipping.\n")
                 continue
 
@@ -340,8 +338,8 @@ class BackgroundProcessor:
                     original_image_bytes
                 )
 
-                if normalized_image is None:
-                    logging.error(f"Background normalization failed for image: {file}, skipping normalization.\n")
+                if not normalized_image:
+                    logging.error(f"Background normalization failed for image: {file}, skipping.\n")
                     continue
 
                 if ssim_value < self.ssim_threshold:
