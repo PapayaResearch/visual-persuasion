@@ -1,6 +1,5 @@
 import litellm
 import time
-import os
 from typing import Callable
 
 def create_api_call(
@@ -9,8 +8,7 @@ def create_api_call(
         temperature: float,
         max_tokens: int,
         reasoning_effort: str,
-        additional_drop_params: list,
-        return_message_only: bool
+        additional_drop_params: list
 ) -> Callable:
     """
     Factory for creating the api_call function.
@@ -29,6 +27,6 @@ def create_api_call(
             additional_drop_params=list(additional_drop_params)
         )
 
-        return result.choices[0].message if return_message_only else result
+        return result
 
     return api_call

@@ -32,7 +32,7 @@ general:
 
 dataset:
   # Name of the dataset (used for creating destination subfolder)
-  name: test_dataset
+  name: new_dataset
 
   # Number of image folders to process (set to -1 to process all)
   num_folders: -1
@@ -67,10 +67,8 @@ background_processor:
   # Model to be used for background processing
   image_editing_model: ${editor}
 
-  # Maximum number of images to preview from the with-background subset (set to -1 to preview all)
-  num_previews_with_background: -1
-  # Maximum number of images to preview from the without-background subset (set to -1 to preview all)
-  num_previews_without_background: -1
+  # Maximum number of images to preview from each of the subsets (set to -1 to preview all)
+  max_previews: -1
 
   # The prompt for the background removal task
   background_removal_prompt: |

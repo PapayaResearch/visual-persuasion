@@ -10,4 +10,3 @@ api_call:
     - temperature
     - max_tokens
     - reasoning_effort
-  return_message_only: true

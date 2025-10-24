@@ -20,8 +20,6 @@ class ApiCall:
     reasoning_effort: str
     # Additional parameters to drop for specific models
     additional_drop_params: list
-    # Return only message content instead of full response
-    return_message_only: bool
 
 #######################
 # Schema Settings

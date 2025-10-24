@@ -7,4 +7,3 @@ reasoning_effort: medium
 additional_drop_params:
     - temperature
     - max_tokens
-return_message_only: false

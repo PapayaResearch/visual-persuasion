@@ -7,4 +7,3 @@ reasoning_effort: null
 additional_drop_params:
     - max_tokens
     - reasoning_effort
-return_message_only: false

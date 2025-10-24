@@ -163,12 +163,13 @@ class LanguageModel:
         messages = self._build_messages(validated_inputs)
 
         # Call the API with response_format set to the output schema
-        response = self.api_call(
-            messages=messages,
-            response_format=self.output_schema
-        )
-
-        if response is None:
+        try:
+            response = self.api_call(
+                messages=messages,
+                response_format=self.output_schema
+            )
+        except Exception as e:
+            logging.error(f"Language Model API call failed: {e}\n")
             return None
 
         # Parse the response

@@ -20,8 +20,6 @@ class ApiCall:
     reasoning_effort: str
     # Additional parameters to drop for specific models
     additional_drop_params: list
-    # Return only message content instead of full response
-    return_message_only: bool
 
 #######################
 # Schema Settings
@@ -73,10 +71,8 @@ class BackgroundProcessor:
     _target_: str
     # Model to be used for background processing
     image_editing_model: ImageModel
-    # Maximum number of images to preview from the with-background subset (set to -1 to preview all)
-    num_previews_with_background: int
-    # Maximum number of images to preview from the without-background subset (set to -1 to preview all)
-    num_previews_without_background: int
+    # Maximum number of images to preview from each of the subsets (set to -1 to preview all)
+    max_previews: int
     # The prompt for the background removal task
     background_removal_prompt: str
     # Threshold for SSIM value to consider an image as having a plain background

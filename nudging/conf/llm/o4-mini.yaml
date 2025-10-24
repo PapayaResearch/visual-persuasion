@@ -8,4 +8,3 @@ additional_drop_params:
     - temperature
     - max_tokens
     - reasoning_effort
-return_message_only: false

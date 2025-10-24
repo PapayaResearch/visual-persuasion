@@ -6,4 +6,3 @@ max_tokens: null
 reasoning_effort: medium
 additional_drop_params:
     - max_tokens
-return_message_only: false
