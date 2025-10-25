@@ -1,15 +1,13 @@
 import os
 import io
 import logging
-from utils.wrappers import ImageModel
-from typing import Tuple
-
 import numpy as np
-from PIL import Image
-from skimage.metrics import structural_similarity as ssim
-
 import random
 import matplotlib.pyplot as plt
+from utils.wrappers import ImageModel
+from typing import Tuple
+from PIL import Image
+from skimage.metrics import structural_similarity as ssim
 
 class BackgroundProcessor:
     def __init__(
@@ -45,7 +43,7 @@ class BackgroundProcessor:
         rows = int(np.sqrt(num_images))
         cols = int(np.ceil(num_images / rows))
         return rows, cols
-    
+
     def _generate_preview(self, image_dir: str, normalized_dir: str, dst_file: str, title: str):
         """Generates a single preview image showing samples from the specified directory."""
         images = [f for f in os.listdir(image_dir)
@@ -53,25 +51,25 @@ class BackgroundProcessor:
         if not images:
             logging.warning(f"No images found in {image_dir} for preview generation.\n")
             return
-        
+
         random.shuffle(images)
         num_previews = self.max_previews if (self.max_previews != -1 and self.max_previews < len(images)) else len(images)
         selected_images = images[:num_previews]
 
         show_normalized = self.enable_background_normalization and normalized_dir is not None
-        
+
         # Calculate subplot dimensions
         rows, cols = self._calculate_subplot_dims(len(selected_images))
-        
+
         # Adjust figure size and column count based on whether we show normalized versions
         if show_normalized:
             fig, axes = plt.subplots(rows, cols * 2, figsize=(cols * 6, rows * 3))
         else:
             fig, axes = plt.subplots(rows, cols, figsize=(cols * 3, rows * 3))
-        
+
         # Add plot title
         fig.suptitle(title, fontsize=16, fontweight='bold')
-        
+
         # Ensure axes is always 2D array for consistent indexing
         total_cols = cols * 2 if show_normalized else cols
         if rows == 1 and total_cols == 1:
@@ -80,11 +78,11 @@ class BackgroundProcessor:
             axes = axes.reshape(1, -1)
         elif total_cols == 1:
             axes = axes.reshape(-1, 1)
-        
+
         # Plot images
         for i, img_name in enumerate(selected_images):
             row = i // cols
-            col = i % cols  
+            col = i % cols
             if show_normalized:
                 # Original image (left)
                 original_img_path = os.path.join(image_dir, img_name)
@@ -109,7 +107,7 @@ class BackgroundProcessor:
                 axes[row, col].imshow(img)
                 axes[row, col].set_title(f"{img_name}", fontsize=8)
                 axes[row, col].axis('off')
-        
+
         # Hide unused subplots
         for i in range(len(selected_images), rows * cols):
             row = i // cols
@@ -119,12 +117,12 @@ class BackgroundProcessor:
                 axes[row, col * 2 + 1].axis('off')
             else:
                 axes[row, col].axis('off')
-        
+
         plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust for suptitle
         preview_path = os.path.join(dst_file)
         plt.savefig(preview_path, dpi=150, bbox_inches='tight')
         plt.close()
-        
+
         img_count_text = f"{len(selected_images)} image pairs" if show_normalized else f"{len(selected_images)} images"
         logging.info(f"Generated {title} preview with {img_count_text} at: {preview_path}\n")
 
@@ -194,7 +192,7 @@ class BackgroundProcessor:
                     norm_f.write(normalized_image_bytes)
                     bg_status = 'with-background-normalized' if has_bg else 'without-background-normalized'
                     logging.info(f"Image {file} normalized and saved to {bg_status} directory.\n")
-        
+
         # Generate preview for with-background images
         self._generate_preview(
             image_dir=self.dst_dir_bg,
