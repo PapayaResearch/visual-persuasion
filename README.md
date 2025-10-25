@@ -52,16 +52,25 @@ python main.py llm=gpt-5-mini
 python main.py editor=nanobanana-litellm
 
 # Override general settings
-python main.py general.source_dir=/path/to/images general.dest_dir=/path/to/output
+python main.py general.src_dir=/path/to/images general.dst_dir=/path/to/output
 
 # Enable/disable image enhancement
-python main.py general.enhance_images=true
+python main.py general.enhance_image_quality=true
+
+# Enable/disable splitting by background
+python main.py general.split_by_background=false
 
 # Configure dataset sampling
-python main.py dataset.num_samples=50
+python main.py dataset.num_folders=10 dataset.num_evaluate_per_folder=5 dataset.num_process_per_folder=2
+
+# Set dataset name
+python main.py dataset.name=my_dataset
 
 # Enable background normalization
-python main.py background_processor.normalize_backgrounds=true
+python main.py background_processor.enable_background_normalization=true
+
+# Change SSIM threshold for background detection
+python main.py background_processor.ssim_threshold=0.7
 ```
 
 ### Run Nudging Pipeline
@@ -95,13 +104,11 @@ python run_nudging.py llm=o3
 python run_nudging.py editor=nanobanana-gemini
 python run_nudging.py editor=nanobanana-litellm
 
-# Override specific models in the pipeline
-python run_nudging.py nudge.evaluator_model.model=gpt-5-2025-08-07
-python run_nudging.py nudge.loss_model.model=claude-sonnet-4-5-20250924
-python run_nudging.py nudge.optimizer_model.model=gemini-2.5-pro
-
 # Change data directory
 python run_nudging.py general.data_dir=/path/to/images
+
+# Enable/disable editing context (include previous image when editing)
+python run_nudging.py general.enable_editing_context=false
 
 # Combine multiple overrides
 python run_nudging.py general.iterations=10 strategy=tournament-of-prompts llm=claude-4-5-sonnet
@@ -126,7 +133,7 @@ python run_evaluation.py general.evaluation_dir=/path/to/nudging/results
 python run_evaluation.py llm=claude-4-5-sonnet
 
 # Change evaluator model directly
-python run_evaluation.py evaluate.evaluator_model.model=gpt-5-2025-08-07
+python run_evaluation.py evaluate.evaluator_model.api_call.model=gpt-5-2025-08-07
 ```
 
 ### Run Analysis
@@ -144,8 +151,6 @@ python run_analysis.py general.analysis_csv=/path/to/evaluation/results.csv
 # Analyze specific CSV results
 python run_analysis.py general.analysis_csv=/path/to/results/evaluation.csv
 
-# Customize visualization settings
+# Customize number of preview images
 python run_analysis.py analyze.num_previews=10
-python run_analysis.py analyze.dpi=150
-python run_analysis.py analyze.figsize=[12,8]
 ```
