@@ -203,8 +203,8 @@ evaluate:
 analyze:
   # Hydra target class for the analysis pipeline
   _target_: nudging.analyze.EvaluationAnalyzer
-  # Number of preview images to generate
-  num_previews: 5
+  # Number of preview images to generate (-1 for all)
+  num_previews: -1
 
 ######################
 # Logging Settings
