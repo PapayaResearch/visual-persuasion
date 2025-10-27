@@ -47,7 +47,7 @@ class EvaluationPipeline:
         """
         # Initialize DataFrame to collect all results
         results_data = []
-        
+
         # Group images by class
         class_groups = defaultdict(list)
         images_to_evaluate = self._get_images_to_evaluate(image_paths)
