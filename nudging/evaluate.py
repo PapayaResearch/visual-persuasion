@@ -18,6 +18,28 @@ class EvaluationPipeline:
     ):
         self.evaluator_prompt = evaluator_prompt
         self.evaluator_model = evaluator_model
+    
+    def _get_images_to_evaluate(self, image_paths: List[str]) -> List[str]:
+        """
+        Retrieves all image files to be evaluated based on naming conventions.
+        """
+        images_to_evaluate = []
+        last_iteration = {}
+
+        for img_path in image_paths:
+            filename = os.path.basename(img_path)
+            name_without_ext = os.path.splitext(filename)[0]
+            split = name_without_ext.split('_')
+            image_name = '_'.join(split[:-1])
+            version = split[-1]
+            if (image_name not in last_iteration) or (filename > last_iteration[image_name]):
+                last_iteration[image_name] = filename
+            if 'iter-0-original' in version or 'iter-1-edit' in version:
+                images_to_evaluate.append(filename)
+        
+        images_to_evaluate.extend(last_iteration.values())
+
+        return images_to_evaluate
 
     def run(self, image_paths: List[str], results_dir: str):
         """
@@ -28,13 +50,15 @@ class EvaluationPipeline:
         
         # Group images by class
         class_groups = defaultdict(list)
+        images_to_evaluate = self._get_images_to_evaluate(image_paths)
         for img_path in image_paths:
             filename = os.path.basename(img_path)
-            name_without_ext = os.path.splitext(filename)[0]
-            split = name_without_ext.split('_')
-            image_class = '_'.join(split[:-1])
-            base = split[-1]
-            class_groups[image_class].append((img_path, base))
+            if filename in images_to_evaluate:
+                name_without_ext = os.path.splitext(filename)[0]
+                split = name_without_ext.split('_')
+                image_class = split[0]
+                base = '_'.join(split[1:])
+                class_groups[image_class].append((img_path, base))
 
         logging.info(f"Found {len(class_groups)} image classes to evaluate\n")
 

@@ -26,11 +26,11 @@ general:
 
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)
-  evaluation_dir: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/2025-10-24_14-58-16
+  evaluation_dir: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/2025-10-24_11-18-58
 
   ## ANALYSIS CONFIGURATION
   # CSV file with evaluation results to analyze
-  analysis_csv: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/2025-10-24_14-58-16/evaluation/gpt-5-2025-08-07/2025-10-25_01-23-27/results.csv
+  analysis_csv: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/2025-10-24_11-18-58/evaluation/gpt-5-2025-08-07/2025-10-27_20-20-04/results.csv
 
 ######################
 # Nudge Settings
