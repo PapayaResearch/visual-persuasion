@@ -9,9 +9,10 @@ class Gemini(ImageModel):
     """
     Implementation of Gemini-based image models for image editing.
     """
-    def __init__(self, model: str, max_retries: int):
+    def __init__(self, model: str, max_retries: int, aspect_ratio: str):
         self.model = model
         self.max_retries = max_retries
+        self.aspect_ratio = aspect_ratio
         self.client = Client()
         # Suppress regular logs from Gemini SDK
         logging.getLogger('google_genai.models').setLevel(logging.WARNING)
@@ -40,7 +41,7 @@ class Gemini(ImageModel):
                     config=types.GenerateContentConfig(
                         response_modalities=['Image'],
                         image_config=types.ImageConfig(
-                            aspect_ratio="1:1"
+                            aspect_ratio=self.aspect_ratio
                         )
                     )
                 )

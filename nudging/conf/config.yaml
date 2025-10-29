@@ -18,11 +18,13 @@ defaults:
 general:
   ## NUDGE CONFIGURATION
   # Directory containing the images to be tested
-  data_dir: ${hydra:runtime.cwd}/data/temp
+  data_dir: ${hydra:runtime.cwd}/data/new_dataset_2025-10-29_18-42-38/without_background_normalized
   # Total number of iterations to run per image
   iterations: 2
   # Enable previous image context during editing
   enable_editing_context: true
+  # Output aspect ratio for edited images
+  aspect_ratio: "1:1"
 
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)

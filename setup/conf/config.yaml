@@ -21,6 +21,8 @@ general:
   # Destination directory for saving the processed images
   dst_dir: ${hydra:runtime.cwd}/../nudging/data
 
+  # Output aspect ratio for edited images
+  aspect_ratio: "1:1"
   # Enhance image quality before further processing
   enhance_image_quality: true
   # Enable splitting of dataset by background type
