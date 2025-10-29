@@ -52,9 +52,6 @@ def main(cfg: Config):
         if os.path.isdir(os.path.join(src_path, f))
     ]
 
-    logging.info(f"Starting dataset creation for: {cfg.dataset.name}\n")
-    logging.info(f"Found {len(all_folders)} folders in source directory: {src_path}\n")
-
     # Create strategy instance and create dataset
     strategy = hydra.utils.instantiate(cfg.strategy)
     strategy.create_dataset(all_folders, dst_dir)

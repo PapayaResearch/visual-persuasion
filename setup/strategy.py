@@ -16,12 +16,9 @@ class SamplingStrategy(ABC):
         self.dst_dir = os.path.join(dst_dir, "base")
         os.makedirs(self.dst_dir, exist_ok=True)
 
-        logging.info(f"Using {self.__class__.__name__} strategy\n")
-
         # Handle -1 case (process all folders)
         if self.num_folders == -1:
             self.num_folders = len(all_folders)
-            logging.info(f"num_folders set to -1, processing all {self.num_folders} folders\n")
 
         # Check if requested folders exceed available folders
         if self.num_folders > len(all_folders):
@@ -31,7 +28,6 @@ class SamplingStrategy(ABC):
         # Select random folders
         random.shuffle(all_folders)
         selected_folders = all_folders[:self.num_folders]
-        logging.info(f"Selected {len(selected_folders)} folders for processing\n")
 
         # Process each selected folder using strategy-specific logic
         for folder_path in tqdm(selected_folders, desc="Processing folders", unit="folder"):

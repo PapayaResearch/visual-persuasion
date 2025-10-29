@@ -4,6 +4,8 @@ import logging
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils.wrappers import ImageModel
 from typing import Tuple
 from PIL import Image
@@ -126,7 +128,48 @@ class BackgroundProcessor:
         img_count_text = f"{len(selected_images)} image pairs" if show_normalized else f"{len(selected_images)} images"
         logging.info(f"Generated {title} preview with {img_count_text} at: {preview_path}\n")
 
-    def split_by_background(self, src_dir: str):
+    def _process_single_image(self, file, src_dir, dst_dir_bg, dst_dir_no_bg, dst_dir_bg_normalized, dst_dir_no_bg_normalized):
+        """Process a single image for background splitting."""
+        original_img_path = os.path.join(src_dir, file)
+        with open(original_img_path, 'rb') as f:
+            original_image_bytes = f.read()
+
+        # Use the background remover model to get the edited image
+        edited_image, edited_image_bytes = self.image_editing_model.edit(
+            self.background_removal_prompt,
+            original_image_bytes
+        )
+        if not edited_image:
+            logging.error(f"Background removal failed for image: {file}, skipping.\n")
+            return None
+
+        # Compute SSIM between original and edited image
+        original_image = Image.open(io.BytesIO(original_image_bytes)).convert("RGB")
+        ssim_value = self._compute_ssim(original_image, edited_image)
+
+        # Decide if the image has a background based on SSIM threshold
+        has_bg = ssim_value < self.ssim_threshold
+        dst_path = os.path.join(dst_dir_bg if has_bg else dst_dir_no_bg, file)
+        with open(dst_path, 'wb') as out_f:
+            out_f.write(original_image_bytes)
+
+        # Generate normalized version if enabled
+        if self.enable_background_normalization:
+            normalized_image, normalized_image_bytes = self.image_editing_model.edit(
+                self.background_normalization_prompt,
+                original_image_bytes
+            )
+            if not normalized_image:
+                logging.error(f"Background normalization failed for image: {file}, skipping.\n")
+                return has_bg
+            # Save normalized image to appropriate directory
+            dst_normalized_path = os.path.join(dst_dir_bg_normalized if has_bg else dst_dir_no_bg_normalized, file)
+            with open(dst_normalized_path, 'wb') as norm_f:
+                norm_f.write(normalized_image_bytes)
+
+        return has_bg
+
+    def split_by_background(self, src_dir: str, max_workers=10):
         """
         Splits images in the source directory into two directories based on whether the image has a normalized background.
         """
@@ -148,50 +191,15 @@ class BackgroundProcessor:
             self.dst_dir_bg_normalized = None
             self.dst_dir_no_bg_normalized = None
 
-        for file in os.listdir(self.src_dir):
-            if not file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff')):
-                continue
+        image_files = [f for f in os.listdir(self.src_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))]
 
-            original_img_path = os.path.join(self.src_dir, file)
-            with open(original_img_path, 'rb') as f:
-                original_image_bytes = f.read()
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(self._process_single_image, file, self.src_dir, self.dst_dir_bg,
+                                      self.dst_dir_no_bg, self.dst_dir_bg_normalized, self.dst_dir_no_bg_normalized): file
+                      for file in image_files}
 
-            # Use the background remover model to get the edited image
-            edited_image, edited_image_bytes = self.image_editing_model.edit(
-                self.background_removal_prompt,
-                original_image_bytes
-            )
-            if not edited_image:
-                logging.error(f"Background removal failed for image: {file}, skipping.\n")
-                continue
-
-            # Compute SSIM between original and edited image
-            original_image = Image.open(io.BytesIO(original_image_bytes)).convert("RGB")
-            ssim_value = self._compute_ssim(original_image, edited_image)
-
-            # Decide if the image has a background based on SSIM threshold
-            has_bg = ssim_value < self.ssim_threshold
-            dst_path = os.path.join(self.dst_dir_bg if has_bg else self.dst_dir_no_bg, file)
-            with open(dst_path, 'wb') as out_f:
-                out_f.write(original_image_bytes)
-                bg_status = 'with-background' if has_bg else 'without-background'
-                logging.info(f"Image {file} (SSIM value: {ssim_value:.4f}) copied to {bg_status} directory.\n")
-
-            # Generate normalized version if enabled
-            if self.enable_background_normalization:
-                normalized_image, normalized_image_bytes = self.image_editing_model.edit(
-                    self.background_normalization_prompt,
-                    original_image_bytes
-                )
-                if not normalized_image:
-                    logging.error(f"Background normalization failed for image: {file}, skipping.\n")
-                    continue
-                # Save normalized image to appropriate directory
-                dst_normalized_path = os.path.join(self.dst_dir_bg_normalized if has_bg else self.dst_dir_no_bg_normalized, file)
-                with open(dst_normalized_path, 'wb') as norm_f:
-                    norm_f.write(normalized_image_bytes)
-                    bg_status = 'with-background-normalized' if has_bg else 'without-background-normalized'
-                    logging.info(f"Image {file} normalized and saved to {bg_status} directory.\n")
+            for future in tqdm(as_completed(futures), total=len(image_files), desc="Splitting by background", unit="image"):
+                future.result()
 
         # Generate preview for with-background images
         self._generate_preview(
