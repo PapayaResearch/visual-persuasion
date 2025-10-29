@@ -27,6 +27,8 @@ general:
   enhance_image_quality: true
   # Enable splitting of dataset by background type
   split_by_background: true
+  # Maximum number of parallel workers for processing
+  max_workers: 1
 
 ######################
 # Dataset Settings

@@ -28,7 +28,7 @@ class ImageEnhancer:
         enhanced_image.save(os.path.join(enhanced_dir, img_file))
         return True
 
-    def enhance_images(self, src_dir, max_workers=10):
+    def enhance_images(self, src_dir, max_workers):
         """
         Enhances the quality of images in the source directory using the specified enhancement model.
         """

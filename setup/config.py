@@ -122,6 +122,8 @@ class General:
     enhance_image_quality: bool
     # Enable splitting of dataset by background type
     split_by_background: bool
+    # Maximum number of parallel workers for processing
+    max_workers: int
 
 ######################
 # Main Config

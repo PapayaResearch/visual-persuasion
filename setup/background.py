@@ -169,7 +169,7 @@ class BackgroundProcessor:
 
         return has_bg
 
-    def split_by_background(self, src_dir: str, max_workers=10):
+    def split_by_background(self, src_dir: str, max_workers: int):
         """
         Splits images in the source directory into two directories based on whether the image has a normalized background.
         """

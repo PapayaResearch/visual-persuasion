@@ -59,12 +59,12 @@ def main(cfg: Config):
     # Enhance image quality if required
     if cfg.general.enhance_image_quality:
         enhancer = hydra.utils.instantiate(cfg.image_enhancer)
-        enhancer.enhance_images(dst_dir)
+        enhancer.enhance_images(dst_dir, cfg.general.max_workers)
 
     # Split the dataset by background if required
     if cfg.general.split_by_background:
         background_processor = hydra.utils.instantiate(cfg.background_processor)
-        background_processor.split_by_background(dst_dir)
+        background_processor.split_by_background(dst_dir, cfg.general.max_workers)
 
     logging.info(f"Dataset creation completed.\nResults saved to: {dst_dir}")
 
