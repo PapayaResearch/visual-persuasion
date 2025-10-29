@@ -42,7 +42,7 @@ class VisualNudge:
         self.loss_model = loss_model
         self.optimizer_model = optimizer_model
 
-    def _process_single_image(self, image_path: str, img_idx: int, total_images: int, results_dir: str):
+    def _process_single_image(self, image_path: str, img_idx: int, total_images: int, results_dir: str, pbar=None):
         """
         Processes a single image through the optimization loop.
         """
@@ -64,6 +64,9 @@ class VisualNudge:
             for iter in range(self.iterations + 1):
                 logging.info("\n>> ITERATION " + ("BEST" if iter == self.iterations else f"{iter + 1}/{self.iterations}") + " <<\n")
                 logging.info(f"PROMPT:\n{current_prompt}\n")
+
+                if pbar:
+                    pbar.update(1)
 
                 # 1. Edit image with current prompt
                 if self.enable_editing_context and context_image_bytes:
@@ -162,9 +165,12 @@ class VisualNudge:
         """
         Runs the optimization loop for each image, optionally in parallel.
         """
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(self._process_single_image, image_path, idx, len(image_paths), results_dir): image_path
-                      for idx, image_path in enumerate(image_paths)}
+        total_iterations = len(image_paths) * (self.iterations + 1)
 
-            for future in tqdm(as_completed(futures), total=len(image_paths), desc="Processing images", unit="image"):
-                future.result()
+        with tqdm(total=total_iterations, desc="Total progress", unit="iter", position=0) as pbar_total:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {executor.submit(self._process_single_image, image_path, idx, len(image_paths), results_dir, pbar_total): image_path
+                          for idx, image_path in enumerate(image_paths)}
+
+                for future in tqdm(as_completed(futures), total=len(image_paths), desc="Images completed", unit="image", position=1, leave=False):
+                    future.result()
