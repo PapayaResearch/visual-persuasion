@@ -1,11 +1,16 @@
 import argparse
 import gzip
 import json
+import os
 import shutil
+import numpy as np
 import pandas as pd
 from pathlib import Path
 from typing import List
 from tqdm import tqdm
+from fastembed import ImageEmbedding
+import apricot
+from sklearn.cluster import MiniBatchKMeans
 
 # TODO: Take as input argument
 TARGET_CATEGORIES = [
@@ -62,6 +67,94 @@ def sample_images_per_category(df: pd.DataFrame, n_samples: int, random_seed: in
     return pd.concat(sampled_dfs, ignore_index=True)
 
 
+def calculate_embeddings(df: pd.DataFrame, dataset_dir: Path) -> np.ndarray:
+    """Calculate embeddings for all images in the dataframe."""
+    model = ImageEmbedding(model_name="Qdrant/clip-ViT-B-32-vision", threads=8)
+
+    image_paths = [str(dataset_dir / path) for path in df["path"].tolist()]
+
+    embeddings = list(tqdm(
+        model.embed(images=image_paths, batch_size=32, parallel=None),
+        total=len(df),
+        desc="Calculating embeddings"
+    ))
+
+    return np.vstack(embeddings)
+
+
+def subsample_by_similarity_apricot(df: pd.DataFrame, embeddings: np.ndarray, n_samples: int) -> pd.DataFrame:
+    """Subsample images using apricot facility location to select similar images.
+
+    This method uses submodular optimization to find representative samples that
+    maximize diversity while staying within the main cluster.
+    """
+    sampled_dfs = []
+
+    for category in tqdm(df["product_type_str"].unique(), desc="Subsampling by similarity (apricot)"):
+        df_cat = df[df["product_type_str"] == category].copy()
+        cat_indices = df_cat.index.tolist()
+        cat_features = embeddings[cat_indices, :]
+
+        selector = apricot.functions.facilityLocation.FacilityLocationSelection(
+            n_samples=n_samples,
+            random_state=0
+        )
+        selector.fit(cat_features)
+        selected_indices = selector.ranking[:n_samples]
+
+        # Get the actual dataframe rows
+        selected_rows = df_cat.iloc[selected_indices]
+        sampled_dfs.append(selected_rows)
+
+    return pd.concat(sampled_dfs, ignore_index=True)
+
+
+def subsample_by_similarity_clustering(df: pd.DataFrame, embeddings: np.ndarray, n_samples: int) -> pd.DataFrame:
+    """Subsample images using density-based clustering.
+
+    This method clusters the embeddings and samples proportionally from each cluster
+    based on density, favoring images from denser regions (more similar images).
+    """
+    sampled_dfs = []
+
+    for category in tqdm(df["product_type_str"].unique(), desc="Subsampling by similarity (clustering)"):
+        df_cat = df[df["product_type_str"] == category].copy()
+        cat_indices = df_cat.index.tolist()
+        cat_features = embeddings[cat_indices, :]
+
+        # Over-cluster to better estimate density
+        n_clusters = n_samples * 3
+        kmeans = MiniBatchKMeans(n_clusters=n_clusters, random_state=0, batch_size=1000)
+        labels = kmeans.fit_predict(cat_features)
+
+        # Count points per cluster (density estimate)
+        unique, counts = np.unique(labels, return_counts=True)
+        cluster_weights = counts / counts.sum()
+
+        # Sample proportionally from each cluster
+        selected_indices = []
+        samples_per_cluster = np.round(cluster_weights * n_samples).astype(int)
+
+        for cluster_id, n_samples_cluster in enumerate(samples_per_cluster):
+            if n_samples_cluster > 0:
+                cluster_points = np.where(labels == cluster_id)[0]
+                sampled = np.random.choice(
+                    cluster_points,
+                    size=min(n_samples_cluster, len(cluster_points)),
+                    replace=False
+                )
+                selected_indices.extend(sampled)
+
+        # Adjust if we're slightly over/under
+        selected_indices = selected_indices[:n_samples]
+
+        # Get the actual dataframe rows
+        selected_rows = df_cat.iloc[selected_indices]
+        sampled_dfs.append(selected_rows)
+
+    return pd.concat(sampled_dfs, ignore_index=True)
+
+
 def copy_images_to_output(df: pd.DataFrame, dataset_dir: Path, output_dir: Path) -> None:
     """Copy sampled images to output directory organized by category."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -110,8 +203,16 @@ def main():
         "--n-samples",
         type=int,
         required=True,
-        help="Number of images to sample per category"
+        help="Number of images to sample per category after similarity-based selection"
     )
+
+    parser.add_argument(
+        "--initial-samples",
+        type=int,
+        default=100,
+        help="Number of images to initially sample randomly per category (e.g., 100)"
+    )
+
 
     parser.add_argument(
         "--seed",
@@ -126,8 +227,22 @@ def main():
     image_df = pd.read_csv(args.image_metadata, compression="gzip")
     filtered_df = filter_by_categories(product_df, TARGET_CATEGORIES)
     merged_df = filtered_df.merge(image_df, left_on="main_image_id", right_on="image_id", how="inner")
-    sampled_df = sample_images_per_category(merged_df, args.n_samples, args.seed)
-    copy_images_to_output(sampled_df, args.dataset_dir, args.output_dir)
+    initially_sampled_df = sample_images_per_category(merged_df, args.initial_samples, args.seed)
+
+    embeddings = calculate_embeddings(initially_sampled_df, args.dataset_dir)
+
+    # final_sampled_df = subsample_by_similarity_apricot(
+    #     initially_sampled_df,
+    #     embeddings,
+    #     args.n_samples
+    # )
+    final_sampled_df = subsample_by_similarity_clustering(
+        initially_sampled_df,
+        embeddings,
+        args.n_samples
+    )
+
+    copy_images_to_output(final_sampled_df, args.dataset_dir, args.output_dir)
 
 if __name__ == "__main__":
     main()
