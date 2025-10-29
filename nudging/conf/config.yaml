@@ -25,6 +25,8 @@ general:
   enable_editing_context: true
   # Output aspect ratio for edited images
   aspect_ratio: "1:1"
+  # Maximum number of parallel workers for processing images
+  max_workers: 1
 
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)

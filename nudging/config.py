@@ -142,6 +142,8 @@ class General:
     iterations: int
     # Enable previous image context during editing
     enable_editing_context: bool
+    # Maximum number of parallel workers for processing images
+    max_workers: int
     # Directory to evaluate (directory with images used for nudging)
     eval_dir: str
     # Directory to analyze (directory with evaluation log files)

@@ -3,6 +3,8 @@ import io
 import logging
 from PIL import Image
 from typing import List
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils.wrappers import ImageModel, LanguageModel
 
 class VisualNudge:
@@ -40,16 +42,15 @@ class VisualNudge:
         self.loss_model = loss_model
         self.optimizer_model = optimizer_model
 
-    def run(self, image_paths: List[str], results_dir: str):
+    def _process_single_image(self, image_path: str, img_idx: int, total_images: int, results_dir: str):
         """
-        Runs the optimization loop for each image.
+        Processes a single image through the optimization loop.
         """
-        for img_idx, image_path in enumerate(image_paths):
-            base_filename, _ = os.path.splitext(os.path.basename(image_path))
-            logging.info(f"\n===== Processing Image {img_idx + 1}/{len(image_paths)}: {base_filename} =====\n")
+        base_filename, _ = os.path.splitext(os.path.basename(image_path))
+        logging.info(f"\n===== Processing Image {img_idx + 1}/{total_images}: {base_filename} =====\n")
 
-            with open(image_path, "rb") as f:
-                original_image_bytes = f.read()
+        with open(image_path, "rb") as f:
+            original_image_bytes = f.read()
 
             original_image = Image.open(io.BytesIO(original_image_bytes))
             original_save_path = os.path.join(results_dir, f"{base_filename}_iter-0-original.jpg")
@@ -156,3 +157,14 @@ class VisualNudge:
 
                     # Update the prompt for the next iteration
                     current_prompt = new_prompt
+
+    def run(self, image_paths: List[str], results_dir: str, max_workers: int = 1):
+        """
+        Runs the optimization loop for each image, optionally in parallel.
+        """
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(self._process_single_image, image_path, idx, len(image_paths), results_dir): image_path
+                      for idx, image_path in enumerate(image_paths)}
+
+            for future in tqdm(as_completed(futures), total=len(image_paths), desc="Processing images", unit="image"):
+                future.result()

@@ -40,8 +40,8 @@ def main(cfg: Config):
         format="%(asctime)s - %(levelname)s - %(message)s",
         force=True
     )
-    logging.getLogger().addHandler(logging.StreamHandler())
     logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+    print(f"Logging to: {log_file}")
     logging.info(f"Logging to: {log_file}")
 
     # Create the results directory
@@ -63,7 +63,7 @@ def main(cfg: Config):
 
     # Run the nudging pipeline
     logging.info(f"Starting nudging run with {len(image_paths)} image(s) from {data_dir}\n")
-    nudge_pipeline.run(image_paths, results_dir)
+    nudge_pipeline.run(image_paths, results_dir, cfg.general.max_workers)
 
     logging.info(f"Nudging run completed: {results_dir}\n")
 
