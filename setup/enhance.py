@@ -36,7 +36,13 @@ class ImageEnhancer:
         enhanced_dir = os.path.join(src_dir, "enhanced")
         os.makedirs(enhanced_dir, exist_ok=True)
 
-        image_files = [f for f in os.listdir(base_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        # Only enhance images that don't already exist in enhanced directory
+        all_images = [f for f in os.listdir(base_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        existing_enhanced = set(os.listdir(enhanced_dir)) if os.path.exists(enhanced_dir) else set()
+        image_files = [f for f in all_images if f not in existing_enhanced]
+
+        if not image_files:
+            return
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(self._enhance_single_image, base_dir, enhanced_dir, img_file): img_file
@@ -44,5 +50,3 @@ class ImageEnhancer:
 
             for future in tqdm(as_completed(futures), total=len(image_files), desc="Enhancing images", unit="image"):
                 future.result()
-
-        logging.info(f"Enhanced images saved to {enhanced_dir}\n")

@@ -41,9 +41,9 @@ def main(cfg: Config):
     logging.getLogger("LiteLLM").setLevel(logging.WARNING)
     logging.info(f"Logging to: {log_file}")
 
-    # Always append timestamp to destination directory
+    # Setup paths
     src_path = cfg.general.src_dir
-    dst_dir = os.path.join(cfg.general.dst_dir, cfg.dataset.name + '_' + current_date)
+    dst_dir = os.path.join(cfg.general.dst_dir, cfg.dataset.name)
 
     # Get all folders in the source directory with absolute paths (strategy-independent)
     all_folders = [

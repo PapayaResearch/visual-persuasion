@@ -45,7 +45,7 @@ class Gemini(ImageModel):
                         )
                     )
                 )
-                if response:
+                if response and response.candidates and response.candidates[0].content:
                     break
             except Exception as e:
                 logging.error(f"Gemini API call failed (attempt {attempt + 1}/{self.max_retries}): {e}\n")
