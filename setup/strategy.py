@@ -2,6 +2,7 @@ import random
 import logging
 import os
 from typing import List
+from tqdm import tqdm
 from utils.wrappers import LanguageModel
 from abc import ABC, abstractmethod
 
@@ -33,9 +34,8 @@ class SamplingStrategy(ABC):
         logging.info(f"Selected {len(selected_folders)} folders for processing\n")
 
         # Process each selected folder using strategy-specific logic
-        for folder_path in selected_folders:
+        for folder_path in tqdm(selected_folders, desc="Processing folders", unit="folder"):
             folder_name = os.path.basename(folder_path)
-            logging.info(f"Processing folder: {folder_name}\n")
 
             # Get all images in the folder
             images = [img for img in os.listdir(folder_path)
@@ -55,7 +55,6 @@ class SamplingStrategy(ABC):
         with open(os.path.join(folder_path, image), "rb") as src_f:
             with open(dst_image_path, "wb") as dst_f:
                 dst_f.write(src_f.read())
-        logging.info(f"Copied image {image} from folder {folder_name} to base directory.\n")
 
 
 class RandomSampling(SamplingStrategy):

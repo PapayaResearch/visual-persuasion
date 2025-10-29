@@ -1,5 +1,6 @@
 import os
 import logging
+from tqdm import tqdm
 from utils.wrappers import ImageModel
 
 class ImageEnhancer:
@@ -20,7 +21,7 @@ class ImageEnhancer:
         os.makedirs(enhanced_dir, exist_ok=True)
 
         image_files = [f for f in os.listdir(base_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-        for img_file in image_files:
+        for img_file in tqdm(image_files, desc="Enhancing images", unit="image"):
             img_path = os.path.join(base_dir, img_file)
             with open(img_path, 'rb') as f:
                 original_image_bytes = f.read()
@@ -32,6 +33,5 @@ class ImageEnhancer:
                 logging.error(f"Enhancement failed for image: {img_file}, skipping.\n")
                 continue
             enhanced_image.save(os.path.join(enhanced_dir, img_file))
-            logging.info(f"Enhanced image {img_file} and copied to enhanced directory.\n")
 
         logging.info(f"Enhanced images saved to {enhanced_dir}\n")
