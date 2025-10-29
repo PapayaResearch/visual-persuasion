@@ -103,7 +103,6 @@ class VLMFiltering(SamplingStrategy):
         # Handle -1 case for num_evaluate_per_folder
         if self.num_evaluate_per_folder == -1:
             num_evaluate = len(images)
-            logging.info(f"num_evaluate_per_folder set to -1, evaluating all {num_evaluate} images in folder {folder_name}\n")
         else:
             num_evaluate = self.num_evaluate_per_folder
 
@@ -129,7 +128,6 @@ class VLMFiltering(SamplingStrategy):
 
             # Get current chunk of images
             chunk_images = selected_images[start_idx:end_idx]
-            logging.info(f"Evaluating chunk {i+1}/{actual_num_process} with {len(chunk_images)} images in folder {folder_name}\n")
 
             # Evaluate the chunk images and choose the best one
             image_bytes_list = []
@@ -149,7 +147,6 @@ class VLMFiltering(SamplingStrategy):
                 best_index = int(response.choice) - 1
 
             best_image = chunk_images[best_index]
-            logging.info(f"Selected best image {best_image} (index {best_index}) from chunk {i+1} in folder {folder_name}")
 
             # Copy the best image to the destination directory
             self.copy_image(folder_path, folder_name, best_image)
