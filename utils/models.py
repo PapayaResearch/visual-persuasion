@@ -2,7 +2,7 @@ import logging
 import io
 import base64
 from PIL import Image
-from google import genai
+from google.genai import Client, types
 from utils.wrappers import ImageModel
 
 class Gemini(ImageModel):
@@ -12,7 +12,7 @@ class Gemini(ImageModel):
     def __init__(self, model: str, max_retries: int):
         self.model = model
         self.max_retries = max_retries
-        self.client = genai.Client()
+        self.client = Client()
         # Suppress regular logs from Gemini SDK
         logging.getLogger('google_genai.models').setLevel(logging.WARNING)
 
@@ -37,6 +37,12 @@ class Gemini(ImageModel):
                 response = self.client.models.generate_content(
                     model=self.model,
                     contents=contents,
+                    config=types.GenerateContentConfig(
+                        response_modalities=['Image'],
+                        image_config=types.ImageConfig(
+                            aspect_ratio="1:1"
+                        )
+                    )
                 )
                 if response:
                     break

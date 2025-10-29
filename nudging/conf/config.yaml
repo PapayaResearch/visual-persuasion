@@ -62,7 +62,7 @@ nudge:
     Keep the product itself exactly unchanged.
   # Additional prompt to retain background state during editing
   background_state_prompt: |
-    If the image does not have a background, do not add one.
+    Do not add a background to the image, keep it white as in the original.
 
   # Use the selected editor from the defaults section
   image_editing_model: ${editor}
