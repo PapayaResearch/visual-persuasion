@@ -65,9 +65,6 @@ class VisualNudge:
                 logging.info("\n>> ITERATION " + ("BEST" if iter == self.iterations else f"{iter + 1}/{self.iterations}") + " <<\n")
                 logging.info(f"PROMPT:\n{current_prompt}\n")
 
-                if pbar:
-                    pbar.update(1)
-
                 # 1. Edit image with current prompt
                 if self.enable_editing_context and context_image_bytes:
                     if self.enable_tournament_mode and self.save_best_prompts:
@@ -160,6 +157,10 @@ class VisualNudge:
 
                     # Update the prompt for the next iteration
                     current_prompt = new_prompt
+
+                # Update progress at end of iteration
+                if pbar:
+                    pbar.update(1)
 
     def run(self, image_paths: List[str], results_dir: str, max_workers: int = 1):
         """
