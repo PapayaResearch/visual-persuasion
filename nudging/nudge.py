@@ -1,6 +1,7 @@
 import os
 import io
 import logging
+import random
 from PIL import Image
 from typing import List
 from tqdm import tqdm
@@ -103,19 +104,21 @@ class VisualNudge:
                 if self.enable_optimization:
                     # 2. Evaluate the edit
                     choices, reasons = {}, []
+                    # If tournament mode, use context image as one of the images
+                    comparison_image_bytes = (context_image_bytes if self.enable_tournament_mode and context_image_bytes
+                                              else original_image_bytes)
+                    # Randomly decide which image is first and which is second to avoid bias
+                    is_edited_first = random.choice([True, False])
+                    image_to_improve = "first" if is_edited_first else "second"
+                    image1_bytes = edited_image_bytes if is_edited_first else comparison_image_bytes
+                    image2_bytes = comparison_image_bytes if is_edited_first else edited_image_bytes
+                    logging.info(f"Evaluating with edited image as {'first' if is_edited_first else 'second'} image.\n")
+
                     for _ in range(self.num_judges):  # Get multiple evaluations for robustness
-                        if self.enable_tournament_mode and context_image_bytes:
-                            # Use the previous and current edited images
-                            evaluation = self.evaluator_model.get_response(
-                                task=self.evaluator_prompt,
-                                images=[context_image_bytes, edited_image_bytes]
-                            )
-                        else:
-                            # Use the original and current edited images
-                            evaluation = self.evaluator_model.get_response(
-                                task=self.evaluator_prompt,
-                                images=[original_image_bytes, edited_image_bytes]
-                            )
+                        evaluation = self.evaluator_model.get_response(
+                            task=self.evaluator_prompt,
+                            images=[image1_bytes, image2_bytes]
+                        )
 
                         if not evaluation:
                             logging.warning("Evaluation failed. Skipping to next judge.\n")
@@ -135,7 +138,8 @@ class VisualNudge:
                     # 3. Get critique (loss)
                     critique = self.loss_model.get_response(
                         choice=selected_choice,
-                        reason=aggregated_reason
+                        reason=aggregated_reason,
+                        to_improve=image_to_improve
                     )
 
                     if not critique:

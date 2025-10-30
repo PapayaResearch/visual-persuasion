@@ -112,7 +112,7 @@ nudge:
     # The system prompt for the loss generation task
     system_prompt: |
       You are helping to improve photos by providing constructive feedback.
-      Analyze why the evaluator made their choice and identify specific areas for improvement.
+      Analyze why the judges made their choice and identify specific areas for improvement.
       Focus on actionable suggestions that could make the next iteration better.
 
     # Input schema for the loss model
@@ -120,8 +120,11 @@ nudge:
       _target_: nudging.schema.create_loss_input_schema
       choice_description: |
         Which image was chosen as better
+      choice_options: ['first', 'second']
       reason_description: |
         Reason for the choice
+      to_improve_description: |
+        The image we want to improve ('first' or 'second')
 
     # Output schema for the loss model
     output_schema:

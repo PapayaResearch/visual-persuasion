@@ -26,14 +26,15 @@ def create_evaluator_output_schema(choice_description: str, choice_options: List
     return EvaluatorOutput
 
 
-def create_loss_input_schema(choice_description: str, reason_description: str) -> Type[IOSchema]:
+def create_loss_input_schema(choice_description: str, choice_options: List[str], reason_description: str, to_improve_description: str) -> Type[IOSchema]:
     """
     Creates a LossInput schema class with configurable field descriptions.
     """
     class LossInput(IOSchema):
         """Input schema for loss model."""
-        choice: str = Field(description=choice_description)
+        choice: Literal[*choice_options] = Field(description=choice_description) # type: ignore
         reason: str = Field(description=reason_description)
+        to_improve: Literal[*choice_options] = Field(description=to_improve_description) # type: ignore
 
     return LossInput
 
