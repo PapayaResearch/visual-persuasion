@@ -23,6 +23,7 @@ class VisualNudge:
         initial_prompt: str,
         background_state_prompt: str,
         image_editing_model: ImageModel,
+        num_judges: int,
         evaluator_prompt: str,
         evaluator_model: LanguageModel,
         loss_model: LanguageModel,
@@ -37,6 +38,7 @@ class VisualNudge:
         self.initial_prompt = initial_prompt
         self.background_state_prompt = background_state_prompt
         self.image_editing_model = image_editing_model
+        self.num_judges = num_judges
         self.evaluator_prompt = evaluator_prompt
         self.evaluator_model = evaluator_model
         self.loss_model = loss_model
@@ -100,28 +102,40 @@ class VisualNudge:
 
                 if self.enable_optimization:
                     # 2. Evaluate the edit
-                    if self.enable_tournament_mode and context_image_bytes:
-                        # Use the previous and current edited images
-                        evaluation = self.evaluator_model.get_response(
-                            task=self.evaluator_prompt,
-                            images=[context_image_bytes, edited_image_bytes]
-                        )
-                    else:
-                        # Use the original and current edited images
-                        evaluation = self.evaluator_model.get_response(
-                            task=self.evaluator_prompt,
-                            images=[original_image_bytes, edited_image_bytes]
-                        )
+                    choices, reasons = {}, []
+                    for _ in range(self.num_judges):  # Get multiple evaluations for robustness
+                        if self.enable_tournament_mode and context_image_bytes:
+                            # Use the previous and current edited images
+                            evaluation = self.evaluator_model.get_response(
+                                task=self.evaluator_prompt,
+                                images=[context_image_bytes, edited_image_bytes]
+                            )
+                        else:
+                            # Use the original and current edited images
+                            evaluation = self.evaluator_model.get_response(
+                                task=self.evaluator_prompt,
+                                images=[original_image_bytes, edited_image_bytes]
+                            )
 
-                    if not evaluation:
-                        logging.error("Evaluation failed. Skipping to next iteration.\n")
+                        if not evaluation:
+                            logging.warning("Evaluation failed. Skipping to next judge.\n")
+                            continue
+                        logging.info(f"{evaluation}\n")
+                        
+                        choices[evaluation.choice] = choices.get(evaluation.choice, 0) + 1
+                        reasons.append(evaluation.reason)
+
+                    # Aggregate evaluations
+                    if not choices:
+                        logging.error("No valid evaluations received. Skipping to next iteration.\n")
                         continue
-                    logging.info(f"{evaluation}\n")
+                    selected_choice = max(choices, key=choices.get)
+                    aggregated_reason = "\n".join(reasons)
 
                     # 3. Get critique (loss)
                     critique = self.loss_model.get_response(
-                        choice=evaluation.choice,
-                        reason=evaluation.reason,
+                        choice=selected_choice,
+                        reason=aggregated_reason
                     )
 
                     if not critique:

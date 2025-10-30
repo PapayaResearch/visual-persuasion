@@ -71,6 +71,8 @@ nudge:
   # Use the selected editor from the defaults section
   image_editing_model: ${editor}
 
+  # Number of judges to use for evaluation
+  num_judges: 3
   # Prompt for the evaluator model
   evaluator_prompt: |
     Compare the two images.
