@@ -167,10 +167,10 @@ class VisualNudge:
         """
         total_iterations = len(image_paths) * (self.iterations + 1)
 
-        with tqdm(total=total_iterations, desc="Total progress", unit="iter", position=0) as pbar_total:
+        with tqdm(total=total_iterations, desc="Total progress", unit="iter") as pbar_total:
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 futures = {executor.submit(self._process_single_image, image_path, idx, len(image_paths), results_dir, pbar_total): image_path
                           for idx, image_path in enumerate(image_paths)}
 
-                for future in tqdm(as_completed(futures), total=len(image_paths), desc="Images completed", unit="image", position=1, leave=False):
+                for future in as_completed(futures):
                     future.result()
