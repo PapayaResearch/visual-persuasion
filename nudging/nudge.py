@@ -144,12 +144,14 @@ class VisualNudge:
 
                     if self.enable_tournament_mode:
                         # In tournament mode, only update context if the new image was preferred
-                        if evaluation.choice.lower() == "edited":
+                        if evaluation.choice.lower() == "second":
                             context_image_bytes = edited_image_bytes
                             best_prompt = current_prompt
                             logging.info("VLM preferred the new image. Updating context for next iteration.\n")
-                        else:
+                        elif evaluation.choice.lower() == "first":
                             logging.info("VLM preferred the old image. Retaining previous context for next iteration.\n")
+                        else:
+                            raise ValueError("Unexpected choice from evaluator in tournament mode.")
                     else:
                         # Otherwise update context to the latest edit
                         context_image_bytes = edited_image_bytes
