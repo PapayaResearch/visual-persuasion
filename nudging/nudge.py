@@ -90,12 +90,6 @@ class VisualNudge:
                 if not edited_image:
                     logging.error("Image editing failed. Skipping to next iteration.\n")
                     continue
-                
-                if iter == self.iterations:
-                    best_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-n-edit.jpg")
-                    edited_image.save(best_image_save_path)
-                    logging.info(f"Saved best image to: {best_image_save_path}\n")
-                    break
 
                 edited_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-{iter+1}-edit.jpg")
                 edited_image.save(edited_image_save_path)
@@ -124,7 +118,7 @@ class VisualNudge:
                             logging.warning("Evaluation failed. Skipping to next judge.\n")
                             continue
                         logging.info(f"{evaluation}\n")
-                        
+
                         choices[evaluation.choice] = choices.get(evaluation.choice, 0) + 1
                         reasons.append(evaluation.reason)
 
@@ -162,14 +156,14 @@ class VisualNudge:
 
                     if self.enable_tournament_mode:
                         # In tournament mode, only update context if the new image was preferred
-                        if evaluation.choice.lower() == "second":
+                        if selected_choice.lower() == image_to_improve:
                             context_image_bytes = edited_image_bytes
                             best_prompt = current_prompt
                             logging.info("VLM preferred the new image. Updating context for next iteration.\n")
-                        elif evaluation.choice.lower() == "first":
+                        elif selected_choice.lower() in ["first", "second"]:
                             logging.info("VLM preferred the old image. Retaining previous context for next iteration.\n")
                         else:
-                            raise ValueError("Unexpected choice from evaluator in tournament mode.")
+                            raise ValueError(f"Unexpected choice received from evaluator: {selected_choice}")
                     else:
                         # Otherwise update context to the latest edit
                         context_image_bytes = edited_image_bytes
@@ -177,6 +171,14 @@ class VisualNudge:
 
                     # Update the prompt for the next iteration
                     current_prompt = new_prompt
+
+                    if iter == self.iterations:
+                        best_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-n-edit.jpg")
+                        best_image = edited_image if selected_choice.lower() == image_to_improve else context_image
+                        best_image.save(best_image_save_path)
+                        logging.info(f"Saved best image to: {best_image_save_path}\n")
+                        break
+
 
                 # Update progress at end of iteration
                 if pbar:
