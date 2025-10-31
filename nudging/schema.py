@@ -50,14 +50,18 @@ def create_loss_output_schema(suggestions_description: str) -> Type[IOSchema]:
     return LossOutput
 
 
-def create_optimizer_input_schema(current_prompt_description: str, suggestions_description: str) -> Type[IOSchema]:
+def create_optimizer_input_schema(
+    current_prompt_description: str,
+    reason_description: str
+) -> Type[IOSchema]:
     """
     Creates an OptimizerInput schema class with configurable field descriptions.
     """
     class OptimizerInput(IOSchema):
         """Input schema for optimizer model."""
         current_prompt: str = Field(description=current_prompt_description)
-        suggestions: str = Field(description=suggestions_description)
+        reason: str = Field(description=reason_description)
+
 
     return OptimizerInput
 

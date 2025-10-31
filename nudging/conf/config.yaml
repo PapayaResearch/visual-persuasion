@@ -5,7 +5,7 @@
 defaults:
   - _self_
   # LLM model for evaluator/loss/optimizer (e.g., gpt-5)
-  - llm: gpt-5
+  - llm: gpt-5-mini
   # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
   - editor: nanobanana-gemini
   # Strategy for nudging (e.g., zero-shot, prompt-optimization, tournament-of-images, tournament-of-prompts)
@@ -42,23 +42,23 @@ general:
 
 nudge:
   # Hydra target class for the main pipeline orchestrator
-  _target_: nudging.nudge.VisualNudge
+  _target_: nudging.tournament_images.VisualNudge
 
   # Total number of iterations to run per image
   iterations: ${general.iterations}
 
   # Enable previous image context during editing
-  enable_editing_context: ${general.enable_editing_context}
+  # enable_editing_context: ${general.enable_editing_context}
   # Additional prompt for editing context
   editing_context_prompt: |
     The first image is the original, the second image is the previous edit.
 
   # Enable prompt optimization pipeline (disable for zero-shot testing)
-  enable_optimization: ${strategy.enable_optimization}
+  # enable_optimization: ${strategy.enable_optimization}
   # Enable tournament mode (keep track of the last chosen image instead of the previous image)
-  enable_tournament_mode: ${strategy.enable_tournament_mode}
+  # enable_tournament_mode: ${strategy.enable_tournament_mode}
   # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
-  save_best_prompts: ${strategy.save_best_prompts}
+  # save_best_prompts: ${strategy.save_best_prompts}
 
   # The initial prompt for the image editing task
   initial_prompt: |
@@ -83,7 +83,7 @@ nudge:
 
     # The system prompt for the image comparison task
     system_prompt: |
-      You are comparing two images to determine which is better.
+      You are a marketing expert comparing two product photos to determine which is more appealing. Recommend the image that would attract more customers.
 
     # Input schema for the evaluator model
     input_schema:
@@ -105,35 +105,35 @@ nudge:
     # Wrapper function for the API - uses LLM config
     api_call: ${llm}
 
-  loss_model:
-    # Hydra target class for the loss model
-    _target_: utils.wrappers.LanguageModel
+  # loss_model:
+  #   # Hydra target class for the loss model
+  #   _target_: utils.wrappers.LanguageModel
 
-    # The system prompt for the loss generation task
-    system_prompt: |
-      You are helping to improve photos by providing constructive feedback.
-      Analyze why the judges made their choice and identify specific areas for improvement.
-      Focus on actionable suggestions that could make the next iteration better.
+  #   # The system prompt for the loss generation task
+  #   system_prompt: |
+  #     You are helping to improve photos by providing constructive feedback.
+  #     Analyze why the judges made their choice and identify specific areas for improvement.
+  #     Focus on actionable suggestions that could make the next iteration better.
 
-    # Input schema for the loss model
-    input_schema:
-      _target_: nudging.schema.create_loss_input_schema
-      choice_description: |
-        Which image was chosen as better
-      choice_options: ['first', 'second']
-      reason_description: |
-        Reason for the choice
-      to_improve_description: |
-        The image we want to improve ('first' or 'second')
+  #   # Input schema for the loss model
+  #   input_schema:
+  #     _target_: nudging.schema.create_loss_input_schema
+  #     choice_description: |
+  #       Which image was chosen as better
+  #     choice_options: ['first', 'second']
+  #     reason_description: |
+  #       Reason for the choice
+  #     to_improve_description: |
+  #       The image we want to improve ('first' or 'second')
 
-    # Output schema for the loss model
-    output_schema:
-      _target_: nudging.schema.create_loss_output_schema
-      suggestions_description: |
-        Concrete, actionable suggestions for improving the next iteration, formatted as a bulleted list
+  #   # Output schema for the loss model
+  #   output_schema:
+  #     _target_: nudging.schema.create_loss_output_schema
+  #     suggestions_description: |
+  #       Concrete, actionable suggestions for improving the next iteration, formatted as a bulleted list
 
-    # Wrapper function for the API - uses LLM config
-    api_call: ${llm}
+  #   # Wrapper function for the API - uses LLM config
+  #   api_call: ${llm}
 
   optimizer_model:
     # Hydra target class for the optimizer model
@@ -142,7 +142,8 @@ nudge:
     # The system prompt for the prompt optimization task
     system_prompt: |
       You are refining an image editing instruction based on feedback.
-      Incorporate the suggested improvements while preserving what worked well.
+      Think about the reasons given for the choice, and whether or not the current prompt's image was chosen.
+      Incorporate improvements while preserving what worked well.
       Keep the instruction clear, specific, and under 100 words.
 
     # Input schema for the optimizer model
@@ -150,8 +151,8 @@ nudge:
       _target_: nudging.schema.create_optimizer_input_schema
       current_prompt_description: |
         The current image editing prompt
-      suggestions_description: |
-        Suggestions for improvement
+      reason_description: |
+        The reason given for the selection
 
     # Output schema for the optimizer model
     output_schema:
