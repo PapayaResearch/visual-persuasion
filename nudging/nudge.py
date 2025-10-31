@@ -3,7 +3,7 @@ import io
 import logging
 import random
 from PIL import Image
-from typing import List
+from typing import List, Tuple
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils.wrappers import ImageModel, LanguageModel
@@ -28,7 +28,7 @@ class VisualNudge:
         evaluator_prompt: str,
         evaluator_model: LanguageModel,
         loss_model: LanguageModel,
-        optimizer_model: LanguageModel,
+        optimizer_model: LanguageModel
     ):
         self.enable_optimization = enable_optimization
         self.iterations = iterations
@@ -44,6 +44,32 @@ class VisualNudge:
         self.evaluator_model = evaluator_model
         self.loss_model = loss_model
         self.optimizer_model = optimizer_model
+
+    def _get_evaluation(self, image1_bytes: bytes, image2_bytes: bytes) -> Tuple[str, str]:
+        """Gets an aggregated evaluation from multiple judges."""
+        evaluations, choices = [], {}
+        for _ in range(self.num_judges):
+            evaluation = self.evaluator_model.get_response(
+                task=self.evaluator_prompt,
+                images=[image1_bytes, image2_bytes]
+            )
+
+            if not evaluation:
+                logging.warning("Evaluation failed. Skipping to next judge.\n")
+                continue
+            logging.info(f"{evaluation}\n")
+
+            evaluations.append(evaluation)
+            choices[evaluation.choice] = choices.get(evaluation.choice, 0) + 1
+
+        if not evaluations:
+            return None, None
+        
+        # Determine selected choice by majority vote
+        selected_choice = max(choices, key=choices.get)
+        aggregated_reason = "\n".join(eval.reason for eval in evaluations if eval.choice == selected_choice)
+
+        return selected_choice, aggregated_reason
 
     def _process_single_image(self, image_path: str, img_idx: int, total_images: int, results_dir: str, pbar=None):
         """
@@ -81,11 +107,12 @@ class VisualNudge:
                         logging.info(f"Regenerated and saved context image to: {context_image_save_path}\n")
 
                     # Use original and previous edited images for context
-                    edited_prompt = f"{current_prompt}\n{self.editing_context_prompt}"
-                    edited_image, edited_image_bytes = self.image_editing_model.edit(f"{edited_prompt}\n{self.background_state_prompt}", original_image_bytes, context_image_bytes)
+                    augmented_prompt = f"{current_prompt}\n{self.editing_context_prompt}\n{self.background_state_prompt}"
+                    edited_image, edited_image_bytes = self.image_editing_model.edit(augmented_prompt, original_image_bytes, context_image_bytes)
                 else:
                     # Use only the original image
-                    edited_image, edited_image_bytes = self.image_editing_model.edit(f"{current_prompt}\n{self.background_state_prompt}", original_image_bytes)
+                    augmented_prompt = f"{current_prompt}\n{self.background_state_prompt}"
+                    edited_image, edited_image_bytes = self.image_editing_model.edit(augmented_prompt, original_image_bytes)
 
                 if not edited_image:
                     logging.error("Image editing failed. Skipping to next iteration.\n")
@@ -96,8 +123,6 @@ class VisualNudge:
                 logging.info(f"Saved edited image to: {edited_image_save_path}\n")
 
                 if self.enable_optimization:
-                    # 2. Evaluate the edit
-                    choices, reasons = {}, []
                     # If tournament mode, use context image as one of the images
                     comparison_image_bytes = (context_image_bytes if self.enable_tournament_mode and context_image_bytes
                                               else original_image_bytes)
@@ -108,26 +133,12 @@ class VisualNudge:
                     image2_bytes = comparison_image_bytes if is_edited_first else edited_image_bytes
                     logging.info(f"Evaluating with edited image as {'first' if is_edited_first else 'second'} image.\n")
 
-                    for _ in range(self.num_judges):  # Get multiple evaluations for robustness
-                        evaluation = self.evaluator_model.get_response(
-                            task=self.evaluator_prompt,
-                            images=[image1_bytes, image2_bytes]
-                        )
+                    # 2. Evaluate the edit with multiple judges
+                    selected_choice, aggregated_reason = self._get_evaluation(image1_bytes, image2_bytes)
 
-                        if not evaluation:
-                            logging.warning("Evaluation failed. Skipping to next judge.\n")
-                            continue
-                        logging.info(f"{evaluation}\n")
-
-                        choices[evaluation.choice] = choices.get(evaluation.choice, 0) + 1
-                        reasons.append(evaluation.reason)
-
-                    # Aggregate evaluations
-                    if not choices:
+                    if not selected_choice:
                         logging.error("No valid evaluations received. Skipping to next iteration.\n")
                         continue
-                    selected_choice = max(choices, key=choices.get)
-                    aggregated_reason = "\n".join(reasons)
 
                     # 3. Get critique (loss)
                     critique = self.loss_model.get_response(
