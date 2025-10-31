@@ -160,10 +160,17 @@ class VisualNudge:
                             context_image_bytes = edited_image_bytes
                             best_prompt = current_prompt
                             logging.info("VLM preferred the new image. Updating context for next iteration.\n")
+                            best_image = edited_image
                         elif selected_choice.lower() in ["first", "second"]:
                             logging.info("VLM preferred the old image. Retaining previous context for next iteration.\n")
+                            best_image = Image.open(io.BytesIO(context_image_bytes))
                         else:
                             raise ValueError(f"Unexpected choice received from evaluator: {selected_choice}")
+
+                        # Save the winning image from this iteration
+                        best_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-{iter+1}-best.jpg")
+                        best_image.save(best_image_save_path)
+                        logging.info(f"Saved best image to: {best_image_save_path}\n")
                     else:
                         # Otherwise update context to the latest edit
                         context_image_bytes = edited_image_bytes
@@ -174,7 +181,7 @@ class VisualNudge:
 
                     if iter == self.iterations:
                         best_image_save_path = os.path.join(results_dir, f"{base_filename}_iter-n-edit.jpg")
-                        best_image = edited_image if selected_choice.lower() == image_to_improve else context_image
+                        best_image = edited_image if selected_choice.lower() == image_to_improve else Image.open(io.BytesIO(context_image_bytes))
                         best_image.save(best_image_save_path)
                         logging.info(f"Saved best image to: {best_image_save_path}\n")
                         break
