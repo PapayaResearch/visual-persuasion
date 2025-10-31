@@ -163,7 +163,7 @@ class VisualNudge:
                             best_image = edited_image
                         elif selected_choice.lower() in ["first", "second"]:
                             logging.info("VLM preferred the old image. Retaining previous context for next iteration.\n")
-                            best_image = Image.open(io.BytesIO(context_image_bytes))
+                            best_image = Image.open(io.BytesIO(comparison_image_bytes))
                         else:
                             raise ValueError(f"Unexpected choice received from evaluator: {selected_choice}")
 
