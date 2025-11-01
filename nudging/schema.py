@@ -52,7 +52,10 @@ def create_loss_output_schema(suggestions_description: str) -> Type[IOSchema]:
 
 def create_optimizer_input_schema(
     current_prompt_description: str,
-    reason_description: str
+    reason_description: str,
+    history_of_prompts_description: str = "",
+    current_iteration_description: str = "",
+    total_iterations_description: str = ""
 ) -> Type[IOSchema]:
     """
     Creates an OptimizerInput schema class with configurable field descriptions.
@@ -61,6 +64,9 @@ def create_optimizer_input_schema(
         """Input schema for optimizer model."""
         current_prompt: str = Field(description=current_prompt_description)
         reason: str = Field(description=reason_description)
+        history_of_prompts: str = Field(description=history_of_prompts_description)
+        current_iteration: int = Field(description=current_iteration_description)
+        total_iterations: int = Field(description=total_iterations_description)
 
 
     return OptimizerInput
@@ -75,3 +81,71 @@ def create_optimizer_output_schema(new_prompt_description: str) -> Type[IOSchema
         new_prompt: str = Field(description=new_prompt_description)
 
     return OptimizedPromptOutput
+
+
+def create_proposer_input_schema(
+    reason_description: str,
+    current_prompt_description: str = "",
+    history_of_prompts_description: str = "",
+    current_iteration_description: str = "",
+    total_iterations_description: str = "",
+    num_proposals_description: str = ""
+) -> Type[IOSchema]:
+    """
+    Creates a ProposerInput schema class with configurable field descriptions.
+    """
+    class ProposerInput(IOSchema):
+        """Input schema for proposer model."""
+        reason: str = Field(description=reason_description)
+        current_prompt: str = Field(description=current_prompt_description)
+        history_of_prompts: str = Field(description=history_of_prompts_description)
+        current_iteration: int = Field(description=current_iteration_description)
+        total_iterations: int = Field(description=total_iterations_description)
+        num_proposals: int = Field(description=num_proposals_description)
+
+    return ProposerInput
+
+
+def create_proposer_output_schema(candidate_prompts_description: str) -> Type[IOSchema]:
+    """
+    Creates a ProposerOutput schema class with configurable field descriptions.
+    """
+    class ProposerOutput(IOSchema):
+        """Output schema for proposer model."""
+        candidate_prompts: List[str] = Field(description=candidate_prompts_description)
+
+    return ProposerOutput
+
+
+def create_selector_input_schema(
+    candidate_prompts_description: str,
+    reason_description: str,
+    current_prompt_description: str = "",
+    history_of_prompts_description: str = "",
+    current_iteration_description: str = "",
+    total_iterations_description: str = ""
+) -> Type[IOSchema]:
+    """
+    Creates a SelectorInput schema class with configurable field descriptions.
+    """
+    class SelectorInput(IOSchema):
+        """Input schema for selector model."""
+        candidate_prompts: List[str] = Field(description=candidate_prompts_description)
+        reason: str = Field(description=reason_description)
+        current_prompt: str = Field(description=current_prompt_description)
+        history_of_prompts: str = Field(description=history_of_prompts_description)
+        current_iteration: int = Field(description=current_iteration_description)
+        total_iterations: int = Field(description=total_iterations_description)
+
+    return SelectorInput
+
+
+def create_selector_output_schema(selected_prompt_description: str) -> Type[IOSchema]:
+    """
+    Creates a SelectorOutput schema class with configurable field descriptions.
+    """
+    class SelectorOutput(IOSchema):
+        """Output schema for selector model."""
+        selected_prompt: str = Field(description=selected_prompt_description)
+
+    return SelectorOutput
