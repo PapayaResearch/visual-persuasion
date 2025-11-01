@@ -82,29 +82,47 @@ class VisualNudge:
     # Total number of iterations to run per image
     iterations: int
     # Enable previous image context (the last edited image) during editing
-    enable_editing_context: bool
+    enable_editing_context: bool = None
     # Additional prompt for editing context
-    editing_context_prompt: str
+    editing_context_prompt: str = None
     # Enable prompt optimization pipeline (disable for zero-shot testing)
-    enable_optimization: bool
+    enable_optimization: bool = None
     # Enable tournament mode (keep track of the last chosen image instead of the previous image)
-    enable_tournament_mode: bool
+    enable_tournament_mode: bool = None
     # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
-    save_best_prompts: bool
+    save_best_prompts: bool = None
     # Initial prompt for image editing
-    initial_prompt: str
+    initial_prompt: str = None
     # Additional prompt to retain background state during editing
-    background_state_prompt: str
+    background_state_prompt: str = None
     # Image editing model configuration
-    image_editing_model: ImageModel
+    image_editing_model: ImageModel = None
     # Prompt for the evaluator model
-    evaluator_prompt: str
+    evaluator_prompt: str = None
+    # Number of judges for evaluation
+    num_judges: int = None
+    # Use history of prompts
+    use_history_of_prompts: bool = None
     # Evaluator language model configuration
-    evaluator_model: LanguageModel
-    # Loss model configuration
-    loss_model: LanguageModel
-    # Optimizer model configuration
-    optimizer_model: LanguageModel
+    evaluator_model: LanguageModel = None
+    # Loss model configuration (legacy, may not be used in tournament_images)
+    loss_model: LanguageModel = None
+    # Optimizer model configuration (legacy, may not be used with two-stage optimizer)
+    optimizer_model: LanguageModel = None
+    # Two-stage optimizer: Number of candidate prompts to generate
+    num_proposals: int = None
+    # Two-stage optimizer: Whether proposer sees current prompt
+    proposer_sees_current_prompt: bool = None
+    # Two-stage optimizer: Whether proposer sees history
+    proposer_sees_history: bool = None
+    # Two-stage optimizer: Whether selector sees current prompt
+    selector_sees_current_prompt: bool = None
+    # Two-stage optimizer: Whether selector sees history
+    selector_sees_history: bool = None
+    # Proposer model configuration
+    proposer_model: LanguageModel = None
+    # Selector model configuration
+    selector_model: LanguageModel = None
 
 #######################
 # Evaluation Pipeline
