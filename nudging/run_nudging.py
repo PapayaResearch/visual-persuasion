@@ -58,8 +58,8 @@ def main(cfg: Config):
                     if os.path.isfile(os.path.join(data_dir, f))
                     and f.lower().endswith(('.jpg', '.jpeg', '.png'))]
 
-    # Instantiate the nudging pipeline
-    nudge_pipeline = hydra.utils.instantiate(cfg.nudge)
+    # Instantiate the nudging pipeline from strategy config
+    nudge_pipeline = hydra.utils.instantiate(cfg.strategy)
 
     # Run the nudging pipeline
     logging.info(f"Starting nudging run with {len(image_paths)} image(s) from {data_dir}\n")

@@ -1,4 +1,23 @@
-# Zero-Shot Nudging Strategy Configuration
-enable_optimization: false
-enable_tournament_mode: false
-save_best_prompts: false
+_target_: nudging.zero_shot.ZeroShot
+
+# Base prompt template with variable placeholder for substitution
+# Use ${variable_name} syntax where variable_name matches prior_variable below
+base_prompt: |
+  Make this product photo look more appealing ${prior}.
+  Keep the product itself exactly unchanged, and the background neutral.
+  You may add other contextual elements.
+
+# Use the selected editor from the defaults section
+image_editing_model: ${editor}
+
+# Name of the template variable to substitute in base_prompt
+prior_variable: prior
+
+# List of priors to substitute into the template variable in base_prompt
+# If empty list, base_prompt is used with template variable replaced by empty string
+# Example priors (uncomment to use):
+# priors:
+#   - "by adding warm, inviting lighting"
+#   - "by placing it on a wooden surface"
+#   - "by adding subtle shadows for depth"
+priors: []
