@@ -2,7 +2,6 @@ import os
 import io
 import logging
 import dataclasses
-from string import Template
 from PIL import Image
 from typing import List, Optional
 from tqdm import tqdm
@@ -47,12 +46,13 @@ class ZeroShot:
         logging.info(f"Saved original image to: {original_save_path}\n")
 
         # Determine which prompts to apply
-        template = Template(self.base_template)
+        # Replace {{variable}} placeholder with actual values
+        placeholder = f"{{{{{self.template_variable}}}}}"
         if self.priors:
-            prompts_to_apply = [(template.substitute(**{self.template_variable: prior}), f"prior-{i}")
+            prompts_to_apply = [(self.base_template.replace(placeholder, prior), f"prior-{i}")
                                 for i, prior in enumerate(self.priors)]
         else:
-            prompts_to_apply = [(template.substitute(**{self.template_variable: self.base_prior}), "edit")]
+            prompts_to_apply = [(self.base_template.replace(placeholder, self.base_prior), "edit")]
 
         for prompt, label in prompts_to_apply:
             logging.info(f"\n>> Applying {label.upper()} <<\n")
