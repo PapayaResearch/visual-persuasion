@@ -160,7 +160,7 @@ nudge:
       - Middle iterations (33-66% complete): Balance exploration with refinement. Try both new approaches and improvements on themes that might be working.
       - Late iterations (>66% complete): Focus on PRECISE, INCREMENTAL refinements that fine-tune winning strategies.
 
-      Keep each instruction clear, specific, and under 100 words. Make only a single, precise visual change per prompt.
+      Keep each instruction clear, specific, and under 50 words. Make only a single, precise visual change per prompt.
       IMPORTANT: Generate the exact number of diverse candidates requested. Each must be substantially different from the others.
 
     # Input schema for the proposer model
@@ -204,8 +204,8 @@ nudge:
 
       Choose the candidate that balances:
       - Addressing the feedback from evaluators
-      - Building on successful elements (if visible from context)
-      - Avoiding repetition of past attempts
+      - Building on majorly successful elements (if visible from context)
+      - Avoiding repetition of past attempts, i.e. prefer trying new ideas
       - Appropriate risk-taking based on iteration progress
 
     # Input schema for the selector model

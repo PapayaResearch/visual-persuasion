@@ -24,7 +24,7 @@ class VisualNudge:
     use_history_of_prompts: bool
     evaluator_model: LanguageModel
 
-    # Two-stage optimizer configuration
+    # Two-stage optimizer
     num_proposals: int
     proposer_sees_current_prompt: bool
     proposer_sees_history: bool
