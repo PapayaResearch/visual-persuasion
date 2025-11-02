@@ -87,16 +87,19 @@ class LanguageModel:
         if enable_json_schema_validation:
             litellm.enable_json_schema_validation = True
 
-    def _encode_image(self, image_bytes: bytes) -> str:
+    def _encode_image(self, image_bytes: bytes, dim: int = 128) -> str:
         """
         Encodes image bytes to base64 data URL.
         """
         # Detect image format
         img = Image.open(io.BytesIO(image_bytes))
+        img = img.resize((dim, dim))
         img_format = img.format.lower() if img.format else 'jpeg'
 
         # Encode to base64
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        buffered = io.BytesIO()
+        img.save(buffered, format=img_format)
+        base64_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
         return f"data:image/{img_format};base64,{base64_image}"
 
     def _build_messages(self, inputs: IOSchema) -> List[dict]:
@@ -125,7 +128,8 @@ class LanguageModel:
                                 {
                                     "type": "image_url",
                                     "image_url": {
-                                        "url": self._encode_image(img_bytes)
+                                        "url": self._encode_image(img_bytes),
+                                        "detail": "low"
                                     }
                                 }
                             ]
