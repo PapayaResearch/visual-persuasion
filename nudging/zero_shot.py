@@ -15,9 +15,10 @@ class ZeroShot:
     Zero-shot visual nudging: applies editing prompts to images without optimization.
     Supports two modes:
     1. With priors: substitutes each prior into base_prompt using template variable
-    2. Without priors: uses base_prompt with template variable replaced by empty string
+    2. Without priors: uses base_prior as the value for the template variable
     """
     base_prompt: str
+    base_prior: str
     image_editing_model: ImageModel
     prior_variable: str = "prior"
     priors: List[str] = dataclasses.field(default_factory=list)
@@ -50,7 +51,7 @@ class ZeroShot:
             prompts_to_apply = [(template.substitute(**{self.prior_variable: prior}), f"prior-{i}")
                                 for i, prior in enumerate(self.priors)]
         else:
-            prompts_to_apply = [(template.substitute(**{self.prior_variable: ""}), "edit")]
+            prompts_to_apply = [(template.substitute(**{self.prior_variable: self.base_prior}), "edit")]
 
         for prompt, label in prompts_to_apply:
             logging.info(f"\n>> Applying {label.upper()} <<\n")
