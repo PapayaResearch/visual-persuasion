@@ -21,12 +21,18 @@ def main(cfg: Config):
     cfg_yaml = OmegaConf.to_yaml(cfg)
     print_config(cfg)
 
+    # Instantiate the nudging pipeline from strategy config
+    nudge_pipeline = hydra.utils.instantiate(cfg.strategy)
+
     # Create common directories and paths
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    base_dir = os.path.join(
-        "nudging",
-        cfg.nudge.evaluator_model.api_call.model
-    )
+
+    # Build directory path: strategy/model/timestamp (model only if strategy uses one)
+    if hasattr(nudge_pipeline, 'evaluator_model'):
+        base_dir = os.path.join(nudge_pipeline.name, nudge_pipeline.evaluator_model.api_call.model)
+    else:
+        base_dir = nudge_pipeline.name
+
     results_dir = os.path.join(cfg.logging.results_dir, base_dir, current_date)
 
     # Set up logging
@@ -57,9 +63,6 @@ def main(cfg: Config):
     image_paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir)
                     if os.path.isfile(os.path.join(data_dir, f))
                     and f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-
-    # Instantiate the nudging pipeline from strategy config
-    nudge_pipeline = hydra.utils.instantiate(cfg.strategy)
 
     # Run the nudging pipeline
     logging.info(f"Starting nudging run with {len(image_paths)} image(s) from {data_dir}\n")
