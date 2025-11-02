@@ -4,9 +4,8 @@ _target_: nudging.zero_shot.ZeroShot
 name: zero-shot
 
 # Base prompt template with variable placeholder for substitution
-# Use ${variable_name} syntax where variable_name matches prior_variable below
 base_prompt: |
-  ${prior}.
+  \${prior}.
   Keep the product itself exactly unchanged, and the background neutral.
   You may add other contextual elements.
 
