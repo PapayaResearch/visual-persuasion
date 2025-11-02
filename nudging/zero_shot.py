@@ -17,6 +17,7 @@ class ZeroShot:
     1. With priors: substitutes each prior into base_prompt using template variable
     2. Without priors: uses base_prior as the value for the template variable
     """
+    name: str
     base_prompt: str
     base_prior: str
     image_editing_model: ImageModel
