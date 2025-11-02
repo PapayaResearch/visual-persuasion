@@ -4,19 +4,18 @@ _target_: nudging.zero_shot.ZeroShot
 name: zero-shot
 
 # Base prompt template with variable placeholder for substitution
-base_prompt: |
+base_template: |
   \${prior}.
   Keep the product itself exactly unchanged, and the background neutral.
   You may add other contextual elements.
+
+template_variable: prior
 
 base_prior: |
   Make this product photo look more appealing
 
 # Use the selected editor from the defaults section
 image_editing_model: ${editor}
-
-# Name of the template variable to substitute in base_prompt
-prior_variable: prior
 
 # List of priors to substitute into the template variable in base_prompt
 # If empty list, base_prompt is used with template variable replaced by empty string
