@@ -3,13 +3,12 @@ from typing import List, Type, Literal
 from utils.wrappers import IOSchema
 
 
-def create_evaluator_input_schema(task_description: str, images_description: str) -> Type[IOSchema]:
+def create_evaluator_input_schema(images_description: str) -> Type[IOSchema]:
     """
     Creates an EvaluatorInput schema class with configurable field descriptions.
     """
     class EvaluatorInput(IOSchema):
         """Input schema for evaluator model."""
-        task: str = Field(description=task_description)
         images: List[bytes] = Field(description=images_description)
 
     return EvaluatorInput
@@ -84,24 +83,24 @@ def create_optimizer_output_schema(new_prompt_description: str) -> Type[IOSchema
 
 
 def create_proposer_input_schema(
-    reason_description: str,
     current_prompt_description: str = "",
     history_of_prompts_description: str = "",
     current_iteration_description: str = "",
     total_iterations_description: str = "",
-    num_proposals_description: str = ""
+    num_proposals_description: str = "",
+    metadata_description: str = ""
 ) -> Type[IOSchema]:
     """
     Creates a ProposerInput schema class with configurable field descriptions.
     """
     class ProposerInput(IOSchema):
         """Input schema for proposer model."""
-        reason: str = Field(description=reason_description)
         current_prompt: str = Field(description=current_prompt_description)
         history_of_prompts: str = Field(description=history_of_prompts_description)
         current_iteration: int = Field(description=current_iteration_description)
         total_iterations: int = Field(description=total_iterations_description)
         num_proposals: int = Field(description=num_proposals_description)
+        metadata: str = Field(description=metadata_description)
 
     return ProposerInput
 
