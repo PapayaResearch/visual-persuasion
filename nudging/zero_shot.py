@@ -52,7 +52,7 @@ class ZeroShot:
         prompts_to_apply = [(self.base_template.replace(placeholder, self.base_prior), "no-prior")]
 
         if self.priors:
-            prompts_to_apply.append(
+            prompts_to_apply.extend(
                 [(self.base_template.replace(placeholder, prior), f"prior-{i}")
                  for i, prior in enumerate(self.priors)]
             )
