@@ -86,7 +86,7 @@ def create_proposer_input_schema(
     current_prompt_description: str = "",
     history_of_prompts_description: str = "",
     current_iteration_description: str = "",
-    judge_feedback_description: str = "",
+    # judge_feedback_description: str = "",
     total_iterations_description: str = "",
     num_proposals_description: str = "",
     metadata_description: str = ""
@@ -99,7 +99,7 @@ def create_proposer_input_schema(
         current_prompt: str = Field(description=current_prompt_description)
         history_of_prompts: str = Field(description=history_of_prompts_description)
         current_iteration: int = Field(description=current_iteration_description)
-        judge_feedback: str = Field(description=judge_feedback_description)
+        # judge_feedback: str = Field(description=judge_feedback_description)
         total_iterations: int = Field(description=total_iterations_description)
         num_proposals: int = Field(description=num_proposals_description)
         metadata: str = Field(description=metadata_description)

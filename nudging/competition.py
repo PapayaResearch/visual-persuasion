@@ -202,7 +202,7 @@ class VisualNudgeCompetition:
             current_prompt=loser_prompt,
             history_of_prompts=history_text,
             current_iteration=round_num,
-            judge_feedback=feedback,
+            # judge_feedback=feedback,
             total_iterations=self.min_rounds_before_equilibrium,
             num_proposals=self.num_improvement_proposals,
             metadata="The product here is a(n) %s." % pair_name.split("_")[1]
