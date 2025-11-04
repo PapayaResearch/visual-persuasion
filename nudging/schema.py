@@ -118,34 +118,28 @@ def create_proposer_output_schema(candidate_prompts_description: str) -> Type[IO
 
 
 def create_selector_input_schema(
-    candidate_prompts_description: str,
-    reason_description: str,
-    current_prompt_description: str = "",
-    history_of_prompts_description: str = "",
-    current_iteration_description: str = "",
-    total_iterations_description: str = ""
+    image_bytes_list_description: str,
+    candidate_descriptions_description: str,
+    num_candidates_description: str
 ) -> Type[IOSchema]:
     """
     Creates a SelectorInput schema class with configurable field descriptions.
     """
     class SelectorInput(IOSchema):
         """Input schema for selector model."""
-        candidate_prompts: List[str] = Field(description=candidate_prompts_description)
-        reason: str = Field(description=reason_description)
-        current_prompt: str = Field(description=current_prompt_description)
-        history_of_prompts: str = Field(description=history_of_prompts_description)
-        current_iteration: int = Field(description=current_iteration_description)
-        total_iterations: int = Field(description=total_iterations_description)
+        images: List[bytes] = Field(description=image_bytes_list_description)
+        candidate_descriptions: str = Field(description=candidate_descriptions_description)
+        num_candidates: int = Field(description=num_candidates_description)
 
     return SelectorInput
 
 
-def create_selector_output_schema(selected_prompt_description: str) -> Type[IOSchema]:
+def create_selector_output_schema(choice_description: str) -> Type[IOSchema]:
     """
     Creates a SelectorOutput schema class with configurable field descriptions.
     """
     class SelectorOutput(IOSchema):
         """Output schema for selector model."""
-        selected_prompt: str = Field(description=selected_prompt_description)
+        choice: str = Field(description=choice_description)
 
     return SelectorOutput
