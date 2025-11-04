@@ -2,6 +2,7 @@ import os
 import io
 import time
 import logging
+import threading
 import dataclasses
 import matplotlib
 matplotlib.use("Agg")
@@ -42,6 +43,7 @@ class VisualNudgeCompetition:
         """Initialize tracking variables."""
         self._total_num_images_generated = 0
         self._cost_per_image_generated = 0.039
+        self._counter_lock = threading.Lock()
         
         self.contest_history = {}
 
@@ -163,9 +165,6 @@ class VisualNudgeCompetition:
         )
         
         selected_idx = int(selector_response.choice) - 1  # Assuming 1-indexed
-        if selected_idx < 0 or selected_idx >= len(candidate_images):
-            logging.warning(f"Invalid selection {selected_idx+1}, defaulting to first candidate\n")
-            selected_idx = 0
         
         best_candidate = candidate_images[selected_idx]
         logging.info(f"✅ Selected candidate {selected_idx+1}: {best_candidate['prompt']}\n")
@@ -224,8 +223,10 @@ class VisualNudgeCompetition:
                 loser_image_bytes,
                 original_image_bytes
             )
-            self._total_num_images_generated += 1
-            
+
+            with self._counter_lock:
+                self._total_num_images_generated += 1
+
             # Save candidate
             candidate_path = os.path.join(results_dir, f"{pair_name}_round-{round_num}_candidate-{i+1}.jpg")
             edited_image.save(candidate_path)
