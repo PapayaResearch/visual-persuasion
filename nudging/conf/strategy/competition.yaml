@@ -6,6 +6,8 @@ name: competition
 max_rounds_per_pair: ${general.iterations}
 editing_context_prompt: |
   The first image is the current state of the product photo. The second is the original unedited photo, for context.
+  Keep the product itself exactly unchanged.
+  You may add other contextual elements.
 initial_prompt: |
   Make a noticeable visual edit to this photo.
 background_state_prompt: |
@@ -48,7 +50,6 @@ proposer_model:
     Each proposal should make exactly one visual change that meaningfully alters the scene composition or context.
     Avoid superficial adjustments; instead consider substantive changes to the scene's content and narrative.
     Proposals should be diverse and explore different improvement strategies.
-    Generate exactly the specified number of improved prompts.
   # Input schema for the proposer model
   input_schema:
     _target_: nudging.schema.create_proposer_input_schema
@@ -58,8 +59,8 @@ proposer_model:
       The history of previous prompts used so far (may be empty if proposer shouldn't see it)
     current_iteration_description: |
       The current iteration number (1-indexed)
-    judge_feedback_description: |
-      Feedback about why an alternative was chosen over the previous image version
+    # judge_feedback_description: |
+    #   Feedback about why an alternative was chosen over the current prompt editing instruction
     total_iterations_description: |
       The total number of iterations planned
     num_proposals_description: |
