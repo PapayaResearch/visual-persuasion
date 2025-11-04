@@ -5,14 +5,13 @@ name: competition
 
 max_rounds_per_pair: ${general.iterations}
 editing_context_prompt: |
-  The first image is the original, the second image is the previous edit.
+  The first image is the current state of the product photo. The second is the original unedited photo, for context.
 initial_prompt: |
   Make a noticeable visual edit to this photo.
 background_state_prompt: |
   The background should stay realistic and coherent with the product. Hold everything constant except for the provided instructions.
 image_editing_model: ${editor}
 num_judges: 5
-evaluator_prompt: Compare the two images.
 evaluator_model:
   # Hydra target class for the evaluator model
   _target_: utils.wrappers.LanguageModel
@@ -23,8 +22,6 @@ evaluator_model:
   # Input schema for the evaluator model
   input_schema:
     _target_: nudging.schema.create_evaluator_input_schema
-    task_description: |
-      The image comparison task description
     images_description: |
       List of image bytes: [first, second]
 
@@ -51,11 +48,10 @@ proposer_model:
     Each proposal should make exactly one visual change that meaningfully alters the scene composition or context.
     Avoid superficial adjustments; instead consider substantive changes to the scene's content and narrative.
     Proposals should be diverse and explore different improvement strategies.
+    Generate exactly the specified number of improved prompts.
   # Input schema for the proposer model
   input_schema:
     _target_: nudging.schema.create_proposer_input_schema
-    reason_description: |
-      The reason given for the previous selection (why the current image was or wasn't chosen)
     current_prompt_description: |
       The current best image editing prompt (may be empty if proposer shouldn't see it)
     history_of_prompts_description: |
@@ -66,6 +62,8 @@ proposer_model:
       The total number of iterations planned
     num_proposals_description: |
       The number of diverse candidate prompts to generate
+    metadata_description: |
+      Additional context or constraints for generating the proposals (may be empty)
 
   # Output schema for the proposer model
   output_schema:
@@ -105,4 +103,4 @@ selector_model:
 
 # Equilibrium detection
 equilibrium_threshold: 0.51
-min_rounds_before_equilibrium: ${general.iterations}
+min_rounds_before_equilibrium: 5

@@ -26,7 +26,6 @@ class VisualNudgeCompetition:
     background_state_prompt: str
     image_editing_model: ImageModel
     num_judges: int
-    evaluator_prompt: str
     evaluator_model: LanguageModel
 
     # Optimizer for improving losers
@@ -74,15 +73,10 @@ class VisualNudgeCompetition:
             logging.info(f"Judge {judge_id}: Evaluating with {image_a_name} as {'first' if is_a_first else 'second'} image.\n")
 
             evaluation = self.evaluator_model.get_response(
-                task=self.evaluator_prompt,
                 images=images
             )
 
             real_choice = choice_map.get(evaluation.choice.lower())
-
-            if not real_choice:
-                logging.warning(f"Judge {judge_id}: Evaluation failed. Skipping.\n")
-                return None
 
             judge_duration = time.time() - judge_start
             print(f"  ⏱️  Judge {judge_id} ({image_a_name} {'1st' if is_a_first else '2nd'}): {judge_duration:.2f}s")
@@ -184,7 +178,8 @@ class VisualNudgeCompetition:
         round_num: int,
         results_dir: str,
         pair_name: str,
-        history_of_prompts: list[str]
+        history_of_prompts: list[str],
+        original_image_bytes: bytes
     ) -> tuple[bytes, str, Image.Image]:
         """
         Generate improved versions of the losing image based on judge feedback.
@@ -202,14 +197,15 @@ class VisualNudgeCompetition:
 
         # Generate improvement proposals
         proposer_response = self.proposer_model.get_response(
-            reason=f"Generate {self.num_improvement_proposals} improved prompts based on judge feedback. The goal is to address weaknesses while maintaining strengths. Avoid repeating previous edits.",
             current_prompt=loser_prompt,
             judge_feedback=feedback,
             history_of_prompts=history_text,
             current_iteration=round_num,
             total_iterations=self.min_rounds_before_equilibrium,
-            num_proposals=self.num_improvement_proposals
+            num_proposals=self.num_improvement_proposals,
+            metadata="The product here is a(n) %s." % pair_name.split("_")[1]
         )
+        print(f"⏱️  Proposal category is: {pair_name.split('_')[1]}")
 
         candidate_prompts = proposer_response.candidate_prompts
         logging.info(f"Generated {len(candidate_prompts)} improvement candidates:\n")
@@ -224,7 +220,7 @@ class VisualNudgeCompetition:
             edited_image, edited_image_bytes = self.image_editing_model.edit(
                 f"{editing_prompt}\n{self.background_state_prompt}",
                 loser_image_bytes,
-                loser_image_bytes
+                original_image_bytes
             )
             self._total_num_images_generated += 1
             
@@ -241,8 +237,7 @@ class VisualNudgeCompetition:
 
         candidate_images = []
         with ThreadPoolExecutor(max_workers=min(len(candidate_prompts), 4)) as img_executor:
-            futures = [img_executor.submit(generate_single_image, i, prompt) 
-                      for i, prompt in enumerate(candidate_prompts)]
+            futures = [img_executor.submit(generate_single_image, i, prompt) for i, prompt in enumerate(candidate_prompts)]
             for future in as_completed(futures):
                 candidate_images.append(future.result())
 
@@ -406,6 +401,9 @@ class VisualNudgeCompetition:
         # Save originals
         state_a["image"].save(os.path.join(results_dir, f"{pair_name}_{base_a}_original.jpg"))
         state_b["image"].save(os.path.join(results_dir, f"{pair_name}_{base_b}_original.jpg"))
+        
+        image_a_bytes_original = state_a["bytes"]
+        image_b_bytes_original = state_b["bytes"]
 
         # Contest loop
         round_num = 0
@@ -475,7 +473,8 @@ class VisualNudgeCompetition:
                 round_num=round_num,
                 results_dir=results_dir,
                 pair_name=pair_name,
-                history_of_prompts=loser_state["edit_history"]
+                history_of_prompts=loser_state["edit_history"],
+                original_image_bytes=image_a_bytes_original if loser_name == base_a else image_b_bytes_original
             )
 
             # Update ONLY loser's state
@@ -549,7 +548,17 @@ class VisualNudgeCompetition:
         run_start = time.time()
         
         # Generate all pairs
-        pairs = list(combinations(image_paths, 2))
+        image_categories = {}
+        for image_path in image_paths:
+            base_name = os.path.splitext(os.path.basename(image_path))[0]
+            category = base_name.split("_")[0]  # Assuming category is prefix before the first underscore
+            image_categories.setdefault(category, [])
+            image_categories[category].append(image_path)
+        
+        pairs = []
+        for category, paths in image_categories.items():
+            category_pairs = list(combinations(paths, 2))
+            pairs.extend(category_pairs)
         
         print(f"\n{'='*80}")
         print(f"🥊 Starting Paired Contest Competition")
