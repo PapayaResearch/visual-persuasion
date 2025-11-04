@@ -121,7 +121,8 @@ def create_proposer_output_schema(candidate_prompts_description: str) -> Type[IO
 def create_selector_input_schema(
     image_bytes_list_description: str,
     candidate_descriptions_description: str,
-    num_candidates_description: str
+    num_candidates_description: str,
+    judge_feedback_description: str
 ) -> Type[IOSchema]:
     """
     Creates a SelectorInput schema class with configurable field descriptions.
@@ -131,6 +132,7 @@ def create_selector_input_schema(
         images: List[bytes] = Field(description=image_bytes_list_description)
         candidate_descriptions: str = Field(description=candidate_descriptions_description)
         num_candidates: int = Field(description=num_candidates_description)
+        judge_feedback: str = Field(description=judge_feedback_description)
 
     return SelectorInput
 
