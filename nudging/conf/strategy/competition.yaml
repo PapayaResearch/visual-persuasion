@@ -90,6 +90,8 @@ selector_model:
       List of image bytes for each candidate prompt
     candidate_descriptions_description: |
       A list of candidate image editing instructions
+    judge_feedback_description: |
+      Feedback about why the previous image version was not chosen over a similar alternative
     num_candidates_description: |
       The number of candidate prompts
 

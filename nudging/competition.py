@@ -142,7 +142,8 @@ class VisualNudgeCompetition:
 
     def _select_best_proposal(
         self,
-        candidate_images: list[dict]
+        candidate_images: list[dict],
+        feedback: str = ""
     ) -> dict:
         """
         Use selector model to choose the best proposal from candidates.
@@ -157,7 +158,8 @@ class VisualNudgeCompetition:
         selector_response = self.selector_model.get_response(
             images=image_bytes_list,
             candidate_descriptions="\n".join(descriptions),
-            num_candidates=len(candidate_images)
+            num_candidates=len(candidate_images),
+            judge_feedback=feedback
         )
         
         selected_idx = int(selector_response.choice) - 1  # Assuming 1-indexed
@@ -242,7 +244,7 @@ class VisualNudgeCompetition:
                 candidate_images.append(future.result())
 
         # Select best candidate using selector model (NOT by testing against winner)
-        best_candidate = self._select_best_proposal(candidate_images)
+        best_candidate = self._select_best_proposal(candidate_images, feedback=feedback)
         
         # Log cost
         total_cost = self._total_num_images_generated * self._cost_per_image_generated
