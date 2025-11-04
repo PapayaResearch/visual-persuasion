@@ -6,12 +6,13 @@ name: zero-shot
 # Base prompt template with variable placeholder for substitution
 base_template: |
   {{prior}}.
+  Each proposal should make exactly one visual change that meaningfully alters the scene composition or context.
   Keep the product itself exactly unchanged, and the background neutral.
 
 template_variable: prior
 
 base_prior: |
-  Make this product photo look more appealing, you may add other contextual elements.
+  Make this product photo look more appealing.
 
 # Use the selected editor from the defaults section
 image_editing_model: ${editor}
@@ -19,13 +20,13 @@ image_editing_model: ${editor}
 # List of priors to substitute into the template variable in base_prompt
 # If empty list, base_prompt is used with template variable replaced by empty string
 priors:
-  - Make this product photo look more appealing by improving the lighting
-  - Make this product photo look more appealing by changing the perspective
-  - Make this product photo look more appealing by including people engaging with it
-  - Make this product photo look more appealing by including pets in the context
+  - Make this product photo look more appealing with incredible lighting
+  - Make this product photo look more appealing with an amazing new perspective
+  - Make this product photo look more appealing by including a person engaging with it
+  - Make this product photo look more appealing by including a pet in context
   - Make this product photo look more appealing by including a professional badge of approval
   - Showcase this product photo on top of a surface
-  - Partially zoom in or out this product photo
-  - Make this product photo look less appealing by degrading the lighting
-  - Make this product photo look less appealing by degrading the perspective (e.g. flat)
+  - Partially zoom in or out the product
+  - Make this product photo look less appealing with awful obscure lighting
+  - Make this product photo look less appealing with an awful unflattering perspective
   - Make this product photo look less appealing by including a suspicious badge of approval
