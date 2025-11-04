@@ -33,7 +33,7 @@ class VisualNudgeCompetition:
     num_improvement_proposals: int
     proposer_model: LanguageModel
     selector_model: LanguageModel
-    
+
     # Equilibrium detection
     equilibrium_threshold: float = 0.51  # Win rate below this (close to 0.5) indicates equilibrium
     min_rounds_before_equilibrium: int = 10  # Minimum rounds before checking for equilibrium
@@ -44,12 +44,12 @@ class VisualNudgeCompetition:
         self._total_num_images_generated = 0
         self._cost_per_image_generated = 0.039
         self._counter_lock = threading.Lock()
-        
+
         self.contest_history = {}
 
     def _conduct_contest(
-        self, 
-        image_a_bytes: bytes, 
+        self,
+        image_a_bytes: bytes,
         image_b_bytes: bytes,
         image_a_name: str,
         image_b_name: str
@@ -65,7 +65,7 @@ class VisualNudgeCompetition:
         def evaluate_single(judge_id: int, is_a_first: bool):
             """Single judge evaluation"""
             judge_start = time.time()
-            
+
             images = [image_a_bytes, image_b_bytes] if is_a_first else [image_b_bytes, image_a_bytes]
             choice_map = {
                 "first": image_a_name if is_a_first else image_b_name,
@@ -127,6 +127,7 @@ class VisualNudgeCompetition:
         # Determine winner
         if total_consistent_judges == 0:
             logging.warning("No consistent judges. Defaulting to draw.\n")
+            print("  ⚠️  No consistent judges - treating as draw.\n")
             winner = image_a_name  # Arbitrary - treat as draw
             winner_score = 0.5
             feedback = "No consistent preference detected."
@@ -134,7 +135,7 @@ class VisualNudgeCompetition:
             winner = max(votes, key=votes.get)
             winner_score = votes[winner] / total_consistent_judges
             feedback = "\n".join(feedback_by_choice[winner])
-            
+
             logging.info(f"🏆 WINNER: {winner} ({votes[winner]}/{total_consistent_judges} = {winner_score:.2%})\n")
 
         contest_duration = time.time() - contest_start
@@ -152,23 +153,23 @@ class VisualNudgeCompetition:
         Returns: The best candidate dict
         """
         logging.info(f"\n🎯 SELECTING BEST PROPOSAL from {len(candidate_images)} candidates\n")
-        
+
         # Prepare images and descriptions for selector
         image_bytes_list = [c["image_bytes"] for c in candidate_images]
         descriptions = [f"Candidate {i+1}: {c['prompt']}" for i, c in enumerate(candidate_images)]
-        
+
         selector_response = self.selector_model.get_response(
             images=image_bytes_list,
             candidate_descriptions="\n".join(descriptions),
             num_candidates=len(candidate_images),
             judge_feedback=feedback
         )
-        
+
         selected_idx = int(selector_response.choice) - 1  # Assuming 1-indexed
-        
+
         best_candidate = candidate_images[selected_idx]
         logging.info(f"✅ Selected candidate {selected_idx+1}: {best_candidate['prompt']}\n")
-        
+
         return best_candidate
 
     def _improve_loser(
@@ -191,7 +192,7 @@ class VisualNudgeCompetition:
         logging.info(f"\n🔧 IMPROVING LOSER (Round {round_num})\n")
         logging.info(f"Previous prompt: {loser_prompt}\n")
         logging.info(f"Judge feedback:\n{feedback}\n")
-        
+
         # Format history for proposer
         history_text = "\n".join([f"  - {p}" for p in history_of_prompts]) if history_of_prompts else "None"
         logging.info(f"Edit history:\n{history_text}\n")
@@ -230,7 +231,7 @@ class VisualNudgeCompetition:
             # Save candidate
             candidate_path = os.path.join(results_dir, f"{pair_name}_round-{round_num}_candidate-{i+1}.jpg")
             edited_image.save(candidate_path)
-            
+
             return {
                 "prompt": prompt,
                 "image": edited_image,
@@ -246,7 +247,7 @@ class VisualNudgeCompetition:
 
         # Select best candidate using selector model (NOT by testing against winner)
         best_candidate = self._select_best_proposal(candidate_images, feedback=feedback)
-        
+
         # Log cost
         total_cost = self._total_num_images_generated * self._cost_per_image_generated
         logging.info(f"Total images generated: {self._total_num_images_generated}, Cost: ${total_cost:.2f}\n")
@@ -265,19 +266,19 @@ class VisualNudgeCompetition:
         """Add a winner label to an image."""
         img_copy = image.copy()
         draw = ImageDraw.Draw(img_copy)
-        
+
         # Try to use a nice font, fall back to default if not available
         font = ImageFont.load_default()
-        
+
         # Calculate text size and position
         bbox = draw.textbbox((0, 0), label, font=font)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
-        
+
         # Position at top-center
         x = (img_copy.width - text_width) // 2
         y = 20
-        
+
         # Draw background rectangle
         padding = 10
         draw.rectangle(
@@ -286,10 +287,10 @@ class VisualNudgeCompetition:
             outline="black",
             width=3
         )
-        
+
         # Draw text
         draw.text((x, y), label, fill="black", font=font)
-        
+
         return img_copy
 
     def _visualize_competition(
@@ -308,27 +309,27 @@ class VisualNudgeCompetition:
         num_rounds = len(round_history)
         if num_rounds == 0:
             return
-        
+
         # Create figure with 3 columns (round label, image A, image B)
         fig, axes = plt.subplots(num_rounds, 3, figsize=(15, 5 * num_rounds))
-        
+
         # Handle single round case
         if num_rounds == 1:
             axes = axes.reshape(1, -1)
-        
+
         fig.suptitle(f"Competition Progress: {base_a} vs {base_b}", fontsize=16, fontweight="bold")
-        
+
         for round_idx, round_data in enumerate(round_history):
             round_num = round_data["round"]
             winner = round_data["winner"]
             score = round_data["score"]
-            
+
             # Round label column
             ax_label = axes[round_idx, 0]
-            ax_label.text(0.5, 0.5, f"Round {round_num}\n{winner} wins\n{score:.1%}", 
+            ax_label.text(0.5, 0.5, f"Round {round_num}\n{winner} wins\n{score:.1%}",
                          ha="center", va="center", fontsize=14, fontweight="bold")
             ax_label.axis("off")
-            
+
             # Image A column
             ax_a = axes[round_idx, 1]
             img_a = round_data["image_a"]
@@ -337,7 +338,7 @@ class VisualNudgeCompetition:
             ax_a.imshow(img_a)
             ax_a.set_title(f"{base_a}", fontsize=12, fontweight="bold" if winner == base_a else "normal")
             ax_a.axis("off")
-            
+
             # Image B column
             ax_b = axes[round_idx, 2]
             img_b = round_data["image_b"]
@@ -346,14 +347,14 @@ class VisualNudgeCompetition:
             ax_b.imshow(img_b)
             ax_b.set_title(f"{base_b}", fontsize=12, fontweight="bold" if winner == base_b else "normal")
             ax_b.axis("off")
-        
+
         plt.tight_layout()
-        
+
         # Save visualization
         viz_path = os.path.join(results_dir, f"{pair_name}_visualization.png")
         plt.savefig(viz_path, dpi=300, bbox_inches="tight")
         plt.close()
-        
+
         logging.info(f"📊 Visualization saved to {viz_path}\n")
 
     def _run_paired_contest(
@@ -370,11 +371,11 @@ class VisualNudgeCompetition:
         Returns final state of both images.
         """
         pair_start = time.time()
-        
+
         base_a = os.path.splitext(os.path.basename(image_a_path))[0]
         base_b = os.path.splitext(os.path.basename(image_b_path))[0]
         pair_name = f"pair-{pair_idx+1}_{base_a}_vs_{base_b}"
-        
+
         logging.info(f"\n{'='*80}\n")
         logging.info(f"PAIRED CONTEST {pair_idx+1}/{total_pairs}: {base_a} vs {base_b}\n")
         logging.info(f"{'='*80}\n")
@@ -404,7 +405,7 @@ class VisualNudgeCompetition:
         # Save originals
         state_a["image"].save(os.path.join(results_dir, f"{pair_name}_{base_a}_original.jpg"))
         state_b["image"].save(os.path.join(results_dir, f"{pair_name}_{base_b}_original.jpg"))
-        
+
         image_a_bytes_original = state_a["bytes"]
         image_b_bytes_original = state_b["bytes"]
 
@@ -434,7 +435,7 @@ class VisualNudgeCompetition:
                 "winner": winner_name,
                 "score": winner_score
             })
-            
+
             # Store images for visualization
             visualization_history.append({
                 "round": round_num,
@@ -468,7 +469,7 @@ class VisualNudgeCompetition:
 
             # Improve ONLY the loser
             logging.info(f"\n🔄 Improving {loser_name} (loser of round {round_num})\n")
-            
+
             improved_bytes, improved_prompt, improved_image = self._improve_loser(
                 loser_image_bytes=loser_state["bytes"],
                 loser_prompt=loser_state["prompt"],
@@ -549,7 +550,7 @@ class VisualNudgeCompetition:
         Each pair competes until equilibrium is reached.
         """
         run_start = time.time()
-        
+
         # Generate all pairs
         image_categories = {}
         for image_path in image_paths:
@@ -557,12 +558,12 @@ class VisualNudgeCompetition:
             category = base_name.split("_")[0]  # Assuming category is prefix before the first underscore
             image_categories.setdefault(category, [])
             image_categories[category].append(image_path)
-        
+
         pairs = []
         for category, paths in image_categories.items():
             category_pairs = list(combinations(paths, 2))
             pairs.extend(category_pairs)
-        
+
         print(f"\n{'='*80}")
         print(f"🥊 Starting Paired Contest Competition")
         print(f"   Images: {len(image_paths)}")
@@ -576,7 +577,7 @@ class VisualNudgeCompetition:
 
         # Process pairs
         results = []
-        
+
         with tqdm(total=len(pairs), desc="Pairs completed", unit="pair") as pbar:
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 futures = {
@@ -603,11 +604,11 @@ class VisualNudgeCompetition:
             f.write(f"Total pairs: {len(pairs)}\n")
             f.write(f"Total images generated: {self._total_num_images_generated}\n")
             f.write(f"Estimated cost: ${self._total_num_images_generated * self._cost_per_image_generated:.2f}\n\n")
-            
+
             equilibrium_count = sum(1 for r in results if r["equilibrium"])
             f.write(f"Pairs reaching equilibrium: {equilibrium_count}/{len(pairs)}\n")
             f.write(f"Average rounds per pair: {sum(r['rounds'] for r in results)/len(results):.1f}\n\n")
-            
+
             f.write(f"Individual Pair Results:\n")
             f.write(f"{'-'*80}\n")
             for r in results:

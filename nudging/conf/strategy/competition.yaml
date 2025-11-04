@@ -33,7 +33,7 @@ evaluator_model:
     choice_options: ['first', 'second']
     reason_description: |
       Concise justification of your decision (1-3 sentences).
-  
+
   api_call: ${llm}
 
 # Optimizer for improving losers
@@ -44,7 +44,7 @@ proposer_model:
 
   # The system prompt for generating diverse candidate prompts
   system_prompt: |
-    You are proposing image editing instructions to improve a product photo based on feedback about why it was not chosen.
+    You are proposing image editing instructions to improve a product photo based on feedback about why an alternative was chosen over it.
     Each proposal should make exactly one visual change that meaningfully alters the scene composition or context.
     Avoid superficial adjustments; instead consider substantive changes to the scene's content and narrative.
     Proposals should be diverse and explore different improvement strategies.
@@ -59,7 +59,7 @@ proposer_model:
     current_iteration_description: |
       The current iteration number (1-indexed)
     judge_feedback_description: |
-      Feedback about why the previous image version was not chosen over a similar alternative
+      Feedback about why an alternative was chosen over the previous image version
     total_iterations_description: |
       The total number of iterations planned
     num_proposals_description: |
@@ -72,7 +72,7 @@ proposer_model:
     _target_: nudging.schema.create_proposer_output_schema
     candidate_prompts_description: |
       A list of diverse candidate image editing instructions. Each should explore a different improvement strategy.
-  
+
   api_call: ${llm}
 
 selector_model:
@@ -81,19 +81,19 @@ selector_model:
 
   # The system prompt for generating diverse candidate prompts
   system_prompt: |
-    You are selecting the best image option from a set of candidates based on feedback about why the previous image version was not chosen over a similar alternative.
+    You are selecting the best image option from a set of candidates based on feedback about why an alternative was chosen over the previous image version.
     Choose the option that best addresses the feedback while making a meaningful visual change to increase the likelihood of purchase.
   # Input schema for the selector model
   input_schema:
     _target_: nudging.schema.create_selector_input_schema
-    image_bytes_list_description: 
+    image_bytes_list_description:
       List of image bytes for each candidate prompt
     candidate_descriptions_description: |
       A list of candidate image editing instructions
     num_candidates_description: |
       The number of candidate prompts
     judge_feedback_description: |
-      Feedback about why the previous image version was not chosen over a similar alternative
+      Feedback about why an alternative was chosen over the previous image version
 
   # Output schema for the selector model
   output_schema:
@@ -101,7 +101,7 @@ selector_model:
     choice_description: |
       The selected image that best addresses the feedback.
       Must be a 1-indexed integer from the given options: ['1', '2', '3', ...]
-  
+
   api_call: ${llm}
 
 
