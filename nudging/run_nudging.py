@@ -28,10 +28,7 @@ def main(cfg: Config):
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     # Build directory path: strategy/model/timestamp (model only if strategy uses one)
-    if hasattr(nudge_pipeline, 'evaluator_model'):
-        base_dir = os.path.join(nudge_pipeline.name, nudge_pipeline.evaluator_model.api_call.model)
-    else:
-        base_dir = nudge_pipeline.name
+    base_dir = nudge_pipeline.name
 
     results_dir = os.path.join(cfg.logging.results_dir, base_dir, current_date)
 
