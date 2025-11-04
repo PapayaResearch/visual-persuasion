@@ -117,6 +117,77 @@ interpret:
     api_call: ${llm}
 
 ######################
+# Interpretation Settings
+######################
+
+interpret:
+  # Hydra target class for the interpretation pipeline
+  _target_: nudging.interpret_results.ResultsInterpreter
+
+  # Directory containing zero-shot results to interpret
+  results_dir: ${general.evaluation_dir}
+
+  # Prompt for the difference detector model
+  difference_prompt: |
+    Compare these two product images and identify the key differences.
+
+  difference_detector_model:
+    # Hydra target class for the difference detector model
+    _target_: utils.wrappers.LanguageModel
+
+    # The system prompt for identifying differences
+    system_prompt: |
+      You are analyzing differences between two product images.
+      The first image is the original, the second is edited.
+      Identify thematic differences in a simple, concise way (e.g., "worse lighting, person added").
+
+    # Input schema for the difference detector model
+    input_schema:
+      _target_: nudging.schema.create_difference_detector_input_schema
+      task_description: |
+        Task description for comparing images
+      images_description: |
+        List of image bytes: [original, edited]
+
+    # Output schema for the difference detector model
+    output_schema:
+      _target_: nudging.schema.create_difference_detector_output_schema
+      differences_description: |
+        Brief, thematic description of differences (comma-separated, e.g., "worse lighting, person added")
+
+    # Wrapper function for the API - uses LLM config
+    api_call: ${llm}
+
+  # Prompt for the theme summarizer model
+  theme_prompt: |
+    Analyze all the differences and identify the main themes.
+
+  theme_summarizer_model:
+    # Hydra target class for the theme summarizer model
+    _target_: utils.wrappers.LanguageModel
+
+    # The system prompt for summarizing themes
+    system_prompt: |
+      You are analyzing a list of differences from multiple product image comparisons.
+      Identify and describe the main recurring themes across all comparisons.
+      Focus on patterns and commonalities.
+
+    # Input schema for the theme summarizer model
+    input_schema:
+      _target_: nudging.schema.create_theme_summarizer_input_schema
+      differences_description: |
+        List of all differences from product comparisons (one per line)
+
+    # Output schema for the theme summarizer model
+    output_schema:
+      _target_: nudging.schema.create_theme_summarizer_output_schema
+      themes_description: |
+        Bulleted list of main themes with explanations
+
+    # Wrapper function for the API - uses LLM config
+    api_call: ${llm}
+
+######################
 # Evaluation Settings
 ######################
 
