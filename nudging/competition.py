@@ -198,9 +198,9 @@ class VisualNudgeCompetition:
         # Generate improvement proposals
         proposer_response = self.proposer_model.get_response(
             current_prompt=loser_prompt,
-            judge_feedback=feedback,
             history_of_prompts=history_text,
             current_iteration=round_num,
+            judge_feedback=feedback,
             total_iterations=self.min_rounds_before_equilibrium,
             num_proposals=self.num_improvement_proposals,
             metadata="The product here is a(n) %s." % pair_name.split("_")[1]
