@@ -58,6 +58,8 @@ proposer_model:
       The history of previous prompts used so far (may be empty if proposer shouldn't see it)
     current_iteration_description: |
       The current iteration number (1-indexed)
+    judge_feedback_description: |
+      Feedback about why the previous image version was not chosen over a similar alternative
     total_iterations_description: |
       The total number of iterations planned
     num_proposals_description: |
