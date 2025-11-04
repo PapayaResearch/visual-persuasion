@@ -81,7 +81,7 @@ class VisualNudgeCompetition:
             real_choice = choice_map.get(evaluation.choice.lower())
 
             judge_duration = time.time() - judge_start
-            print(f"  ⏱️  Judge {judge_id} ({image_a_name} {'1st' if is_a_first else '2nd'}): {judge_duration:.2f}s")
+            logging.debug(f"  ⏱️  Judge {judge_id} ({image_a_name} {'1st' if is_a_first else '2nd'}): {judge_duration:.2f}s")
             logging.info(f"Judge {judge_id}: Chose {real_choice} - {evaluation.reason}\n")
             return (real_choice, evaluation.reason)
 
@@ -127,7 +127,7 @@ class VisualNudgeCompetition:
         # Determine winner
         if total_consistent_judges == 0:
             logging.warning("No consistent judges. Defaulting to draw.\n")
-            print("  ⚠️  No consistent judges - treating as draw.\n")
+            logging.debug("  ⚠️  No consistent judges - treating as draw.\n")
             winner = image_a_name  # Arbitrary - treat as draw
             winner_score = 0.5
             feedback = "No consistent preference detected."
@@ -139,7 +139,7 @@ class VisualNudgeCompetition:
             logging.info(f"🏆 WINNER: {winner} ({votes[winner]}/{total_consistent_judges} = {winner_score:.2%})\n")
 
         contest_duration = time.time() - contest_start
-        print(f"⏱️  Contest completed: {contest_duration:.2f}s")
+        logging.debug(f"⏱️  Contest completed: {contest_duration:.2f}s")
 
         return winner, winner_score, feedback
 
@@ -207,7 +207,7 @@ class VisualNudgeCompetition:
             num_proposals=self.num_improvement_proposals,
             metadata="The product here is a(n) %s." % pair_name.split("_")[1]
         )
-        print(f"⏱️  Proposal category is: {pair_name.split('_')[1]}")
+        logging.debug(f"⏱️  Proposal category is: {pair_name.split('_')[1]}")
 
         candidate_prompts = proposer_response.candidate_prompts
         logging.info(f"Generated {len(candidate_prompts)} improvement candidates:\n")
@@ -251,10 +251,10 @@ class VisualNudgeCompetition:
         # Log cost
         total_cost = self._total_num_images_generated * self._cost_per_image_generated
         logging.info(f"Total images generated: {self._total_num_images_generated}, Cost: ${total_cost:.2f}\n")
-        print(f"Total images: {self._total_num_images_generated}, Cost: ${total_cost:.2f}")
+        logging.debug(f"Total images: {self._total_num_images_generated}, Cost: ${total_cost:.2f}")
 
         improve_duration = time.time() - improve_start
-        print(f"⏱️  Improvement phase: {improve_duration:.2f}s")
+        logging.debug(f"⏱️  Improvement phase: {improve_duration:.2f}s")
 
         return (
             best_candidate["image_bytes"],
@@ -531,7 +531,7 @@ class VisualNudgeCompetition:
                 f.write(f"    {i}. {edit}\n")
 
         pair_duration = time.time() - pair_start
-        print(f"\n⏱️  Pair {pair_idx+1} total: {pair_duration:.2f}s ({pair_duration/60:.2f}m)\n")
+        logging.debug(f"\n⏱️  Pair {pair_idx+1} total: {pair_duration:.2f}s ({pair_duration/60:.2f}m)\n")
 
         return {
             "pair_name": pair_name,
@@ -564,14 +564,14 @@ class VisualNudgeCompetition:
             category_pairs = list(combinations(paths, 2))
             pairs.extend(category_pairs)
 
-        print(f"\n{'='*80}")
-        print(f"🥊 Starting Paired Contest Competition")
-        print(f"   Images: {len(image_paths)}")
-        print(f"   Total pairs: {len(pairs)}")
-        print(f"   Max rounds per pair: {self.max_rounds_per_pair}")
-        print(f"   Equilibrium threshold: {self.equilibrium_threshold}")
-        print(f"   Max workers: {max_workers}")
-        print(f"{'='*80}\n")
+        logging.debug(f"\n{'='*80}")
+        logging.debug(f"🥊 Starting Paired Contest Competition")
+        logging.debug(f"   Images: {len(image_paths)}")
+        logging.debug(f"   Total pairs: {len(pairs)}")
+        logging.debug(f"   Max rounds per pair: {self.max_rounds_per_pair}")
+        logging.debug(f"   Equilibrium threshold: {self.equilibrium_threshold}")
+        logging.debug(f"   Max workers: {max_workers}")
+        logging.debug(f"{'='*80}\n")
 
         os.makedirs(results_dir, exist_ok=True)
 
@@ -621,14 +621,14 @@ class VisualNudgeCompetition:
                 f.write(f"\n")
 
         run_duration = time.time() - run_start
-        print(f"\n{'='*80}")
-        print(f"✅ Paired Contest Competition Complete!")
-        print(f"⏱️  TOTAL RUNTIME: {run_duration:.2f}s ({run_duration/60:.2f}m)")
-        print(f"   Total pairs: {len(pairs)}")
-        print(f"   Pairs with equilibrium: {equilibrium_count}/{len(pairs)}")
-        print(f"   Average rounds: {sum(r['rounds'] for r in results)/len(results):.1f}")
-        print(f"   Total images generated: {self._total_num_images_generated}")
-        print(f"   Estimated cost: ${self._total_num_images_generated * self._cost_per_image_generated:.2f}")
-        print(f"{'='*80}\n")
+        logging.debug(f"\n{'='*80}")
+        logging.debug(f"✅ Paired Contest Competition Complete!")
+        logging.debug(f"⏱️  TOTAL RUNTIME: {run_duration:.2f}s ({run_duration/60:.2f}m)")
+        logging.debug(f"   Total pairs: {len(pairs)}")
+        logging.debug(f"   Pairs with equilibrium: {equilibrium_count}/{len(pairs)}")
+        logging.debug(f"   Average rounds: {sum(r['rounds'] for r in results)/len(results):.1f}")
+        logging.debug(f"   Total images generated: {self._total_num_images_generated}")
+        logging.debug(f"   Estimated cost: ${self._total_num_images_generated * self._cost_per_image_generated:.2f}")
+        logging.debug(f"{'='*80}\n")
 
         return results
