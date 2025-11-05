@@ -12,7 +12,7 @@ class SamplingStrategy(ABC):
     def sample_images(self, all_folders: List[str]) -> List[tuple]:
         """
         Main dataset sampling workflow with common logic.
-        Returns a list of tuples: (source_image_path, destination_filename)
+        Returns a list of tuples: (source_image_path, destination_filename, category)
         """
         self.sampled_images = []
 
@@ -74,4 +74,4 @@ class RandomSampling(SamplingStrategy):
         for image in selected_images:
             src_image_path = os.path.join(folder_path, image)
             dst_filename = f"{folder_name.replace('_', '')}_{image.replace('_', '')}"
-            self.sampled_images.append((src_image_path, dst_filename))
+            self.sampled_images.append((src_image_path, dst_filename, folder_name))

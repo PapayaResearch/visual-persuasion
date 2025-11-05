@@ -50,6 +50,7 @@ image_enhancer:
   enhancement_prompt: |
     Upscale the image and enhance its quality.
     Do not make any other changes to the image itself.
+    The subject is a {category}.
 
     Edit the image to standardize it with the following requirements:
     1. Remove the background and replace it with a plain white color (#FFFFFF).
