@@ -9,10 +9,8 @@ from pathlib import Path
 from typing import List
 from tqdm import tqdm
 from fastembed import ImageEmbedding
-import apricot
 from sklearn.cluster import MiniBatchKMeans
 
-# TODO: Take as input argument
 TARGET_CATEGORIES = [
     "CELLULAR_PHONE_CASE",
     "SHOES",
@@ -29,11 +27,11 @@ TARGET_CATEGORIES = [
     "PLANTER",
     "BACKPACK",
     "BED",
-    "BATTERY",
-    "DESK",
     "WALLET",
     "SAUTE_FRY_PAN",
-    "BREAD"
+    "BREAD",
+    "CLOCK",
+    "VASE",
 ]
 
 
@@ -81,34 +79,6 @@ def calculate_embeddings(df: pd.DataFrame, dataset_dir: Path) -> np.ndarray:
 
     return np.vstack(embeddings)
 
-
-def subsample_by_similarity_apricot(df: pd.DataFrame, embeddings: np.ndarray, n_samples: int) -> pd.DataFrame:
-    """Subsample images using apricot facility location to select similar images.
-
-    This method uses submodular optimization to find representative samples that
-    maximize diversity while staying within the main cluster.
-    """
-    sampled_dfs = []
-
-    for category in tqdm(df["product_type_str"].unique(), desc="Subsampling by similarity (apricot)"):
-        df_cat = df[df["product_type_str"] == category].copy()
-        cat_indices = df_cat.index.tolist()
-        cat_features = embeddings[cat_indices, :]
-
-        selector = apricot.functions.facilityLocation.FacilityLocationSelection(
-            n_samples=n_samples,
-            random_state=0
-        )
-        selector.fit(cat_features)
-        selected_indices = selector.ranking[:n_samples]
-
-        # Get the actual dataframe rows
-        selected_rows = df_cat.iloc[selected_indices]
-        sampled_dfs.append(selected_rows)
-
-    return pd.concat(sampled_dfs, ignore_index=True)
-
-
 def subsample_by_similarity_clustering(df: pd.DataFrame, embeddings: np.ndarray, n_samples: int) -> pd.DataFrame:
     """Subsample images using density-based clustering.
 
@@ -123,7 +93,7 @@ def subsample_by_similarity_clustering(df: pd.DataFrame, embeddings: np.ndarray,
         cat_features = embeddings[cat_indices, :]
 
         # Over-cluster to better estimate density
-        n_clusters = n_samples * 3
+        n_clusters = n_samples * 1
         kmeans = MiniBatchKMeans(n_clusters=n_clusters, random_state=0, batch_size=1000)
         labels = kmeans.fit_predict(cat_features)
 
@@ -231,11 +201,6 @@ def main():
 
     embeddings = calculate_embeddings(initially_sampled_df, args.dataset_dir)
 
-    # final_sampled_df = subsample_by_similarity_apricot(
-    #     initially_sampled_df,
-    #     embeddings,
-    #     args.n_samples
-    # )
     final_sampled_df = subsample_by_similarity_clustering(
         initially_sampled_df,
         embeddings,
