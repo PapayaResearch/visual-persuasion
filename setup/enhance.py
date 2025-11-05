@@ -1,5 +1,6 @@
 import os
 import logging
+from typing import List, Tuple
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils.wrappers import ImageModel
@@ -13,40 +14,57 @@ class ImageEnhancer:
         self.enhancement_model = enhancement_model
         self.enhancement_prompt = enhancement_prompt
 
-    def _enhance_single_image(self, base_dir, enhanced_dir, img_file):
-        """Enhance a single image."""
-        img_path = os.path.join(base_dir, img_file)
-        with open(img_path, 'rb') as f:
+    def _enhance_single_image(self, src_image_path: str, dst_image_path: str):
+        """Enhance a single image and save it to the destination path."""
+        with open(src_image_path, 'rb') as f:
             original_image_bytes = f.read()
+
         enhanced_image, enhanced_image_bytes = self.enhancement_model.edit(
             self.enhancement_prompt,
             original_image_bytes
         )
+
         if not enhanced_image:
-            logging.error(f"Enhancement failed for image: {img_file}, skipping.\n")
+            logging.error(f"Enhancement failed for image: {src_image_path}, skipping.\n")
             return False
-        enhanced_image.save(os.path.join(enhanced_dir, img_file))
+
+        enhanced_image.save(dst_image_path)
         return True
 
-    def enhance_images(self, src_dir, max_workers):
+    def enhance_images(self, sampled_images: List[Tuple[str, str]], dst_dir: str, max_workers: int):
         """
-        Enhances the quality of images in the source directory using the specified enhancement model.
+        Enhances sampled images and saves them to the destination directory.
+        Skips images that already exist in dst_dir.
+
+        Args:
+            sampled_images: List of tuples (source_image_path, destination_filename)
+            dst_dir: Directory where enhanced images will be saved
+            max_workers: Number of worker threads for parallel processing
         """
-        base_dir = os.path.join(src_dir, "base")
-        enhanced_dir = os.path.join(src_dir, "enhanced")
-        os.makedirs(enhanced_dir, exist_ok=True)
+        os.makedirs(dst_dir, exist_ok=True)
 
-        # Only enhance images that don't already exist in enhanced directory
-        all_images = [f for f in os.listdir(base_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-        existing_enhanced = set(os.listdir(enhanced_dir)) if os.path.exists(enhanced_dir) else set()
-        image_files = [f for f in all_images if f not in existing_enhanced]
-
-        if not image_files:
-            return
+        # Filter out images that already exist in dst_dir
+        existing_images = set(os.listdir(dst_dir))
+        images_to_enhance = [
+            (src_path, dst_filename)
+            for src_path, dst_filename in sampled_images
+            if dst_filename not in existing_images
+        ]
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(self._enhance_single_image, base_dir, enhanced_dir, img_file): img_file
-                      for img_file in image_files}
+            futures = {
+                executor.submit(
+                    self._enhance_single_image,
+                    src_path,
+                    os.path.join(dst_dir, dst_filename)
+                ): dst_filename
+                for src_path, dst_filename in images_to_enhance
+            }
 
-            for future in tqdm(as_completed(futures), total=len(image_files), desc="Enhancing images", unit="image"):
+            for future in tqdm(
+                    as_completed(futures),
+                    total=len(images_to_enhance),
+                    desc="Enhancing images",
+                    unit="image"
+            ):
                 future.result()
