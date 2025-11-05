@@ -5,7 +5,7 @@
 defaults:
   - _self_
   # LLM model for evaluator/loss/optimizer (e.g., gpt-5)
-  - llm: gpt-5
+  - llm: o3
   # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
   - editor: nanobanana-gemini
   # Strategy for nudging (e.g., zero-shot, prompt-optimization, tournament-of-images, tournament-of-prompts)
@@ -18,7 +18,7 @@ defaults:
 general:
   ## NUDGE CONFIGURATION
   # Directory containing the images to be tested
-  data_dir: ${hydra:runtime.cwd}/data/temp
+  data_dir: ${hydra:runtime.cwd}/data/new_dataset_2025-10-29_18-42-38/without_background_normalized
   # Total number of iterations to run per image
   iterations: 2
   # Enable previous image context during editing
@@ -26,7 +26,7 @@ general:
   # Output aspect ratio for edited images
   aspect_ratio: "1:1"
   # Maximum number of parallel workers for processing images
-  max_workers: 1
+  max_workers: 3
 
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)
@@ -35,132 +35,6 @@ general:
   ## ANALYSIS CONFIGURATION
   # CSV file with evaluation results to analyze
   analysis_csv: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/2025-10-24_11-18-58/evaluation/gpt-5-2025-08-07/2025-10-27_20-20-04/results.csv
-
-######################
-# Nudge Settings
-######################
-
-nudge:
-  # Hydra target class for the main pipeline orchestrator
-  _target_: nudging.nudge.VisualNudge
-
-  # Total number of iterations to run per image
-  iterations: ${general.iterations}
-
-  # Enable previous image context during editing
-  enable_editing_context: ${general.enable_editing_context}
-  # Additional prompt for editing context
-  editing_context_prompt: |
-    The first image is the original, the second image is the previous edit.
-
-  # Enable prompt optimization pipeline (disable for zero-shot testing)
-  enable_optimization: ${strategy.enable_optimization}
-  # Enable tournament mode (keep track of the last chosen image instead of the previous image)
-  enable_tournament_mode: ${strategy.enable_tournament_mode}
-  # Save best prompts instead of the best images in tournament mode (regenerates images for every iteration)
-  save_best_prompts: ${strategy.save_best_prompts}
-
-  # The initial prompt for the image editing task
-  initial_prompt: |
-    Make this product photo look more appealing.
-    Keep the product itself exactly unchanged.
-  # Additional prompt to retain background state during editing
-  background_state_prompt: |
-    You must keep the background neutral, but may add other contextual elements.
-
-  # Use the selected editor from the defaults section
-  image_editing_model: ${editor}
-
-  # Number of judges to use for evaluation
-  num_judges: 3
-  # Prompt for the evaluator model
-  evaluator_prompt: |
-    Compare the two images.
-
-  evaluator_model:
-    # Hydra target class for the evaluator model
-    _target_: utils.wrappers.LanguageModel
-
-    # The system prompt for the image comparison task
-    system_prompt: |
-      You are comparing two images to determine which is better.
-
-    # Input schema for the evaluator model
-    input_schema:
-      _target_: nudging.schema.create_evaluator_input_schema
-      task_description: |
-        The image comparison task description
-      images_description: |
-        List of image bytes: [first, second]
-
-    # Output schema for the evaluator model
-    output_schema:
-      _target_: nudging.schema.create_evaluator_output_schema
-      choice_description: |
-        Which image is better: 'first' or 'second'
-      choice_options: ['first', 'second']
-      reason_description: |
-        Detailed explanation of why the chosen image is better
-
-    # Wrapper function for the API - uses LLM config
-    api_call: ${llm}
-
-  loss_model:
-    # Hydra target class for the loss model
-    _target_: utils.wrappers.LanguageModel
-
-    # The system prompt for the loss generation task
-    system_prompt: |
-      You are helping to improve photos by providing constructive feedback.
-      Analyze why the judges made their choice and identify specific areas for improvement.
-      Focus on actionable suggestions that could make the next iteration better.
-
-    # Input schema for the loss model
-    input_schema:
-      _target_: nudging.schema.create_loss_input_schema
-      choice_description: |
-        Which image was chosen as better
-      choice_options: ['first', 'second']
-      reason_description: |
-        Reason for the choice
-      to_improve_description: |
-        The image we want to improve ('first' or 'second')
-
-    # Output schema for the loss model
-    output_schema:
-      _target_: nudging.schema.create_loss_output_schema
-      suggestions_description: |
-        Concrete, actionable suggestions for improving the next iteration, formatted as a bulleted list
-
-    # Wrapper function for the API - uses LLM config
-    api_call: ${llm}
-
-  optimizer_model:
-    # Hydra target class for the optimizer model
-    _target_: utils.wrappers.LanguageModel
-
-    # The system prompt for the prompt optimization task
-    system_prompt: |
-      You are refining an image editing instruction based on feedback.
-      Incorporate the suggested improvements while preserving what worked well.
-      Keep the instruction clear, specific, and under 100 words.
-
-    # Input schema for the optimizer model
-    input_schema:
-      _target_: nudging.schema.create_optimizer_input_schema
-      current_prompt_description: |
-        The current image editing prompt
-      suggestions_description: |
-        Suggestions for improvement
-
-    # Output schema for the optimizer model
-    output_schema:
-      _target_: nudging.schema.create_optimizer_output_schema
-      new_prompt_description: |
-        The refined image editing instruction, incorporating feedback while keeping successful elements
-
-    # Wrapper function for the API - uses LLM config
-    api_call: ${llm}
 
 ######################
 # Evaluation Settings
@@ -197,7 +71,7 @@ evaluate:
         Which image is better: 'first' or 'second'
       choice_options: ['first', 'second']
       reason_description: |
-        Detailed explanation of why the chosen image is better
+        Detailed explanation of why the chosen image is more appealing
 
     # Wrapper function for the API - uses LLM config
     api_call: ${llm}
@@ -223,3 +97,5 @@ logging:
     log_dir: ${hydra:runtime.cwd}/logs
     # Base directory for writing results (images, configs)
     results_dir: ${hydra:runtime.cwd}/results
+    # Also log to console
+    console: true
