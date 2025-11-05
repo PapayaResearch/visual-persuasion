@@ -9,7 +9,7 @@ defaults:
   # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
   - editor: nanobanana-gemini
   # Strategy for nudging (e.g., zero-shot, prompt-optimization, tournament-of-images, tournament-of-prompts)
-  - strategy: tournament-of-prompts
+  - strategy: zero-shot
 
 ######################
 # General Settings
