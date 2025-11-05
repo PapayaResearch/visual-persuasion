@@ -5,7 +5,7 @@ name: zero-shot
 
 # Base prompt template with variable placeholder for substitution
 base_template: |
-  {{prior}}
+  {prior}
   Keep the product itself exactly unchanged, and the background neutral.
 
 template_variable: prior

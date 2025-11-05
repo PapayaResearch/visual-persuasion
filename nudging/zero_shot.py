@@ -45,15 +45,12 @@ class ZeroShot:
         original_image.save(original_save_path)
         logging.info(f"Saved original image to: {original_save_path}\n")
 
-        # Replace {{variable}} placeholder with actual values
-        placeholder = f"{{{{{self.template_variable}}}}}"
-
         # Zero shot without priors
-        prompts_to_apply = [(self.base_template.replace(placeholder, self.base_prior), "no-prior")]
+        prompts_to_apply = [(self.base_template.format(prior=self.base_prior), "no-prior")]
 
         if self.priors:
             prompts_to_apply.extend(
-                [(self.base_template.replace(placeholder, prior), f"prior-{i}")
+                [(self.base_template.format(prior=prior), f"prior-{i}")
                  for i, prior in enumerate(self.priors)]
             )
 
