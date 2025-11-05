@@ -25,7 +25,6 @@ def main(cfg: Config):
     log_file = os.path.join(
         "logs",
         cfg.dataset.name,
-        cfg.llm.model,
         current_date + ".log"
     )
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
@@ -37,7 +36,6 @@ def main(cfg: Config):
         force=True
     )
     logging.getLogger().addHandler(logging.StreamHandler())
-    logging.getLogger("LiteLLM").setLevel(logging.WARNING)
     logging.info(f"Logging to: {log_file}")
 
     # Setup paths
