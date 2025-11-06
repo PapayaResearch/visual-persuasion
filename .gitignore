@@ -8,6 +8,9 @@ keys
 logs
 results
 outputs
+model.tar.gz
+*.pt
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
