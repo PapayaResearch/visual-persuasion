@@ -66,11 +66,11 @@ class EvaluationAnalyzer:
             filename2 = f"{class_name}_{row['base2']}"
             unique_filenames.add(filename1)
             unique_filenames.add(filename2)
-        
+
         # Select preview images
         num_preview_images = min(self.num_previews, len(unique_filenames)) if self.num_previews != -1 else len(unique_filenames)
         selected_filenames = sorted(random.sample(sorted(unique_filenames), num_preview_images))
-        
+
         # Create grid layout
         cols = min(5, len(selected_filenames))
         rows = (len(selected_filenames) + cols - 1) // cols
@@ -100,7 +100,7 @@ class EvaluationAnalyzer:
                     ax.set_title('_'.join(filename.split('_')[1:]), fontsize=10)
                     img_loaded = True
                     break
-            
+
             if not img_loaded:
                 ax.text(0.5, 0.5, 'Missing', ha='center', va='center',
                        transform=ax.transAxes, fontsize=12)
@@ -126,22 +126,22 @@ class EvaluationAnalyzer:
         # Calculate win rates for this class
         base_wins = defaultdict(int)
         base_total = defaultdict(int)
-        
+
         for _, row in class_df.iterrows():
             base1, base2, choice = row['base1'], row['base2'], row['choice']
-            
+
             base_total[base1] += 1
             base_total[base2] += 1
-            
+
             if choice == base1:
                 base_wins[base1] += 1
             elif choice == base2:
                 base_wins[base2] += 1
-        
+
         # Calculate win rates
-        win_rates = {base: (base_wins[base] / base_total[base] * 100) if base_total[base] > 0 else 0 
+        win_rates = {base: (base_wins[base] / base_total[base] * 100) if base_total[base] > 0 else 0
                      for base in base_total}
-        
+
         win_rate_series = pd.Series(win_rates).sort_values(ascending=False)
 
         fig, ax = plt.subplots(figsize=(12, 8))

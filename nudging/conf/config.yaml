@@ -46,9 +46,9 @@ general:
 # Interpretation Settings
 ######################
 
-interpret:
+interp:
   # Hydra target class for the interpretation pipeline
-  _target_: nudging.interpret_results.ResultsInterpreter
+  _target_: nudging.interp.ResultsInterpreter
 
   # Directory containing zero-shot results to interpret
   results_dir: ${general.evaluation_dir}

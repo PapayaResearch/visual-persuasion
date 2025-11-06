@@ -92,7 +92,7 @@ class EvaluationPipeline:
 
         vlm_choice = evaluation.choice.lower()
         vlm_reason = evaluation.reason
-        
+
         # Determine which image was chosen by the VLM
         img1_chosen = ((vlm_choice == "first" and is_img1_first) or
                        (vlm_choice == "second" and not is_img1_first))
@@ -154,7 +154,7 @@ class EvaluationPipeline:
         # Group images by class
         class_groups = defaultdict(set)
         images_to_evaluate = self._get_images_to_evaluate(image_paths)
-        
+
         for img_path in images_to_evaluate:
             with open(img_path, "rb") as f:
                 img_bytes = f.read()
@@ -175,7 +175,7 @@ class EvaluationPipeline:
 
             for (image_id_1, edit_type_1, img_bytes_1), (image_id_2, edit_type_2, img_bytes_2) in \
                     itertools.combinations(comparable_images, 2):
-                
+
                 # Skip comparison based on settings
                 if (not self.allow_same_image_comparison) and (image_id_1 == image_id_2):
                     continue

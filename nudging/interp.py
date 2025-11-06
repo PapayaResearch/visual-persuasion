@@ -157,7 +157,12 @@ class ResultsInterpreter:
                 futures = {executor.submit(self._compare_images, orig, edited, label): label
                           for orig, edited, label in comparison_tasks}
 
-                for future in tqdm(as_completed(futures), total=len(comparison_tasks), desc=f"{category} comparisons", unit="comparison"):
+                for future in tqdm(
+                        as_completed(futures),
+                        total=len(comparison_tasks),
+                        desc=f"{category} comparisons",
+                        unit="comparison"
+                ):
                     label, diff = future.result()
                     category_differences.append(f"[{label}] {diff}")
 

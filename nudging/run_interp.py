@@ -48,10 +48,10 @@ def main(cfg: Config):
         outfile.write(cfg_yaml)
 
     # Instantiate the interpreter pipeline
-    interpreter = hydra.utils.instantiate(cfg.interpret)
+    interpreter = hydra.utils.instantiate(cfg.interp)
 
     # Run the interpreter
-    logging.info(f"Starting interpretation of results from {cfg.interpret.results_dir}\n")
+    logging.info(f"Starting interpretation of results from {cfg.interp.results_dir}\n")
     interpreter.run(output_dir, cfg.general.max_workers)
 
     logging.info(f"Interpretation completed: {output_dir}\n")
