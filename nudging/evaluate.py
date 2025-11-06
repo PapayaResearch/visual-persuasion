@@ -37,7 +37,7 @@ class EvaluationPipeline:
     def _load_completed_comparisons(self, csv_path: str) -> Set[Tuple[str, str, str]]:
         """
         Load completed comparisons from existing CSV.
-        Returns a set of (image_class, base1, base2) tuples with normalized ordering.
+        Returns a set of (image_class, base1, base2) tuples.
         """
         if not os.path.exists(csv_path):
             return set()
@@ -45,9 +45,7 @@ class EvaluationPipeline:
         completed = set()
         df = pd.read_csv(csv_path)
         for _, row in df.iterrows():
-            # Normalize order so (A, B) and (B, A) are treated as the same
-            pair = tuple(sorted([row['base1'], row['base2']]))
-            completed.add((row['image_class'], pair[0], pair[1]))
+            completed.add((row['image_class'], row['base1'], row['base2']))
 
         logging.info(f"Loaded {len(completed)} completed comparisons from existing CSV\n")
         return completed
@@ -177,7 +175,7 @@ class EvaluationPipeline:
                 # Check if this comparison was already completed
                 base_1 = f"{image_id_1}_{edit_type_1}"
                 base_2 = f"{image_id_2}_{edit_type_2}"
-                comparison_key = (image_class, *tuple(sorted([base_1, base_2])))
+                comparison_key = (image_class, base_1, base_2)
 
                 if comparison_key in completed_comparisons:
                     continue
