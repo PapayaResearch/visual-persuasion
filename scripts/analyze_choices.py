@@ -30,6 +30,10 @@ def main():
     counts = Counter(chosen_edit_types)
     total = len(chosen_edit_types)
 
+    # Count position bias
+    chose_first = sum(df['choice'] == df['first'])
+    chose_second = sum(df['choice'] == df['second'])
+
     # Report results
     print(f"\nTotal comparisons: {total}\n")
     print("Edit type choices:")
@@ -37,6 +41,11 @@ def main():
     for edit_type, count in sorted(counts.items()):
         percentage = (count / total) * 100
         print(f"{edit_type:20s} {count:5d} ({percentage:5.1f}%)")
+
+    print(f"\n\nPosition bias:")
+    print("-" * 40)
+    print(f"Chose first image:  {chose_first:5d} ({(chose_first/total)*100:5.1f}%)")
+    print(f"Chose second image: {chose_second:5d} ({(chose_second/total)*100:5.1f}%)")
 
 if __name__ == "__main__":
     main()
