@@ -1,6 +1,6 @@
-######################
+############################
 # Defaults
-######################
+############################
 
 defaults:
   - _self_
@@ -9,9 +9,9 @@ defaults:
   # Strategy for processing images
   - strategy: random-sampling
 
-######################
+############################
 # General Settings
-######################
+############################
 
 general:
   # Directory containing the folders of images to process
@@ -23,9 +23,9 @@ general:
   # Maximum number of parallel workers for processing
   max_workers: 1
 
-######################
+############################
 # Dataset Settings
-######################
+############################
 
 dataset:
   # Name of the dataset (used for creating destination subfolder)
@@ -37,9 +37,9 @@ dataset:
   # Number of images to finally select for processing from each folder (set to -1 to choose all)
   num_process_per_folder: -1
 
-#######################
+############################
 # Enhancement Settings
-#######################
+############################
 
 image_enhancer:
   # Hydra target class for image enhancement
@@ -57,4 +57,26 @@ image_enhancer:
     2. Isolate the main subject of the image.
     3. Apply neutral, even lighting to the subject.
     4. Scale and position the subject so it takes up approximately 60% of the image area.
+    Do not alter the main subject's appearance beyond these standardization requirements.
+
+############################
+# Standardization Settings
+############################
+
+image_standardizer:
+  # Hydra target class for image standardization
+  _target_: setup.standardize.ImageStandardizer
+  # Model to be used for image standardization
+  standardization_model: ${editor}
+  # The prompt for standardizing the edited images
+  standardization_prompt: |
+    Standardize the image without making any other changes to the image itself.
+    The subject is a {category}.
+
+    Edit the image to standardize it with the following requirements:
+    1. Remove the background and replace it with a plain white color (#FFFFFF).
+    2. Isolate the main subject (single object) of the image.
+    3. Remove shadows and other lighting effects.
+    4. Apply neutral, even lighting to the subject.
+    5. Scale and position the subject so it takes up approximately 60% of the image area.
     Do not alter the main subject's appearance beyond these standardization requirements.

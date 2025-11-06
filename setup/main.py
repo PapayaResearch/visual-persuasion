@@ -24,6 +24,7 @@ def main(cfg: Config):
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log_file = os.path.join(
         "logs",
+        "enhancement",
         cfg.dataset.name,
         current_date + ".log"
     )
