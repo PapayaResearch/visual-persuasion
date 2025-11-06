@@ -18,7 +18,7 @@ defaults:
 general:
   ## NUDGE CONFIGURATION
   # Directory containing the images to be tested
-  data_dir: ${hydra:runtime.cwd}/data/new_dataset_2025-10-29_18-42-38/without_background_normalized
+  data_dir: ${hydra:runtime.cwd}/data/temp
   # Total number of iterations to run per image
   iterations: 2
   # Enable previous image context during editing
@@ -151,7 +151,7 @@ evaluate:
         Which image is better: 'first' or 'second'
       choice_options: ['first', 'second']
       reason_description: |
-        Detailed explanation of why the chosen image is more appealing
+        Detailed explanation of why the chosen image is better
 
     # Wrapper function for the API - uses LLM config
     api_call: ${llm}
