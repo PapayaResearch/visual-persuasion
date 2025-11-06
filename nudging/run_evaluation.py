@@ -53,8 +53,7 @@ def main(cfg: Config):
     results_dir = os.path.join(
         data_dir,
         "evaluation",
-        cfg.evaluate.evaluator_model.api_call.model,
-        current_date
+        cfg.evaluate.evaluator_model.api_call.model
     )
     os.makedirs(results_dir, exist_ok=True)
 
