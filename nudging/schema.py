@@ -67,7 +67,6 @@ def create_optimizer_input_schema(
         current_iteration: int = Field(description=current_iteration_description)
         total_iterations: int = Field(description=total_iterations_description)
 
-
     return OptimizerInput
 
 
@@ -133,7 +132,6 @@ def create_selector_input_schema(
         candidate_descriptions: str = Field(description=candidate_descriptions_description)
         num_candidates: int = Field(description=num_candidates_description)
         judge_feedback: str = Field(description=judge_feedback_description)
-
     return SelectorInput
 
 
@@ -144,5 +142,4 @@ def create_selector_output_schema(choice_description: str) -> Type[IOSchema]:
     class SelectorOutput(IOSchema):
         """Output schema for selector model."""
         choice: str = Field(description=choice_description)
-
     return SelectorOutput
