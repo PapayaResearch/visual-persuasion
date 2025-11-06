@@ -3,8 +3,9 @@ import re
 import logging
 import random
 import itertools
+import threading
 import pandas as pd
-from typing import List, Tuple
+from typing import List, Tuple, Set
 from collections import defaultdict
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -20,6 +21,7 @@ class EvaluationPipeline:
         only_allow_first_last_comparison: bool
     ):
         self.evaluator_model = evaluator_model
+        self.evaluator_model.return_usage_data = True
         self.only_allow_first_last_comparison = only_allow_first_last_comparison
 
     def _parse_filename(self, filename: str) -> Tuple[str, str, str]:
@@ -31,6 +33,24 @@ class EvaluationPipeline:
         image_id = match.group(2)
         edit_type = match.group(3)
         return class_name, image_id, edit_type
+
+    def _load_completed_comparisons(self, csv_path: str) -> Set[Tuple[str, str, str]]:
+        """
+        Load completed comparisons from existing CSV.
+        Returns a set of (image_class, base1, base2) tuples with normalized ordering.
+        """
+        if not os.path.exists(csv_path):
+            return set()
+
+        completed = set()
+        df = pd.read_csv(csv_path)
+        for _, row in df.iterrows():
+            # Normalize order so (A, B) and (B, A) are treated as the same
+            pair = tuple(sorted([row['base1'], row['base2']]))
+            completed.add((row['image_class'], pair[0], pair[1]))
+
+        logging.info(f"Loaded {len(completed)} completed comparisons from existing CSV\n")
+        return completed
 
     def _get_images_to_evaluate(self, image_paths: List[str]) -> List[str]:
         """
@@ -122,7 +142,13 @@ class EvaluationPipeline:
     def run(self, image_paths: List[str], results_dir: str, max_workers: int = 1):
         """
         Runs the evaluation pipeline for each image comparison in parallel.
+        Supports resumption by skipping already completed comparisons.
         """
+        csv_save_path = os.path.join(results_dir, 'results.csv')
+
+        # Load completed comparisons from existing CSV
+        completed_comparisons = self._load_completed_comparisons(csv_save_path)
+
         # Group images by class
         class_groups = defaultdict(set)
         images_to_evaluate = self._get_images_to_evaluate(image_paths)
@@ -136,7 +162,7 @@ class EvaluationPipeline:
 
         logging.info(f"Found {len(class_groups)} image classes to evaluate\n")
 
-        # Collect all comparison tasks
+        # Collect all comparison tasks, skipping completed ones
         comparison_tasks = []
         for image_class in sorted(class_groups.keys()):
             comparable_images = sorted(class_groups[image_class], key=lambda x: '_'.join(x[:2]))
@@ -148,6 +174,14 @@ class EvaluationPipeline:
                 if image_id_1 == image_id_2:
                     continue
 
+                # Check if this comparison was already completed
+                base_1 = f"{image_id_1}_{edit_type_1}"
+                base_2 = f"{image_id_2}_{edit_type_2}"
+                comparison_key = (image_class, *tuple(sorted([base_1, base_2])))
+
+                if comparison_key in completed_comparisons:
+                    continue
+
                 comparison_tasks.append((
                     image_class, image_id_1, edit_type_1, img_bytes_1,
                     image_id_2, edit_type_2, img_bytes_2
@@ -156,33 +190,44 @@ class EvaluationPipeline:
         total_comparisons = len(comparison_tasks)
         logging.info(f"Total comparisons to evaluate: {total_comparisons}\n")
 
-        # Execute comparisons in parallel
-        results_data = []
-        class_results = defaultdict(list)
+        # Prepare CSV file for incremental writing
+        csv_lock = threading.Lock()
+        file_exists = os.path.exists(csv_save_path)
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {
-                executor.submit(
-                    self._evaluate_comparison,
-                    *task
-                ): task for task in comparison_tasks
-            }
+        # Open CSV in append mode for incremental writing
+        with open(csv_save_path, 'a', newline='', encoding='utf-8') as csvfile:
+            fieldnames = [
+                'image_class', 'base1', 'base2', 'choice', 'reason', 'first', 'second',
+                'completion_tokens', 'prompt_tokens', 'total_tokens', 'reasoning_tokens'
+            ]
+            writer = pd.DataFrame(columns=fieldnames)
 
-            for future in tqdm(
-                    as_completed(futures),
-                    total=total_comparisons,
-                    desc="Evaluating comparisons",
-                    unit="comparison"
-            ):
-                result = future.result()
-                results_data.append(result)
-                class_results[result['image_class']].append(result)
+            # Write header if file is new
+            if not file_exists:
+                writer.to_csv(csvfile, index=False, header=True, mode='a')
+                csvfile.flush()
 
-        # Export results to CSV
-        results_df = pd.DataFrame(results_data, columns=[
-            'image_class', 'base1', 'base2', 'choice', 'reason', 'first', 'second',
-            'completion_tokens', 'prompt_tokens', 'total_tokens', 'reasoning_tokens'
-        ])
-        csv_save_path = os.path.join(results_dir, 'results.csv')
-        results_df.to_csv(csv_save_path, index=False, encoding='utf-8')
-        logging.info(f"Saved results CSV with {len(results_df)} records to: {csv_save_path}\n")
+            # Execute comparisons in parallel
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {
+                    executor.submit(
+                        self._evaluate_comparison,
+                        *task
+                    ): task for task in comparison_tasks
+                }
+
+                for future in tqdm(
+                        as_completed(futures),
+                        total=total_comparisons,
+                        desc="Evaluating comparisons",
+                        unit="comparison"
+                ):
+                    result = future.result()
+
+                    # Write result immediately to CSV with thread safety
+                    with csv_lock:
+                        result_df = pd.DataFrame([result])
+                        result_df.to_csv(csvfile, index=False, header=False, mode='a')
+                        csvfile.flush()  # Force write to disk
+
+        logging.info(f"Evaluation completed. Results saved to: {csv_save_path}\n")

@@ -132,10 +132,29 @@ class VisualNudge:
 class Evaluate:
     # Hydra target for evaluation pipeline class
     _target_: str
-    # Prompt for the evaluator model
-    evaluator_prompt: str
+    # Whether to only allow comparisons between the first and last iterations
+    only_allow_first_last_comparison: bool
     # Evaluator model configuration
     evaluator_model: LanguageModel
+
+#######################
+# Interpretation Pipeline
+#######################
+
+@dataclass
+class Interp:
+    # Hydra target class for the interpretation pipeline
+    _target_: str
+    # Directory containing zero-shot results to interpret
+    results_dir: str
+    # Prompt for the difference detector model
+    difference_prompt: str
+    # Difference detector model configuration
+    difference_detector_model: LanguageModel
+    # Prompt for the theme summarizer model
+    theme_prompt: str
+    # Theme summarizer model configuration
+    theme_summarizer_model: LanguageModel
 
 #######################
 # Analysis Pipeline
@@ -162,10 +181,8 @@ class General:
     enable_editing_context: bool
     # Maximum number of parallel workers for processing images
     max_workers: int
-    # Directory to evaluate (directory with images used for nudging)
-    eval_dir: str
-    # Directory to analyze (directory with evaluation log files)
-    analysis_dir: str
+    # CSV file with evaluation results to analyze
+    analysis_csv: str
 
 #######################
 # Logging Settings
@@ -192,6 +209,8 @@ class Config:
     nudge: VisualNudge
     # Evaluation pipeline configuration
     evaluate: Evaluate
+    # Interpretation pipeline configuration
+    interp: Interp
     # Analysis pipeline configuration
     analyze: Analyze
     # Strategy configuration

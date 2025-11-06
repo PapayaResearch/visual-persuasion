@@ -16,7 +16,6 @@ defaults:
 ######################
 
 general:
-  ## NUDGE CONFIGURATION
   # Directory containing the images to be tested
   data_dir: ${hydra:runtime.cwd}/data/new_dataset_2025-10-29_18-42-38/without_background_normalized
   # Total number of iterations to run per image
@@ -27,12 +26,6 @@ general:
   aspect_ratio: "1:1"
   # Maximum number of parallel workers for processing images
   max_workers: 3
-
-  ## EVALUATION CONFIGURATION
-  # Directory to evaluate (directory with images used for nudging)
-  evaluation_dir: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/test
-  # Whether to only allow comparisons between the first and last iterations (original vs. final edit)
-  only_allow_first_last_comparison: false
 
   ## ANALYSIS CONFIGURATION
   # CSV file with evaluation results to analyze
@@ -47,7 +40,7 @@ interp:
   _target_: nudging.interp.ResultsInterpreter
 
   # Directory containing zero-shot results to interpret
-  results_dir: ${general.evaluation_dir}
+  results_dir: ${general.data_dir}
 
   # Prompt for the difference detector model
   difference_prompt: |
@@ -115,13 +108,16 @@ evaluate:
   # Hydra target class for the evaluation pipeline
   _target_: nudging.evaluate.EvaluationPipeline
 
+  # Whether to only allow comparisons between the first and last iterations (original vs. final edit)
+  only_allow_first_last_comparison: false
+
   evaluator_model:
     # Hydra target class for the evaluator model
     _target_: utils.wrappers.LanguageModel
 
     # The system prompt for the image comparison task
     system_prompt: |
-      Compare the two images and determine which is better.
+      Which of these would you buy?
 
     # Input schema for the evaluator model
     input_schema:
@@ -136,15 +132,10 @@ evaluate:
         Which image is better: 'first' or 'second'
       choice_options: ['first', 'second']
       reason_description: |
-        Detailed explanation of why the chosen image is more appealing
+        Concise justification of your decision (1-3 sentences).
 
     # Wrapper function for the API - uses LLM config
     api_call: ${llm}
-    # Enable returning usage data from the API
-    return_usage_data: true
-
-  # Whether to only allow comparisons between the first and last iterations
-  only_allow_first_last_comparison: ${general.only_allow_first_last_comparison}
 
 ######################
 # Analysis Settings

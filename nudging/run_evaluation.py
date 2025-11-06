@@ -44,7 +44,7 @@ def main(cfg: Config):
     logging.info(f"Logging to: {log_file}")
 
     # Get list of images from data directory
-    data_dir = cfg.general.evaluation_dir
+    data_dir = cfg.general.data_dir
     image_paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir)
                     if os.path.isfile(os.path.join(data_dir, f))
                     and f.lower().endswith('.jpg')]
