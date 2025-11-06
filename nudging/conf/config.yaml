@@ -9,7 +9,7 @@ defaults:
   # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
   - editor: nanobanana-gemini
   # Strategy for nudging (e.g., zero-shot, prompt-optimization, tournament-of-images, tournament-of-prompts)
-  - strategy: tournament-of-prompts
+  - strategy: zero-shot
 
 ######################
 # General Settings
@@ -30,11 +30,91 @@ general:
 
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)
-  evaluation_dir: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/2025-10-24_11-18-58
+  evaluation_dir: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/test
+  # Whether to allow comparisons between the same image IDs
+  allow_same_image_comparison: false
+  # Whether to only allow comparisons between the same image IDs (only applicable if allow_same_image_comparison is true)
+  only_allow_same_image_comparison: false
+  # Whether to only allow comparisons between the first and last iterations (original vs. final edit)
+  only_allow_first_last_comparison: false
 
   ## ANALYSIS CONFIGURATION
   # CSV file with evaluation results to analyze
-  analysis_csv: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/2025-10-24_11-18-58/evaluation/gpt-5-2025-08-07/2025-10-27_20-20-04/results.csv
+  analysis_csv: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/test/evaluation/o3-2025-04-16/2025-11-05_15-31-05/results.csv
+
+######################
+# Interpretation Settings
+######################
+
+interpret:
+  # Hydra target class for the interpretation pipeline
+  _target_: nudging.interpret_results.ResultsInterpreter
+
+  # Directory containing zero-shot results to interpret
+  results_dir: ${general.evaluation_dir}
+
+  # Prompt for the difference detector model
+  difference_prompt: |
+    Compare these two product images and identify the key differences.
+
+  difference_detector_model:
+    # Hydra target class for the difference detector model
+    _target_: utils.wrappers.LanguageModel
+
+    # The system prompt for identifying differences
+    system_prompt: |
+      You are analyzing differences between two product images.
+      The first image is the original, the second is edited.
+      Identify thematic differences in a simple, concise way (e.g., "worse lighting, person added").
+
+    # Input schema for the difference detector model
+    input_schema:
+      _target_: nudging.schema.create_difference_detector_input_schema
+      task_description: |
+        Task description for comparing images
+      images_description: |
+        List of image bytes: [original, edited]
+
+    # Output schema for the difference detector model
+    output_schema:
+      _target_: nudging.schema.create_evaluator_output_schema
+      choice_description: |
+        Which image is better: 'first' or 'second'
+      choice_options: ['first', 'second']
+      reason_description: |
+        Detailed explanation of why the chosen image is better
+
+    # Wrapper function for the API - uses LLM config
+    api_call: ${llm}
+
+  # Prompt for the theme summarizer model
+  theme_prompt: |
+    Analyze all the differences and identify the main themes.
+
+  theme_summarizer_model:
+    # Hydra target class for the theme summarizer model
+    _target_: utils.wrappers.LanguageModel
+
+    # The system prompt for summarizing themes
+    system_prompt: |
+      You are analyzing a list of differences from multiple product image comparisons.
+      Identify and describe the main recurring themes across all comparisons.
+      Focus on patterns and commonalities.
+
+    # Input schema for the theme summarizer model
+    input_schema:
+      _target_: nudging.schema.create_theme_summarizer_input_schema
+      differences_description: |
+        List of all differences from product comparisons (one per line)
+
+    # Output schema for the theme summarizer model
+    output_schema:
+      _target_: nudging.schema.create_theme_summarizer_output_schema
+      themes_description: |
+        Bulleted list of main themes with explanations
+
+    # Wrapper function for the API - uses LLM config
+    api_call: ${llm}
 
 ######################
 # Evaluation Settings
@@ -77,6 +157,13 @@ evaluate:
     api_call: ${llm}
     # Enable returning usage data from the API
     return_usage_data: true
+
+  # Whether to allow comparisons between the same image IDs
+  allow_same_image_comparison: ${general.allow_same_image_comparison}
+  # Whether to only allow comparisons between the same image IDs
+  only_allow_same_image_comparison: ${general.only_allow_same_image_comparison}
+  # Whether to only allow comparisons between the first and last iterations
+  only_allow_first_last_comparison: ${general.only_allow_first_last_comparison}
 
 ######################
 # Analysis Settings

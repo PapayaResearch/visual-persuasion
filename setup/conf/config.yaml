@@ -4,11 +4,9 @@
 
 defaults:
   - _self_
-  # LLM model for VLM filtering (e.g., gpt-5)
-  - llm: gpt-5-mini
   # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
   - editor: nanobanana-gemini
-  # Strategy for processing images (e.g., vlm-filtering, random-sampling)
+  # Strategy for processing images
   - strategy: random-sampling
 
 ######################
@@ -17,16 +15,11 @@ defaults:
 
 general:
   # Directory containing the folders of images to process
-  src_dir: ${hydra:runtime.cwd}/data/test_dataset
+  src_dir: ${hydra:runtime.cwd}/data/test
   # Destination directory for saving the processed images
   dst_dir: ${hydra:runtime.cwd}/../nudging/data
-
   # Output aspect ratio for edited images
   aspect_ratio: "1:1"
-  # Enhance image quality before further processing
-  enhance_image_quality: true
-  # Enable splitting of dataset by background type
-  split_by_background: true
   # Maximum number of parallel workers for processing
   max_workers: 1
 
@@ -36,15 +29,13 @@ general:
 
 dataset:
   # Name of the dataset (used for creating destination subfolder)
-  name: new_dataset
-
+  name: test
   # Number of image folders to process (set to -1 to process all)
   num_folders: -1
-  # Number of images to evaluate from each folder if there is filtering involved (set to -1 to evaluate all)
-  num_evaluate_per_folder: 2
+  # Number of images to evaluate from each folder (set to -1 to evaluate all)
+  num_evaluate_per_folder: -1
   # Number of images to finally select for processing from each folder (set to -1 to choose all)
-  num_process_per_folder: 1
-  # The total number of images in the resulting dataset will be num_folders * num_process_per_folder
+  num_process_per_folder: -1
 
 #######################
 # Enhancement Settings
@@ -59,36 +50,11 @@ image_enhancer:
   enhancement_prompt: |
     Upscale the image and enhance its quality.
     Do not make any other changes to the image itself.
+    The subject is a {category}.
 
-#######################
-# Background Settings
-#######################
-
-background_processor:
-  # Hydra target class for background processing
-  _target_: setup.background.BackgroundProcessor
-
-  # Model to be used for background processing
-  image_editing_model: ${editor}
-
-  # Maximum number of images to preview from each of the subsets (set to -1 to preview all)
-  max_previews: -1
-
-  # The prompt for the background removal task
-  background_removal_prompt: |
-    Edit the image to remove the background with the following requirements:
-    1. Isolate the main subject of the image.
-    2. Replace the background with a plain white color (#FFFFFF).
-    3. Ensure the main subject remains unaltered in appearance.
-  # Threshold for SSIM value to consider an image as having a plain background
-  ssim_threshold: 0.6
-
-  # Enable background normalization
-  enable_background_normalization: true
-  # The prompt for the background normalization task
-  background_normalization_prompt: |
     Edit the image to standardize it with the following requirements:
-    1. Apply neutral, even lighting to the subject.
-    2. Set the background color to plain white (#FFFFFF).
-    3. Scale and position the subject so it takes up approximately 60% of the image area.
+    1. Remove the background and replace it with a plain white color (#FFFFFF).
+    2. Isolate the main subject of the image.
+    3. Apply neutral, even lighting to the subject.
+    4. Scale and position the subject so it takes up approximately 60% of the image area.
     Do not alter the main subject's appearance beyond these standardization requirements.

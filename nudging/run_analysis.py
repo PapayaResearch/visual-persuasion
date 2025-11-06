@@ -24,7 +24,7 @@ def main(cfg: Config):
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     base_dir = os.path.join(
         "analysis",
-        cfg.nudge.evaluator_model.api_call.model
+        cfg.llm.model
     )
 
     # Set up logging

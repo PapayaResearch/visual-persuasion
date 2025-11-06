@@ -20,15 +20,13 @@ def main(cfg: Config):
     OmegaConf.resolve(cfg)
     print_config(cfg)
 
-    # Create common directories and paths
-    current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    base_dir = os.path.join(
-        cfg.dataset.name,
-        cfg.llm.model
-    )
-
     # Set up logging
-    log_file = os.path.join("logs", base_dir, current_date + ".log")
+    current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_file = os.path.join(
+        "logs",
+        cfg.dataset.name,
+        current_date + ".log"
+    )
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
     logging.basicConfig(
@@ -38,33 +36,26 @@ def main(cfg: Config):
         force=True
     )
     logging.getLogger().addHandler(logging.StreamHandler())
-    logging.getLogger("LiteLLM").setLevel(logging.WARNING)
     logging.info(f"Logging to: {log_file}")
 
     # Setup paths
-    src_path = cfg.general.src_dir
+    src_dir = cfg.general.src_dir
     dst_dir = os.path.join(cfg.general.dst_dir, cfg.dataset.name)
 
     # Get all folders in the source directory with absolute paths (strategy-independent)
     all_folders = [
-        os.path.join(src_path, f)
-        for f in os.listdir(src_path)
-        if os.path.isdir(os.path.join(src_path, f))
+        os.path.join(src_dir, f)
+        for f in os.listdir(src_dir)
+        if os.path.isdir(os.path.join(src_dir, f))
     ]
 
-    # Create strategy instance and create dataset
+    # Sample images using strategy
     strategy = hydra.utils.instantiate(cfg.strategy)
-    strategy.create_dataset(all_folders, dst_dir)
+    sampled_images = strategy.sample_images(all_folders)
 
-    # Enhance image quality if required
-    if cfg.general.enhance_image_quality:
-        enhancer = hydra.utils.instantiate(cfg.image_enhancer)
-        enhancer.enhance_images(dst_dir, cfg.general.max_workers)
-
-    # Split the dataset by background if required
-    if cfg.general.split_by_background:
-        background_processor = hydra.utils.instantiate(cfg.background_processor)
-        background_processor.split_by_background(dst_dir, cfg.general.max_workers)
+    # Enhance sampled images and save to destination
+    enhancer = hydra.utils.instantiate(cfg.image_enhancer)
+    enhancer.enhance_images(sampled_images, dst_dir, cfg.general.max_workers)
 
     logging.info(f"Dataset creation completed.\nResults saved to: {dst_dir}")
 
