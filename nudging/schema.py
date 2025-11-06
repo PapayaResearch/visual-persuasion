@@ -146,3 +146,36 @@ def create_selector_output_schema(choice_description: str) -> Type[IOSchema]:
         choice: str = Field(description=choice_description)
 
     return SelectorOutput
+
+
+def create_difference_detector_output_schema(differences_description: str) -> Type[IOSchema]:
+    """
+    Creates a DifferenceDetectorOutput schema class with configurable field descriptions.
+    """
+    class DifferenceDetectorOutput(IOSchema):
+        """Output schema for difference detector model."""
+        differences: str = Field(description=differences_description)
+
+    return DifferenceDetectorOutput
+
+
+def create_theme_summarizer_input_schema(differences_description: str) -> Type[IOSchema]:
+    """
+    Creates a ThemeSummarizerInput schema class with configurable field descriptions.
+    """
+    class ThemeSummarizerInput(IOSchema):
+        """Input schema for theme summarizer model."""
+        differences: str = Field(description=differences_description)
+
+    return ThemeSummarizerInput
+
+
+def create_theme_summarizer_output_schema(themes_description: str) -> Type[IOSchema]:
+    """
+    Creates a ThemeSummarizerOutput schema class with configurable field descriptions.
+    """
+    class ThemeSummarizerOutput(IOSchema):
+        """Output schema for theme summarizer model."""
+        themes: str = Field(description=themes_description)
+
+    return ThemeSummarizerOutput

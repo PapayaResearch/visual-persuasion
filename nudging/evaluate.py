@@ -16,16 +16,10 @@ class EvaluationPipeline:
     """
     def __init__(
         self,
-        evaluator_prompt: str,
         evaluator_model: LanguageModel,
-        allow_same_image_comparison: bool,
-        only_allow_same_image_comparison: bool,
         only_allow_first_last_comparison: bool
     ):
-        self.evaluator_prompt = evaluator_prompt
         self.evaluator_model = evaluator_model
-        self.allow_same_image_comparison = allow_same_image_comparison
-        self.only_allow_same_image_comparison = only_allow_same_image_comparison
         self.only_allow_first_last_comparison = only_allow_first_last_comparison
 
     def _parse_filename(self, filename: str) -> Tuple[str, str, str]:
@@ -45,17 +39,20 @@ class EvaluationPipeline:
         if not self.only_allow_first_last_comparison:
             return image_paths
 
-        first_iteration, last_iteration = {}, {}
+        image_groups = defaultdict(list)
         for img_path in image_paths:
             if not img_path.lower().endswith('.jpg'):
                 continue
-            _, image_id, _ = self._parse_filename(os.path.basename(img_path))
-            if (image_id not in first_iteration) or (img_path < first_iteration[image_id]):
-                first_iteration[image_id] = img_path
-            if (image_id not in last_iteration) or (img_path > last_iteration[image_id]):
-                last_iteration[image_id] = img_path
+            _, image_id, edit_type = self._parse_filename(os.path.basename(img_path))
+            iter_num = int(re.search(r'iter-(\d+)', edit_type).group(1))
+            image_groups[image_id].append((iter_num, img_path))
 
-        images_to_evaluate = list(first_iteration.values()) + list(last_iteration.values())
+        images_to_evaluate = []
+        for image_id, paths in image_groups.items():
+            paths.sort()
+            images_to_evaluate.append(paths[0][1])   # first
+            images_to_evaluate.append(paths[-1][1])  # last
+
         return images_to_evaluate
 
     def _evaluate_comparison(
@@ -83,7 +80,6 @@ class EvaluationPipeline:
 
         # Evaluate the images without telling the VLM which is which
         evaluation, usage = self.evaluator_model.get_response(
-            task=self.evaluator_prompt,
             images=[image1_bytes, image2_bytes]
         )
 
@@ -109,7 +105,6 @@ class EvaluationPipeline:
         if usage and usage.completion_tokens_details:
             reasoning_tokens = usage.completion_tokens_details.reasoning_tokens
 
-        # Return result as dictionary
         return {
             'image_class': image_class,
             'base1': base_1,
@@ -121,31 +116,8 @@ class EvaluationPipeline:
             'completion_tokens': completion_tokens,
             'prompt_tokens': prompt_tokens,
             'total_tokens': total_tokens,
-            'reasoning_tokens': reasoning_tokens,
-            # For log file generation
-            'log_text': (
-                f"Evaluating {base_1} vs {base_2}\n"
-                f"Choice: {choice}\n"
-                f"Reason (first={first}, second={second}):\n"
-                f"{vlm_reason}\n"
-                f"{'-' * 40}\n\n"
-            )
+            'reasoning_tokens': reasoning_tokens
         }
-
-    def _generate_class_log(self, image_class: str, results: List[dict], results_dir: str):
-        """Generate log file for a single image class."""
-        all_evaluations = f"Evaluation Results for {image_class}\n"
-        all_evaluations += "=" * 50 + "\n\n"
-        all_evaluations += f"Found {len(results)} comparable image pairs for {image_class}\n\n"
-        all_evaluations += "-" * 40 + "\n\n"
-
-        for result in results:
-            if result:
-                all_evaluations += result['log_text']
-
-        log_save_path = os.path.join(results_dir, f"{image_class}.log")
-        with open(log_save_path, "w", encoding="utf-8") as log_file:
-            log_file.write(all_evaluations)
 
     def run(self, image_paths: List[str], results_dir: str, max_workers: int = 1):
         """
@@ -169,18 +141,11 @@ class EvaluationPipeline:
         for image_class in sorted(class_groups.keys()):
             comparable_images = sorted(class_groups[image_class], key=lambda x: '_'.join(x[:2]))
 
-            if len(comparable_images) < 2:
-                logging.info(f"Only 1 image found for class {image_class}. Skipping evaluation.\n")
-                continue
-
             for (image_id_1, edit_type_1, img_bytes_1), (image_id_2, edit_type_2, img_bytes_2) in \
                     itertools.combinations(comparable_images, 2):
 
-                # Skip comparison based on settings
-                if (not self.allow_same_image_comparison) and (image_id_1 == image_id_2):
-                    continue
-                if (self.allow_same_image_comparison and
-                    self.only_allow_same_image_comparison and (image_id_1 != image_id_2)):
+                # Skip same image comparisons
+                if image_id_1 == image_id_2:
                     continue
 
                 comparison_tasks.append((
@@ -196,24 +161,22 @@ class EvaluationPipeline:
         class_results = defaultdict(list)
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(self._evaluate_comparison, *task): task for task in comparison_tasks}
+            futures = {
+                executor.submit(
+                    self._evaluate_comparison,
+                    *task
+                ): task for task in comparison_tasks
+            }
 
-            for future in tqdm(as_completed(futures), total=total_comparisons, desc="Evaluating comparisons", unit="comparison"):
+            for future in tqdm(
+                    as_completed(futures),
+                    total=total_comparisons,
+                    desc="Evaluating comparisons",
+                    unit="comparison"
+            ):
                 result = future.result()
-                if result:
-                    results_data.append(result)
-                    class_results[result['image_class']].append(result)
-                else:
-                    task = futures[future]
-                    image_class = task[0]
-                    base_1 = f"{task[1]}_{task[2]}"
-                    base_2 = f"{task[4]}_{task[5]}"
-                    logging.error(f"Evaluation failed for {image_class}: {base_1} vs {base_2}. Skipping.\n")
-
-        # Generate log files for each class
-        logging.info("\nGenerating log files...\n")
-        for image_class, results in class_results.items():
-            self._generate_class_log(image_class, results, results_dir)
+                results_data.append(result)
+                class_results[result['image_class']].append(result)
 
         # Export results to CSV
         results_df = pd.DataFrame(results_data, columns=[

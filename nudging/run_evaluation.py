@@ -47,7 +47,7 @@ def main(cfg: Config):
     data_dir = cfg.general.evaluation_dir
     image_paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir)
                     if os.path.isfile(os.path.join(data_dir, f))
-                    and f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+                    and f.lower().endswith('.jpg')]
 
     # Create the results directory
     results_dir = os.path.join(
@@ -57,6 +57,7 @@ def main(cfg: Config):
         current_date
     )
     os.makedirs(results_dir, exist_ok=True)
+
     # Save config to output directories
     with open(os.path.join(results_dir, "config.yaml"), "w") as outfile:
         outfile.write(cfg_yaml)

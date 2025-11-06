@@ -31,10 +31,6 @@ general:
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)
   evaluation_dir: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/test
-  # Whether to allow comparisons between the same image IDs
-  allow_same_image_comparison: false
-  # Whether to only allow comparisons between the same image IDs (only applicable if allow_same_image_comparison is true)
-  only_allow_same_image_comparison: false
   # Whether to only allow comparisons between the first and last iterations (original vs. final edit)
   only_allow_first_last_comparison: false
 
@@ -69,20 +65,15 @@ interp:
 
     # Input schema for the difference detector model
     input_schema:
-      _target_: nudging.schema.create_difference_detector_input_schema
-      task_description: |
-        Task description for comparing images
+      _target_: nudging.schema.create_evaluator_input_schema
       images_description: |
         List of image bytes: [original, edited]
 
     # Output schema for the difference detector model
     output_schema:
-      _target_: nudging.schema.create_evaluator_output_schema
-      choice_description: |
-        Which image is better: 'first' or 'second'
-      choice_options: ['first', 'second']
-      reason_description: |
-        Detailed explanation of why the chosen image is better
+      _target_: nudging.schema.create_difference_detector_output_schema
+      differences_description: |
+        Concise description of the key differences between the original and edited images
 
     # Wrapper function for the API - uses LLM config
     api_call: ${llm}
@@ -124,23 +115,17 @@ evaluate:
   # Hydra target class for the evaluation pipeline
   _target_: nudging.evaluate.EvaluationPipeline
 
-  # Prompt for the evaluator model
-  evaluator_prompt: |
-    Compare the two images.
-
   evaluator_model:
     # Hydra target class for the evaluator model
     _target_: utils.wrappers.LanguageModel
 
     # The system prompt for the image comparison task
     system_prompt: |
-      You are comparing two images to determine which is better.
+      Compare the two images and determine which is better.
 
     # Input schema for the evaluator model
     input_schema:
       _target_: nudging.schema.create_evaluator_input_schema
-      task_description: |
-        The image comparison task description
       images_description: |
         List of image bytes: [first, second]
 
@@ -158,10 +143,6 @@ evaluate:
     # Enable returning usage data from the API
     return_usage_data: true
 
-  # Whether to allow comparisons between the same image IDs
-  allow_same_image_comparison: ${general.allow_same_image_comparison}
-  # Whether to only allow comparisons between the same image IDs
-  only_allow_same_image_comparison: ${general.only_allow_same_image_comparison}
   # Whether to only allow comparisons between the first and last iterations
   only_allow_first_last_comparison: ${general.only_allow_first_last_comparison}
 
