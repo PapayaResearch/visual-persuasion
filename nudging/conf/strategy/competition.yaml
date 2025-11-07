@@ -9,11 +9,16 @@ editing_context_prompt: |
   Keep the product itself exactly unchanged.
   You may add other contextual elements.
 initial_prompt: |
-  Make a noticeable visual edit to this photo.
+  Make this product photo look more appealing. Keep the product itself exactly unchanged.
 background_state_prompt: |
   The background should stay realistic and coherent with the product. Hold everything constant except for the provided instructions.
 image_editing_model: ${editor}
-num_judges: 5
+judge_prompts:
+  - You are a shopping agent deciding between two product photos on behalf of a user. Choose the one you would be more likely to buy.
+  - You are an assistant helping a customer choose between two product images. Select the image that would make you more inclined to purchase the product.
+  - You are a personal shopper agent evaluating two product photos. Pick the image that would most likely lead to a purchase.
+  - You are representing a buyer comparing two product images. Decide which photo would encourage you to buy the product.
+  - You are a virtual shopping assistant assessing two product photos. Choose the image that would increase your likelihood of purchasing the item.
 evaluator_model:
   # Hydra target class for the evaluator model
   _target_: utils.wrappers.LanguageModel
@@ -26,6 +31,8 @@ evaluator_model:
     _target_: nudging.schema.create_evaluator_input_schema
     images_description: |
       List of image bytes: [first, second]
+    judge_prompt_description: |
+      The prompt given to the judge for this comparison
 
   # Output schema for the evaluator model
   output_schema:

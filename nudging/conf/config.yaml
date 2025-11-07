@@ -26,6 +26,8 @@ general:
   aspect_ratio: "1:1"
   # Maximum number of parallel workers for processing images
   max_workers: 3
+  # Resume from latest run if some results exist
+  resume: false
 
   ## ANALYSIS CONFIGURATION
   # CSV file with evaluation results to analyze
