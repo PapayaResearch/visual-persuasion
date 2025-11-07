@@ -132,8 +132,8 @@ class VisualNudge:
 class Evaluate:
     # Hydra target for evaluation pipeline class
     _target_: str
-    # Whether to only allow comparisons between the first and last iterations
-    only_allow_first_last_comparison: bool
+    # Strategy name determines filename parsing logic
+    strategy_name: str
     # Evaluator model configuration
     evaluator_model: LanguageModel
 

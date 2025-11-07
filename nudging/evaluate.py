@@ -18,21 +18,42 @@ class EvaluationPipeline:
     def __init__(
         self,
         evaluator_model: LanguageModel,
-        only_allow_first_last_comparison: bool
+        strategy_name: str
     ):
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
-        self.only_allow_first_last_comparison = only_allow_first_last_comparison
+        self.strategy_name = strategy_name
 
-    def _parse_filename(self, filename: str) -> Tuple[str, str, str]:
+    def _parse_filename_zero_shot(self, filename: str) -> Tuple[str, str, str]:
         """
-        Parse filename to extract class_name, image_id, edit_type.
+        Parse zero-shot filename: CLASS_ID_EDITTYPE.jpg
+        Returns (class_name, image_id, edit_type)
         """
         match = re.match(r'([A-Za-z0-9_]+)_([A-Za-z0-9]+)_([A-Za-z0-9-]+)\.jpg', filename)
         class_name = match.group(1)
         image_id = match.group(2)
         edit_type = match.group(3)
         return class_name, image_id, edit_type
+
+    def _parse_filename_competition(self, filename: str):
+        """
+        Parse competition filename: pair-X_..._CATEGORY_ID_STATUS.jpg
+        Returns (category, image_id, status) or None if should skip.
+        Only processes files ending with _final.jpg or _original.jpg
+        """
+        if not (filename.endswith('_final.jpg') or filename.endswith('_original.jpg')):
+            return None
+
+        # Remove .jpg and split by underscore
+        base = filename[:-4]
+        parts = base.split('_')
+
+        # Extract from the end: STATUS, ID, CATEGORY
+        status = parts[-1]
+        image_id = parts[-2]
+        category = parts[-3]
+
+        return category, image_id, status
 
     def _load_completed_comparisons(self, csv_path: str) -> Set[Tuple[str, str, str]]:
         """
@@ -50,28 +71,6 @@ class EvaluationPipeline:
         logging.info(f"Loaded {len(completed)} completed comparisons from existing CSV\n")
         return completed
 
-    def _get_images_to_evaluate(self, image_paths: List[str]) -> List[str]:
-        """
-        Retrieves all image files to be evaluated based on naming conventions.
-        """
-        if not self.only_allow_first_last_comparison:
-            return image_paths
-
-        image_groups = defaultdict(list)
-        for img_path in image_paths:
-            if not img_path.lower().endswith('.jpg'):
-                continue
-            _, image_id, edit_type = self._parse_filename(os.path.basename(img_path))
-            iter_num = int(re.search(r'iter-(\d+)', edit_type).group(1))
-            image_groups[image_id].append((iter_num, img_path))
-
-        images_to_evaluate = []
-        for image_id, paths in image_groups.items():
-            paths.sort()
-            images_to_evaluate.append(paths[0][1])   # first
-            images_to_evaluate.append(paths[-1][1])  # last
-
-        return images_to_evaluate
 
     def _evaluate_comparison(
         self,
@@ -149,14 +148,21 @@ class EvaluationPipeline:
 
         # Group images by class
         class_groups = defaultdict(set)
-        images_to_evaluate = self._get_images_to_evaluate(image_paths)
 
-        for img_path in images_to_evaluate:
+        for img_path in image_paths:
             with open(img_path, "rb") as f:
                 img_bytes = f.read()
             filename = os.path.basename(img_path)
-            class_name, image_id, edit_type = self._parse_filename(filename)
-            class_groups[class_name].add((image_id, edit_type, img_bytes))
+
+            if self.strategy_name == 'zero-shot':
+                class_name, image_id, edit_type = self._parse_filename_zero_shot(filename)
+                class_groups[class_name].add((image_id, edit_type, img_bytes))
+            elif self.strategy_name == 'competition':
+                parsed = self._parse_filename_competition(filename)
+                if parsed is None:
+                    continue
+                category, image_id, status = parsed
+                class_groups[category].add((image_id, status, img_bytes))
 
         logging.info(f"Found {len(class_groups)} image classes to evaluate\n")
 

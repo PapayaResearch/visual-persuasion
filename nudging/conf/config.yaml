@@ -108,8 +108,8 @@ evaluate:
   # Hydra target class for the evaluation pipeline
   _target_: nudging.evaluate.EvaluationPipeline
 
-  # Whether to only allow comparisons between the first and last iterations (original vs. final edit)
-  only_allow_first_last_comparison: false
+  # Strategy name determines filename parsing logic
+  strategy_name: ${strategy.name}
 
   evaluator_model:
     # Hydra target class for the evaluator model
