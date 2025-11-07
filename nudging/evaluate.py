@@ -41,7 +41,7 @@ class EvaluationPipeline:
         Returns (category, image_id, status) or None if should skip.
         Only processes files ending with _final.jpg, _original.jpg, or _no-prior.jpg
         """
-        if not (filename.endswith('_final.jpg') or filename.endswith('_original.jpg') or filename.endswith('_no-prior.jpg')):
+        if not (filename.endswith('_final.jpg') or filename.endswith('_original.jpg') or filename.endswith('_no-prior.jpg') or (filename.endswith('_round-1_candidate-1.jpg')):
             return None
 
         # Remove .jpg and split by underscore
