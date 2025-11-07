@@ -27,6 +27,8 @@ general:
   aspect_ratio: "1:1"
   # Maximum number of parallel workers for processing images
   max_workers: 3
+  # Resume from latest run if some results exist
+  resume: false
 
   ## EVALUATION CONFIGURATION
   # Directory to evaluate (directory with images used for nudging)

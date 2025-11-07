@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import hydra
 from datetime import datetime
 from omegaconf import OmegaConf
@@ -31,6 +32,23 @@ def main(cfg: Config):
     base_dir = nudge_pipeline.name
 
     results_dir = os.path.join(cfg.logging.results_dir, base_dir, current_date)
+
+    if cfg.general.resume:
+        # Find most recent results directory first
+        existing_dirs = []
+        results_pdir = os.path.dirname(results_dir)
+        if os.path.exists(results_pdir):
+            for d in os.listdir(results_pdir):
+                dir_path = os.path.join(results_pdir, d)
+                if os.path.isdir(dir_path):
+                    existing_dirs.append(d)
+
+        latest_dir = max(existing_dirs)
+        print(f"Found existing results directory: {latest_dir}")
+        previous_results_path = os.path.join(results_pdir, latest_dir)
+        shutil.copytree(previous_results_path, results_dir)
+        print(f"Resuming from previous results at: {previous_results_path}")
+
 
     # Set up logging
     log_dir = cfg.logging.log_dir
