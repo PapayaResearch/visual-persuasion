@@ -37,25 +37,7 @@ class EvaluationPipeline:
         edit_type = match.group(3)
         return class_name, image_id, edit_type
 
-    def _load_completed_comparisons(self, csv_path: str) -> Set[Tuple[str, str, str]]:
-        """
-        Load completed comparisons from existing CSV.
-        Returns a set of (image_class, base1, base2) tuples with normalized ordering.
-        """
-        if not os.path.exists(csv_path):
-            return set()
-
-        completed = set()
-        df = pd.read_csv(csv_path)
-        for _, row in df.iterrows():
-            # Normalize order so (A, B) and (B, A) are treated as the same
-            pair = tuple(sorted([row['base1'], row['base2']]))
-            completed.add((row['image_class'], pair[0], pair[1]))
-
-        logging.info(f"Loaded {len(completed)} completed comparisons from existing CSV\n")
-        return completed
-
-    def _get_images_to_evaluate(self, image_paths: List[str]) -> List[str]:
+    def _parse_filename_competition(self, filename: str):
         """
         Parse competition filename: CATEGORY_ID_STATUS.jpg or pair-X_..._CATEGORY_ID_STATUS.jpg
         Returns (category, image_id, status) or None if should skip.
