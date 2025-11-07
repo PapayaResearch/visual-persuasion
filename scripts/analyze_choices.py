@@ -19,6 +19,14 @@ def main():
     csv_path = sys.argv[1]
     df = pd.read_csv(csv_path)
 
+    # Filter out comparisons where both are "original"
+    def is_original_vs_original(row):
+        edit_type_1 = extract_edit_type(row['base1'])
+        edit_type_2 = extract_edit_type(row['base2'])
+        return edit_type_1 == 'original' and edit_type_2 == 'original'
+
+    df = df[~df.apply(is_original_vs_original, axis=1)]
+
     # Extract edit type of chosen image
     chosen_edit_types = []
     for _, row in df.iterrows():
