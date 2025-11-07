@@ -134,6 +134,8 @@ class Evaluate:
     _target_: str
     # Strategy name determines filename parsing logic
     strategy_name: str
+    # List of judge prompts for multi-judge evaluation
+    judge_prompts: list
     # Evaluator model configuration
     evaluator_model: LanguageModel
 
