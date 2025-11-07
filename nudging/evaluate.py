@@ -39,21 +39,23 @@ class EvaluationPipeline:
         """
         Parse competition filename: CATEGORY_ID_STATUS.jpg or pair-X_..._CATEGORY_ID_STATUS.jpg
         Returns (category, image_id, status) or None if should skip.
-        Only processes files ending with _final.jpg, _original.jpg, or _no-prior.jpg
         """
-        if not (filename.endswith('_final.jpg') or filename.endswith('_original.jpg') or filename.endswith('_no-prior.jpg') or filename.endswith('_round-1_candidate-1.jpg')):
+        if not filename.endswith('.jpg'):
             return None
 
-        # Remove .jpg and split by underscore
-        base = filename[:-4]
-        parts = base.split('_')
+        valid_statuses = ['final', 'original', 'no-prior', 'round-1_candidate-1']
 
-        # Extract from the end: STATUS, ID, CATEGORY
-        status = parts[-1]
-        image_id = parts[-2]
-        category = parts[-3]
+        for status in valid_statuses:
+            if filename.endswith(f'_{status}.jpg'):
+                base = filename[:-4]
+                parts = base.split('_')
+                status_parts = status.split('_')
+                num_status_parts = len(status_parts)
+                image_id = parts[-(num_status_parts + 1)]
+                category = parts[-(num_status_parts + 2)]
+                return category, image_id, status
 
-        return category, image_id, status
+        return None
 
     def _load_completed_comparisons(self, csv_path: str) -> Set[Tuple[str, str, str]]:
         """
