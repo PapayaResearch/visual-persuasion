@@ -37,11 +37,11 @@ class EvaluationPipeline:
 
     def _parse_filename_competition(self, filename: str):
         """
-        Parse competition filename: pair-X_..._CATEGORY_ID_STATUS.jpg
+        Parse competition filename: CATEGORY_ID_STATUS.jpg or pair-X_..._CATEGORY_ID_STATUS.jpg
         Returns (category, image_id, status) or None if should skip.
-        Only processes files ending with _final.jpg or _original.jpg
+        Only processes files ending with _final.jpg, _original.jpg, or _no-prior.jpg
         """
-        if not (filename.endswith('_final.jpg') or filename.endswith('_original.jpg')):
+        if not (filename.endswith('_final.jpg') or filename.endswith('_original.jpg') or filename.endswith('_no-prior.jpg')):
             return None
 
         # Remove .jpg and split by underscore
