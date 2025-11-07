@@ -169,4 +169,4 @@ logging:
     # Base directory for writing results (images, configs)
     results_dir: ${hydra:runtime.cwd}/results
     # Also log to console
-    console: true
+    console: false

@@ -33,14 +33,18 @@ def main(cfg: Config):
     log_file = os.path.join(log_dir, base_dir, current_date + ".log")
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
+    logging_handlers = [logging.FileHandler(log_file)]
+    if cfg.logging.console:
+        logging_handlers.append(logging.StreamHandler())
+
     logging.basicConfig(
-        filename=log_file,
+        handlers=logging_handlers,
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
         force=True
     )
-    logging.getLogger().addHandler(logging.StreamHandler())
     logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+    print(f"Logging to: {log_file}")
     logging.info(f"Logging to: {log_file}")
 
     # Get list of images from data directory
