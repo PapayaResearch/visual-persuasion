@@ -113,6 +113,8 @@ evaluate:
   # Strategy name determines filename parsing logic
   strategy_name: ${strategy.name}
 
+  n_evaluations: 1
+
   evaluator_model:
     # Hydra target class for the evaluator model
     _target_: utils.wrappers.LanguageModel

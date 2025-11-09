@@ -19,11 +19,13 @@ class EvaluationPipeline:
         self,
         evaluator_model: LanguageModel,
         strategy_name: str,
+        n_evaluations: int = 1
         # judge_prompts: List[str]
     ):
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
         self.strategy_name = strategy_name
+        self.n_evaluations = n_evaluations
         # self.judge_prompts = judge_prompts
 
     def _parse_filename_zero_shot(self, filename: str) -> Tuple[str, str, str]:
@@ -203,6 +205,7 @@ class EvaluationPipeline:
                     image_id_2, edit_type_2, img_bytes_2
                 ))
 
+        comparison_tasks = list(comparison_tasks) * self.n_evaluations  # Repeat tasks for multiple evaluations if >1 specified
         total_comparisons = len(comparison_tasks)
         logging.info(f"Total comparisons to evaluate: {total_comparisons}\n")
 

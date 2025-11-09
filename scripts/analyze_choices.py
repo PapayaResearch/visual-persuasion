@@ -78,5 +78,26 @@ def main():
             else:
                 print(f"{edit_type_2:20s} beats {edit_type_1:20s} {count:5d} ({win_rate:5.1f}%)")
 
+
+    # Check win counts/rates for each base
+    pairs = {}
+    for _, row in df.iterrows():
+        if row['choice'] == 'inconsistent':
+            continue  # Skip inconsistent choices
+        pairs.setdefault(row['base1'].split("_", 1)[0] + ' vs ' + row['base2'].split("_", 1)[0], []).append(row['choice'].split("_", 1)[0])
+
+    # Print win counts and rates for each base product within each pair
+    print("\nWin counts and rates for each base product within each pair:")
+    print("-" * 40)
+    for pair, choices in pairs.items():
+        count_base1 = sum(1 for choice in choices if choice == pair.split(' vs ')[0])
+        count_base2 = sum(1 for choice in choices if choice == pair.split(' vs ')[1])
+        total = count_base1 + count_base2
+        if total > 0:
+            win_rate_base1 = (count_base1 / total) * 100
+            win_rate_base2 = (count_base2 / total) * 100
+            print(f"{pair:40s} {count_base1:5d} ({win_rate_base1:5.1f}%) vs {count_base2:5d} ({win_rate_base2:5.1f}%)")
+            print("-" * 40)
+
 if __name__ == "__main__":
     main()
