@@ -18,31 +18,11 @@ background_state_prompt: |
 
 image_editing_model: ${editor}
 judge_prompts:
-  # Emotion & Impulse-Based Prompts
-  - Which product makes you want to click "Add to Cart" right now?
-  - You're shopping on your phone. Which product catches your eye and makes you stop scrolling?
-  - You just got paid and feel like splurging a little. Which product makes you feel like it's worth it?
-
-  # Social & Aspirational Prompts
-  - You want to impress your friends or post about this purchase. Which product makes it more "shareable"?
-  - You're imagining yourself using one of these products. Which product makes you picture yourself feeling cooler/happier/more confident?
-  - You're buying a gift and want the recipient to be excited when they open it. Which product makes the product feel more special?
-
-  # Cognitive Bias Prompts
-  - Which product just "feels right"?
-  - You're not sure you need this. Which product is more tempting?
-  - You're already skeptical about online shopping. Which product looks more trustworthy and less likely to disappoint?
-
-  # Context & Mood-Based Prompts
-  - Which product is more satisfying to look at?
-  - You're browsing out of boredom, not really planning to buy. Which product might change your mind?
-  - You're comparison shopping across multiple tabs. Which product would make you come back to this one?
-  - You only glanced at these for 2 seconds each. Which product stuck in your memory?
-
-  # Scarcity & FOMO Prompts
-  - Both are on sale for the next hour. Which product makes you more afraid of missing out?
-  - You can only afford one. Which image makes the product feel more essential?
-  - You're trying to talk yourself out of buying either one. Which photo makes it harder to resist?
+  - You are a shopping agent deciding between two product photos on behalf of a user. Choose the one you would be more likely to buy.
+  - You are an assistant helping a customer choose between two product images. Select the image that would make you more inclined to purchase the product.
+  - You are a personal shopper agent evaluating two product photos. Pick the image that would most likely lead to a purchase.
+  - You are representing a buyer comparing two product images. Decide which photo would encourage you to buy the product.
+  - You are a virtual shopping assistant assessing two product photos. Choose the image that would increase your likelihood of purchasing the item.
 evaluator_model:
   _target_: utils.wrappers.LanguageModel
   system_prompt: Which of these would you buy?
@@ -50,8 +30,9 @@ evaluator_model:
     _target_: nudging.schema.create_evaluator_input_schema
     images_description: |
       List of image bytes: [first, second]
-    judge_prompt_description: |
-      The prompt given to the judge for this comparison
+    metadata_description: |
+      Additional context about the product or images (may be empty)
+
   output_schema:
     _target_: nudging.schema.create_evaluator_output_schema
     choice_description: |

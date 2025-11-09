@@ -163,7 +163,8 @@ class VisualNudgeCompetitionCombined:
 
             evaluation = self.evaluator_model.get_response(
                 images=images,
-                judge_prompt=self.judge_prompts[judge_id]
+                judge_prompt=self.judge_prompts[judge_id],
+                metadata="Context: the user is looking for a(n) %s." % image_a_name.split("_")[0].lower()
             )
 
             real_choice = choice_map.get(evaluation.choice.lower())
@@ -340,7 +341,7 @@ class VisualNudgeCompetitionCombined:
             # judge_feedback=feedback,
             total_iterations=self.min_rounds_before_equilibrium,
             num_proposals=self.num_improvement_proposals,
-            metadata="The product here is a(n) %s." % pair_name.split("_")[1]
+            metadata="The product here is a(n) %s; make sure your edits still center this product." % pair_name.split("_")[1].lower()
         )
         logging.debug(f"⏱️  Proposal category is: {pair_name.split('_')[1]}")
 

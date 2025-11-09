@@ -3,14 +3,17 @@ from typing import List, Type, Literal
 from utils.wrappers import IOSchema
 
 
-def create_evaluator_input_schema(images_description: str, judge_prompt_description: str) -> Type[IOSchema]:
+def create_evaluator_input_schema(
+    images_description: str,
+    metadata_description: str = ""
+) -> Type[IOSchema]:
     """
     Creates an EvaluatorInput schema class with configurable field descriptions.
     """
     class EvaluatorInput(IOSchema):
         """Input schema for evaluator model."""
         images: List[bytes] = Field(description=images_description)
-        judge_prompt: str = Field(description=judge_prompt_description)
+        metadata: str = Field(description=metadata_description)
 
     return EvaluatorInput
 
