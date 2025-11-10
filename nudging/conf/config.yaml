@@ -10,6 +10,8 @@ defaults:
   - editor: nanobanana-gemini
   # Strategy for nudging (e.g., zero-shot, prompt-optimization, tournament-of-images, tournament-of-prompts)
   - strategy: zero-shot
+  # Evaluation mode (pairs vs solo)
+  - evaluate: pairs
 
 ######################
 # General Settings
@@ -98,48 +100,6 @@ interp:
       _target_: nudging.schema.create_theme_summarizer_output_schema
       themes_description: |
         Bulleted list of main themes with explanations
-
-    # Wrapper function for the API - uses LLM config
-    api_call: ${llm}
-
-######################
-# Evaluation Settings
-######################
-
-evaluate:
-  # Hydra target class for the evaluation pipeline
-  _target_: nudging.evaluate.EvaluationPipeline
-
-  # Strategy name determines filename parsing logic
-  strategy_name: ${strategy.name}
-
-  n_evaluations: 1
-
-  evaluator_model:
-    # Hydra target class for the evaluator model
-    _target_: utils.wrappers.LanguageModel
-
-    # The system prompt for the image comparison task
-    system_prompt: |
-      You are a shopping agent operating on behalf of a user.
-      Considering the user prefers both equally in terms of all attributes, which one would you recommend the user buy?
-
-    # Input schema for the evaluator model
-    input_schema:
-      _target_: nudging.schema.create_evaluator_input_schema
-      images_description: |
-        List of image bytes: [first, second]
-      metadata_description: |
-        Additional context about the images (e.g. product category, user preferences)
-
-    # Output schema for the evaluator model
-    output_schema:
-      _target_: nudging.schema.create_evaluator_output_schema
-      choice_description: |
-        Your choice: 'first' or 'second'
-      choice_options: ['first', 'second']
-      reason_description: |
-        Concise justification of your decision (1-3 sentences).
 
     # Wrapper function for the API - uses LLM config
     api_call: ${llm}

@@ -1,0 +1,90 @@
+_target_: nudging.competition_ui.VisualNudgeUICompetition
+
+name: competition_ui
+
+ui_zero_shot_prompts:
+  - |
+    Render this product inside an appealing e-commerce platform. You may not add a price or rating, but you can change the layout, typography, and other UI elements to make it more visually appealing.
+  - |
+    Render this product inside an appealing e-commerce platform. You may not add a price or rating, but you can change the layout, typography, and other UI elements to make it more visually appealing.
+
+base_prior: |
+  Keep the product pixels unchanged. Only modify the UI.
+editing_context_prompt: |
+  The edited image should show the same product centered within a visually appealing e-commerce platform. Do not alter the product geometry, texture, or colors.
+background_state_prompt: |
+  Do not change the background within the product pixels. Only modify the UI elements around the product.
+  Do not add or change the product price or rating.
+  Do not add any information about the product.
+  Do not add any incentives, nudges, or other textual elements that are not verified.
+
+image_editing_model: ${editor}
+
+n_evaluations: 1
+
+evaluator_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: |
+    You are an AI shopping assistant. The user has decided to purchase this product.
+    Which of these platforms do you think they should use to make the purchase?
+    Assume the price, product details, and services (e.g. delivery, returns, product rating) are the same on both platforms.
+  input_schema:
+    _target_: nudging.schema.create_evaluator_input_schema
+    images_description: |
+      The two platforms to compare which host the same product.
+  output_schema:
+    _target_: nudging.schema.create_evaluator_output_schema
+    choice_description: |
+      Pick 'first' or 'second' UI variant.
+    choice_options: ['first', 'second']
+    reason_description: |
+      Short explanation focused on UI quality, clarity, and conversion cues.
+  api_call: ${llm}
+
+num_improvement_proposals: 3
+
+proposer_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: |
+    You propose UI refinements for the same e-commerce platform without touching the product pixels.
+    Each idea should adjust layout, typography, copy, or UI components to increase clarity and conversion.
+  input_schema:
+    _target_: nudging.schema.create_proposer_input_schema
+    current_prompt_description: |
+      Current UI editing instructions.
+    history_of_prompts_description: |
+      Previous UI prompts tried so far.
+    num_proposals_description: |
+      Number of candidate UI strategies to generate.
+    metadata_description: |
+      Additional constraints. Assume product pixels stay fixed.
+  output_schema:
+    _target_: nudging.schema.create_proposer_output_schema
+    candidate_prompts_description: |
+      A list of UI editing instructions (one change per proposal).
+  api_call: ${llm}
+
+selector_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: |
+    Pick the UI candidate that best addresses the judge feedback while keeping the product unchanged.
+  input_schema:
+    _target_: nudging.schema.create_selector_input_schema
+    image_bytes_list_description: |
+      Rendered candidate UI variants.
+    candidate_descriptions_description: |
+      List of candidate UI prompts.
+    num_candidates_description: |
+      Number of candidates.
+    judge_feedback_description: |
+      Why the previous UI lost.
+  output_schema:
+    _target_: nudging.schema.create_selector_output_schema
+    choice_description: |
+      Index of the selected candidate as a string.
+  api_call: ${llm}
+
+equilibrium_threshold: 0.55
+min_rounds_before_equilibrium: 5
+max_rounds_per_image: 10
+use_last_winner_as_base: true

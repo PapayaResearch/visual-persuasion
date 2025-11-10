@@ -1,7 +1,6 @@
 import os
 import re
 import logging
-import random
 import itertools
 import threading
 import pandas as pd
@@ -124,9 +123,8 @@ class EvaluationPipeline:
             choice = choice_1_first
             vlm_reason = reason_1_first if choice_1_first == base_1 else reason_2_first
 
-            logging.warning(f"Inconsistent judge results for {base_1} vs {base_2}: "
-                            f"{choice_1_first} vs {choice_2_first}\n")
         else:
+            logging.warning(f"Inconsistent judge results for {base_1} vs {base_2}: {choice_1_first} vs {choice_2_first}\n")
             choice = "inconsistent"
             vlm_reason = "\n".join([f"Judge 1: {reason_1_first}", f"Judge 2: {reason_2_first}"])
 

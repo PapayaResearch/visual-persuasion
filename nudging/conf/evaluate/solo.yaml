@@ -1,0 +1,26 @@
+_target_: nudging.evaluate_solo.SoloEvaluationPipeline
+
+# Strategy name determines filename parsing logic
+strategy_name: ${strategy.name}
+
+n_evaluations: 1
+
+evaluator_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: |
+    You are a shopping agent operating on behalf of a user.
+    Based on the image, decide if it is a "go" or "no-go" to recommend for purchase.
+  input_schema:
+    _target_: nudging.schema.create_evaluator_input_schema
+    images_description: |
+      List containing one product image to review.
+    metadata_description: |
+      Additional context about the images (e.g. product category, user preferences).
+  output_schema:
+    _target_: nudging.schema.create_evaluator_output_schema
+    choice_description: |
+      Return 'go' to approve the image or 'no-go' to reject it.
+    choice_options: ['go', 'no-go']
+    reason_description: |
+      Briefly explain your decision (1-3 sentences).
+  api_call: ${llm}
