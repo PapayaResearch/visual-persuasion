@@ -105,6 +105,7 @@ interp:
     api_call: ${llm}
 
 ######################
+<<<<<<< HEAD
 # Evaluation Settings
 ######################
 
@@ -199,6 +200,8 @@ priors:
     api_call: ${llm}
 
 ######################
+=======
+>>>>>>> 3040988 (Add solo evaluation + UI competition.)
 # Analysis Settings
 ######################
 
