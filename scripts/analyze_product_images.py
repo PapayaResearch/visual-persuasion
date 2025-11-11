@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Analyzes product images using an LLM to extract perceived product attributes."""
 
 import argparse
@@ -71,7 +70,7 @@ def analyze_image(llm, image_path: Path) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="Analyze product images using an LLM")
-    parser.add_argument("image_directory", help="Directory containing .jpg product images")
+    parser.add_argument("--data", required=True, help="Directory containing .jpg product images")
     parser.add_argument("--output", "-o", default="product_analysis.csv", help="Output CSV file")
     parser.add_argument("--llm", "-l", default="gpt-5", help="LLM config name from nudging/conf/llm/")
     parser.add_argument("--max-workers", "-w", type=int, default=8, help="Number of parallel workers")
@@ -79,7 +78,7 @@ def main():
 
     analyzer = setup_analyzer(args.llm)
 
-    image_dir = Path(args.image_directory)
+    image_dir = Path(args.data)
     image_files = sorted(
         list(image_dir.glob("*.jpg")) + list(image_dir.glob("*.JPG")) +
         list(image_dir.glob("*.jpeg")) + list(image_dir.glob("*.JPEG"))
@@ -91,6 +90,8 @@ def main():
 
         for future in tqdm(as_completed(futures), total=len(image_files), desc="Analyzing images"):
             results.append(future.result())
+
+    results.sort(key=lambda x: x["filename"])
 
     fieldnames = ["filename", "price", "rating", "usability", "appealing", "quality"]
     with open(args.output, "w", newline="") as csvfile:
