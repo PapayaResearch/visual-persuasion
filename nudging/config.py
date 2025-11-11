@@ -140,6 +140,21 @@ class Evaluate:
     evaluator_model: LanguageModel
 
 #######################
+# Priors Pipeline
+#######################
+
+@dataclass
+class Priors:
+    # Hydra target for priors pipeline class
+    _target_: str
+    # List of judge prompts for multi-judge evaluation
+    judge_prompts: list
+    # Evaluator model configuration
+    evaluator_model: LanguageModel
+    # Regex pattern to extract category from filename
+    category_pattern: str
+
+#######################
 # Interpretation Pipeline
 #######################
 
@@ -211,6 +226,8 @@ class Config:
     nudge: VisualNudge
     # Evaluation pipeline configuration
     evaluate: Evaluate
+    # Priors pipeline configuration
+    priors: Priors
     # Interpretation pipeline configuration
     interp: Interp
     # Analysis pipeline configuration
