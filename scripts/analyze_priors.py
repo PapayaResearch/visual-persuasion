@@ -194,7 +194,7 @@ def main():
         "--attributes",
         "-a",
         required=True,
-        help="Path to product_analysis.csv from analyze_product_images.py"
+        help="Path to product_analysis.csv from collect_product_priors.py"
     )
     args = parser.parse_args()
 
