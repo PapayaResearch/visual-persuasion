@@ -3,7 +3,7 @@
 import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
+import numpy as np
 from pathlib import Path
 
 
@@ -49,13 +49,29 @@ def print_correlation_matrix(df: pd.DataFrame):
 
 def plot_correlation_matrix(corr_matrix: pd.DataFrame, output_path: Path):
     """Save correlation matrix as a heatmap."""
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(corr_matrix, annot=True, fmt='.3f', cmap='coolwarm',
-                center=0, vmin=-1, vmax=1, square=True,
-                cbar_kws={'label': 'Correlation'})
-    plt.title('Product Attribute Correlation Matrix', fontsize=14, pad=20)
+    fig, ax = plt.subplots(figsize=(10, 8))
+    im = ax.imshow(corr_matrix, cmap='coolwarm', vmin=-1, vmax=1, aspect='auto')
+
+    attributes = corr_matrix.columns.tolist()
+    ax.set_xticks(np.arange(len(attributes)))
+    ax.set_yticks(np.arange(len(attributes)))
+    ax.set_xticklabels(attributes)
+    ax.set_yticklabels(attributes)
+
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+
+    for i in range(len(attributes)):
+        for j in range(len(attributes)):
+            text = ax.text(j, i, f'{corr_matrix.iloc[i, j]:.3f}',
+                          ha="center", va="center", color="black", fontsize=10)
+
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label('Correlation', rotation=270, labelpad=20)
+
+    ax.set_title('Product Attribute Correlation Matrix', fontsize=14, pad=20)
     plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
     print(f"\nCorrelation matrix plot saved to: {output_path}")
 
 
