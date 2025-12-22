@@ -1,6 +1,7 @@
 import os
 import logging
 import dataclasses
+from string import Template
 from itertools import combinations
 from typing import List, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -17,16 +18,10 @@ class OptimizationPipeline:
     Phase 1: Filter pairs to identify "comparable" images on the target parameter
     Phase 2: Run competition between comparable pairs using VisualNudgeCompetition
     """
-    # Target parameter for optimization (e.g., 'Price', 'Rating', 'Quality', 'Usability', 'Appealing')
+    name: str
     parameter: str
-    
-    # Number of judges for comparability assessment
-    num_judges: int
-    
-    # Threshold for considering images "comparable"
+    judge_prompts_template: list[str]
     comparability_threshold: float
-    
-    # Evaluator model for comparability assessment
     comparability_evaluator_model: LanguageModel
     
     # Competition settings (will be passed to VisualNudgeCompetition)
@@ -51,22 +46,17 @@ class OptimizationPipeline:
     def __post_init__(self):
         """Initialize the pipeline and generate judge prompts for the target parameter."""
         # Generate judge prompts dynamically based on the parameter
+        self.num_judges = len(self.judge_prompts_template)
         self.judge_prompts = self._generate_judge_prompts()
-        
         # Track comparable pairs
         self.comparable_pairs: List[Tuple[str, str]] = []
         
     def _generate_judge_prompts(self) -> List[str]:
         """Generate judge prompts based on the target parameter."""
-        base_prompts = [
-            f"You are a shopping agent comparing two product photos. Which one would you rate higher on {self.parameter}?",
-            f"You are an assistant helping a customer compare two product images. Select the image that appears better in terms of {self.parameter}.",
-            f"You are a personal shopper agent evaluating two product photos. Pick the image that scores higher on {self.parameter}.",
-            f"You are representing a buyer comparing two product images. Decide which photo rates higher on {self.parameter}.",
-            f"You are a virtual shopping assistant assessing two product photos. Choose the image with better {self.parameter}.",
+        prompts = [
+            Template(prompt).substitute(parameter=self.parameter) for prompt in self.judge_prompts_template
         ]
-        # Return the number of prompts needed
-        return base_prompts[:self.num_judges]
+        return prompts
     
     def _evaluate_pair_comparability(
         self,
