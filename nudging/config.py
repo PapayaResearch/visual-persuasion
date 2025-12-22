@@ -155,6 +155,43 @@ class Priors:
     category_pattern: str
 
 #######################
+# Optimization Pipeline
+#######################
+
+@dataclass
+class Optimization:
+    # Hydra target for optimization pipeline class
+    _target_: str
+    # Target parameter for optimization
+    parameter: str
+    # Number of judges for comparability assessment
+    num_judges: int
+    # Threshold for considering images "comparable"
+    comparability_threshold: float
+    # Regex pattern to extract category from filename
+    category_pattern: str
+    # Competition settings
+    max_rounds_per_pair: int
+    editing_context_prompt: str
+    initial_prompt: str
+    background_state_prompt: str
+    image_editing_model: ImageModel
+    # Equilibrium detection settings
+    equilibrium_threshold: float
+    min_rounds_before_equilibrium: int
+    # Comparability evaluator model configuration
+    comparability_evaluator_model: LanguageModel
+    # Optimizer for improving losers
+    num_improvement_proposals: int
+    proposer_model: LanguageModel
+    selector_model: LanguageModel
+    judge_prompts: list
+    # Evaluator model configuration
+    evaluator_model: LanguageModel
+    # Regex pattern to extract category from filename
+    category_pattern: str
+
+#######################
 # Interpretation Pipeline
 #######################
 
@@ -228,6 +265,8 @@ class Config:
     evaluate: Evaluate
     # Priors pipeline configuration
     priors: Priors
+    # Optimization pipeline configuration
+    optimization: Optimization
     # Interpretation pipeline configuration
     interp: Interp
     # Analysis pipeline configuration
