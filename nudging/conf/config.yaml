@@ -31,7 +31,7 @@ general:
 
   ## OPTIMIZATION CONFIGURATION
   # Target parameter for optimization (e.g., 'Price', 'Rating', 'Quality', 'Usability', 'Appealing')
-  optimization_parameter: Price
+  optimization_parameter: Rating
 
   ## ANALYSIS CONFIGURATION
   # CSV file with evaluation results to analyze
