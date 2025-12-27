@@ -180,3 +180,27 @@ def create_theme_summarizer_output_schema(themes_description: str) -> Type[IOSch
         themes: str = Field(description=themes_description)
 
     return ThemeSummarizerOutput
+
+
+def create_score_input_schema(image_description: str, judge_prompt_description: str) -> Type[IOSchema]:
+    """
+    Creates a ScoreInput schema class for single-image score evaluation.
+    """
+    class ScoreInput(IOSchema):
+        """Input schema for score-based evaluator model."""
+        image: bytes = Field(description=image_description)
+        judge_prompt: str = Field(description=judge_prompt_description)
+
+    return ScoreInput
+
+
+def create_score_output_schema(score_description: str, reason_description: str) -> Type[IOSchema]:
+    """
+    Creates a ScoreOutput schema class for single-image score evaluation.
+    """
+    class ScoreOutput(IOSchema):
+        """Output schema for score-based evaluator model."""
+        score: int = Field(ge=0, le=100, description=score_description)
+        reason: str = Field(description=reason_description)
+
+    return ScoreOutput

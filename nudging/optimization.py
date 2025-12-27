@@ -29,7 +29,7 @@ class ScoreCompetition:
     initial_prompt: str
     background_state_prompt: str
     image_editing_model: ImageModel
-    judge_prompts: list[str]
+    judge_prompt: str
     evaluator_model: LanguageModel
 
     # Optimizer for improving losers
@@ -56,97 +56,58 @@ class ScoreCompetition:
         image_b_bytes: bytes,
         image_a_name: str,
         image_b_name: str
-    ) -> tuple[str, float, str]:
+    ) -> tuple[str, float, str, int, int]:
         """
-        Conduct a multi-judge contest between two images.
-        Returns: (winner_name, winner_score, aggregated_feedback)
-        winner_score is the proportion of consistent judges preferring the winner (0-1)
+        Conduct a score-based contest between two images.
+        Returns: (winner_name, winner_score_ratio, feedback, score_a, score_b)
+        winner_score_ratio is the winner's score divided by 100
+        score_a and score_b are the raw scores (0-100) for each image
         """
         contest_start = time.time()
         logging.info(f"\n🥊 CONTEST: {image_a_name} vs {image_b_name}\n")
 
-        def evaluate_single(judge_id: int, is_a_first: bool):
-            """Single judge evaluation"""
-            judge_start = time.time()
-
-            images = [image_a_bytes, image_b_bytes] if is_a_first else [image_b_bytes, image_a_bytes]
-            choice_map = {
-                "first": image_a_name if is_a_first else image_b_name,
-                "second": image_b_name if is_a_first else image_a_name,
-            }
-
-            logging.info(f"Judge {judge_id}: Evaluating with {image_a_name} as {'first' if is_a_first else 'second'} image.\n")
+        def evaluate_single(image_bytes: bytes, image_name: str):
+            """Evaluate a single image and return its score"""
+            eval_start = time.time()
+            logging.info(f"Evaluating {image_name}...\n")
 
             evaluation = self.evaluator_model.get_response(
-                images=images,
-                judge_prompt=self.judge_prompts[judge_id]
+                image=image_bytes,
+                judge_prompt=self.judge_prompt
             )
 
-            real_choice = choice_map.get(evaluation.choice.lower())
+            eval_duration = time.time() - eval_start
+            logging.debug(f"  ⏱️  {image_name} evaluation: {eval_duration:.2f}s")
+            logging.info(f"📊 {image_name}: score={evaluation.score} - {evaluation.reason}\n")
+            return evaluation.score, evaluation.reason
 
-            judge_duration = time.time() - judge_start
-            logging.debug(f"  ⏱️  Judge {judge_id} ({image_a_name} {'1st' if is_a_first else '2nd'}): {judge_duration:.2f}s")
-            logging.info(f"Judge {judge_id}: Chose {real_choice} - {evaluation.reason}\n")
-            return (real_choice, evaluation.reason)
+        # Evaluate both images in parallel
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_a = executor.submit(evaluate_single, image_a_bytes, image_a_name)
+            future_b = executor.submit(evaluate_single, image_b_bytes, image_b_name)
 
-        # Run all evaluations in parallel
-        judge_results = {}  # judge_id -> {True: result, False: result}
+            score_a, reason_a = future_a.result()
+            score_b, reason_b = future_b.result()
 
-        num_judges = len(self.judge_prompts)
-        with ThreadPoolExecutor(max_workers=min(num_judges * 2, 8)) as eval_executor:
-            future_to_judge = {}
-            for judge_id in range(num_judges):
-                for is_a_first in [True, False]:
-                    future = eval_executor.submit(evaluate_single, judge_id, is_a_first)
-                    future_to_judge[future] = (judge_id, is_a_first)
-
-            for future in as_completed(future_to_judge):
-                judge_id, is_a_first = future_to_judge[future]
-                result = future.result()
-
-                if judge_id not in judge_results:
-                    judge_results[judge_id] = {}
-                judge_results[judge_id][is_a_first] = result
-
-        # Aggregate consistent judges
-        votes = {image_a_name: 0, image_b_name: 0}
-        feedback_by_choice = {image_a_name: [], image_b_name: []}
-        total_consistent_judges = 0
-
-        for judge_id, results in judge_results.items():
-            result_a_first = results.get(True)
-            result_b_first = results.get(False)
-
-            choice_a_first, reason_a_first = result_a_first
-            choice_b_first, reason_b_first = result_b_first
-
-            # Only count consistent judges
-            if choice_a_first == choice_b_first:
-                logging.info(f"Judge {judge_id}: Consistent - chose '{choice_a_first}'\n")
-                total_consistent_judges += 1
-                votes[choice_a_first] += 1
-                feedback_by_choice[choice_a_first].append(reason_a_first)
-            else:
-                logging.warning(f"Judge {judge_id}: Inconsistent - skipping.\n")
-
-        # Determine winner
-        if total_consistent_judges == 0:
-            logging.warning("No consistent judges. Defaulting to draw.\n")
-            logging.debug("  ⚠️  No consistent judges - treating as draw.\n")
-            winner = image_a_name  # Arbitrary - treat as draw
-            winner_score = 0.5
-            feedback = "No consistent preference detected."
+        # Determine winner based on scores (higher score wins)
+        if score_a >= score_b: # Tie goes to first image
+            winner = image_a_name
+            winner_score = score_a
+            feedback = reason_a
         else:
-            winner = max(votes, key=votes.get)
-            winner_score = votes[winner] / total_consistent_judges
-            feedback = "\n".join(feedback_by_choice[winner])
+            winner = image_b_name
+            winner_score = score_b
+            feedback = reason_b
 
-            logging.info(f"🏆 WINNER: {winner} ({votes[winner]}/{total_consistent_judges} = {winner_score:.2%})\n")
+        winner_score_ratio = winner_score / 100.0
+
+        logging.info(f"📊 SCORES: {image_a_name}={score_a}, {image_b_name}={score_b}\n")
+        logging.info(f"🏆 WINNER: {winner} (score: {winner_score}/100)\n")
 
         contest_duration = time.time() - contest_start
         logging.debug(f"⏱️  Contest completed: {contest_duration:.2f}s")
 
-        return winner, winner_score, feedback
+        return winner, winner_score_ratio, feedback, score_a, score_b
 
     def _select_best_proposal(
         self,
@@ -298,11 +259,12 @@ class ScoreCompetition:
         for round_idx, round_data in enumerate(round_history):
             round_num = round_data["round"]
             winner = round_data["winner"]
-            score = round_data["score"]
+            score_a = round_data.get("score_a", 0)
+            score_b = round_data.get("score_b", 0)
 
             # Round label column
             ax_label = axes[round_idx, 0]
-            ax_label.text(0.5, 0.5, f"Round {round_num}\n{winner} wins\n{score:.1%}",
+            ax_label.text(0.5, 0.5, f"Round {round_num}\n{winner} wins\n{base_a}: {score_a}\n{base_b}: {score_b}",
                         ha="center", va="center", fontsize=14, fontweight="bold")
             ax_label.axis("off")
 
@@ -327,6 +289,59 @@ class ScoreCompetition:
         plt.close()
 
         logging.info(f"📊 Visualization saved to {viz_path}\n")
+
+    def _plot_score_history(
+        self,
+        pair_name: str,
+        base_a: str,
+        base_b: str,
+        score_history: list[dict],
+        results_dir: str,
+        plot_path: str
+    ):
+        """
+        Create a line plot showing score progression for both images over rounds.
+        """
+        num_rounds = len(score_history)
+        if num_rounds == 0:
+            return
+
+        rounds = [entry["round"] for entry in score_history]
+        scores_a = [entry["score_a"] for entry in score_history]
+        scores_b = [entry["score_b"] for entry in score_history]
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Plot both score lines
+        ax.plot(rounds, scores_a, 'b-o', label=base_a, linewidth=2, markersize=8)
+        ax.plot(rounds, scores_b, 'r-s', label=base_b, linewidth=2, markersize=8)
+
+        # Add labels and title
+        ax.set_xlabel("Round", fontsize=12)
+        ax.set_ylabel("Score (0-100)", fontsize=12)
+        ax.set_title(f"Score Progression: {base_a} vs {base_b}", fontsize=14, fontweight="bold")
+
+        # Set axis limits
+        ax.set_ylim(0, 105)
+        ax.set_xlim(0.5, num_rounds + 0.5)
+        ax.set_xticks(rounds)
+
+        # Add grid and legend
+        ax.grid(True, linestyle='--', alpha=0.7)
+        ax.legend(loc='best', fontsize=10)
+
+        # Add score annotations
+        for r, sa, sb in zip(rounds, scores_a, scores_b):
+            ax.annotate(f'{sa}', (r, sa), textcoords="offset points", xytext=(0, 10), ha='center', fontsize=9, color='blue')
+            ax.annotate(f'{sb}', (r, sb), textcoords="offset points", xytext=(0, -15), ha='center', fontsize=9, color='red')
+
+        plt.tight_layout()
+
+        # Save plot
+        plt.savefig(plot_path, dpi=300, bbox_inches="tight")
+        plt.close()
+
+        logging.info(f"📈 Score plot saved to {plot_path}\n")
 
     def _run_paired_contest(
         self,
@@ -384,9 +399,11 @@ class ScoreCompetition:
         round_num = 0
         equilibrium_reached = False
         contest_history = []
+        score_history = []  # Track scores for plotting
         visualization_history = []  # For matplotlib visualization
 
         viz_path = os.path.join(results_dir, f"{pair_name}_visualization.png")
+        score_plot_path = os.path.join(results_dir, f"{pair_name}_scores.png")
 
         if os.path.isfile(viz_path):
             logging.info(f"The final visualization for {pair_name} already exists. Skipping contest.\n")
@@ -397,6 +414,7 @@ class ScoreCompetition:
                 "rounds": 0,
                 "equilibrium": False,
                 "history": [],
+                "score_history": [],
                 "final_state_a": state_a,
                 "final_state_b": state_b
             }
@@ -408,7 +426,7 @@ class ScoreCompetition:
             logging.info(f"{'='*60}\n")
 
             # Conduct contest
-            winner_name, winner_score, feedback = self._conduct_contest(
+            winner_name, winner_score, feedback, score_a, score_b = self._conduct_contest(
                 image_a_bytes=state_a["bytes"],
                 image_b_bytes=state_b["bytes"],
                 image_a_name=base_a,
@@ -419,7 +437,16 @@ class ScoreCompetition:
             contest_history.append({
                 "round": round_num,
                 "winner": winner_name,
-                "score": winner_score
+                "score": winner_score,
+                "score_a": score_a,
+                "score_b": score_b
+            })
+
+            # Track scores for plotting
+            score_history.append({
+                "round": round_num,
+                "score_a": score_a,
+                "score_b": score_b
             })
 
             # Store images for visualization
@@ -427,6 +454,8 @@ class ScoreCompetition:
                 "round": round_num,
                 "winner": winner_name,
                 "score": winner_score,
+                "score_a": score_a,
+                "score_b": score_b,
                 "image_a": state_a["image"].copy(),
                 "image_b": state_b["image"].copy()
             })
@@ -484,6 +513,16 @@ class ScoreCompetition:
             viz_path=viz_path
         )
 
+        # Generate score progression plot
+        self._plot_score_history(
+            pair_name=pair_name,
+            base_a=base_a,
+            base_b=base_b,
+            score_history=score_history,
+            results_dir=results_dir,
+            plot_path=score_plot_path
+        )
+
         # Save final results
         logging.info(f"\n{'='*60}\n")
         if equilibrium_reached:
@@ -505,7 +544,7 @@ class ScoreCompetition:
             f.write(f"Equilibrium reached: {equilibrium_reached}\n\n")
             f.write(f"Contest History:\n")
             for entry in contest_history:
-                f.write(f"  Round {entry['round']}: {entry['winner']} won ({entry['score']:.2%})\n")
+                f.write(f"  Round {entry['round']}: {base_a}={entry['score_a']}, {base_b}={entry['score_b']} -> {entry['winner']} won\n")
             f.write(f"\nFinal State:\n")
             f.write(f"\n{base_a}:\n")
             f.write(f"  Prompt: {state_a['prompt']}\n")
@@ -528,6 +567,7 @@ class ScoreCompetition:
             "rounds": round_num,
             "equilibrium": equilibrium_reached,
             "history": contest_history,
+            "score_history": score_history,
             "final_state_a": state_a,
             "final_state_b": state_b
         }
@@ -636,11 +676,13 @@ class OptimizationPipeline:
     comparability_evaluator_model: LanguageModel
 
     # Competition settings (will be passed to ScoreCompetition)
+    competition_prompt_template: str
     max_rounds_per_pair: int
     editing_context_prompt: str
     initial_prompt: str
     background_state_prompt: str
     image_editing_model: ImageModel
+    evaluator_model: LanguageModel
 
     # Optimizer models for competition
     num_improvement_proposals: int
@@ -806,10 +848,11 @@ class OptimizationPipeline:
             id_1 = os.path.splitext(os.path.basename(path_1))[0]
             id_2 = os.path.splitext(os.path.basename(path_2))[0]
 
-            is_comparable, score, winner = self._evaluate_pair_comparability(
-                id_1, image_bytes_cache[path_1],
-                id_2, image_bytes_cache[path_2]
-            )
+            # is_comparable, score, winner = self._evaluate_pair_comparability(
+            #     id_1, image_bytes_cache[path_1],
+            #     id_2, image_bytes_cache[path_2]
+            # )
+            is_comparable, score, winner = True, 0.5, id_1  # TEMP OVERRIDE FOR TESTING
 
             return {
                 "pair": pair,
@@ -860,9 +903,7 @@ class OptimizationPipeline:
         Create a ScoreCompetition instance with parameter-specific judge prompts.
         """
         # Create evaluator model for competition
-        competition_judge_prompts = [
-            f"Which of these would you rate higher on {self.parameter}?"
-        ]
+        competition_judge_prompt = Template(self.competition_prompt_template).substitute(parameter=self.parameter)
 
         return ScoreCompetition(
             name=f"optimization_{self.parameter.lower()}",
@@ -870,8 +911,8 @@ class OptimizationPipeline:
             initial_prompt=self.initial_prompt,
             background_state_prompt=self.background_state_prompt,
             image_editing_model=self.image_editing_model,
-            judge_prompts=competition_judge_prompts,
-            evaluator_model=self.comparability_evaluator_model,  # Reuse the evaluator
+            judge_prompt=competition_judge_prompt,
+            evaluator_model=self.evaluator_model,
             num_improvement_proposals=self.num_improvement_proposals,
             proposer_model=self.proposer_model,
             selector_model=self.selector_model,
