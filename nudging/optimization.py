@@ -55,12 +55,15 @@ class ScoreCompetition:
         image_a_bytes: bytes,
         image_b_bytes: bytes,
         image_a_name: str,
-        image_b_name: str
+        image_b_name: str,
+        prev_score_a: int = None,
+        prev_score_b: int = None,
+        prev_winner: str = None
     ) -> tuple[str, float, str, int, int]:
         """
         Conduct a score-based contest between two images.
         Returns: (winner_name, winner_score_ratio, feedback, score_a, score_b)
-        winner_score_ratio is the winner's score divided by 100
+        winner_score_ratio is winner_score / (winner_score + loser_score)
         score_a and score_b are the raw scores (0-100) for each image
         """
         contest_start = time.time()
@@ -81,28 +84,48 @@ class ScoreCompetition:
             logging.info(f"📊 {image_name}: score={evaluation.score} - {evaluation.reason}\n")
             return evaluation.score, evaluation.reason
 
-        # Evaluate both images in parallel
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            future_a = executor.submit(evaluate_single, image_a_bytes, image_a_name)
-            future_b = executor.submit(evaluate_single, image_b_bytes, image_b_name)
+        # Check if we can reuse previous scores (only re-evaluate the loser's improved image)
+        if prev_winner is not None and prev_score_a is not None and prev_score_b is not None:
+            # Only evaluate the image that was improved (the previous loser)
+            if prev_winner == image_a_name:
+                # A was winner, B was loser and improved - only evaluate B
+                score_a = prev_score_a
+                reason_a = "(previous score reused)"
+                logging.info(f"📊 {image_a_name}: score={score_a} (reused from previous round)\n")
+                score_b, reason_b = evaluate_single(image_b_bytes, image_b_name)
+            else:
+                # B was winner, A was loser and improved - only evaluate A
+                score_b = prev_score_b
+                reason_b = "(previous score reused)"
+                logging.info(f"📊 {image_b_name}: score={score_b} (reused from previous round)\n")
+                score_a, reason_a = evaluate_single(image_a_bytes, image_a_name)
+        else:
+            # First round - evaluate both images in parallel
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future_a = executor.submit(evaluate_single, image_a_bytes, image_a_name)
+                future_b = executor.submit(evaluate_single, image_b_bytes, image_b_name)
 
-            score_a, reason_a = future_a.result()
-            score_b, reason_b = future_b.result()
+                score_a, reason_a = future_a.result()
+                score_b, reason_b = future_b.result()
 
         # Determine winner based on scores (higher score wins)
-        if score_a >= score_b: # Tie goes to first image
+        if score_a >= score_b:  # Tie goes to first image
             winner = image_a_name
             winner_score = score_a
+            loser_score = score_b
             feedback = reason_a
         else:
             winner = image_b_name
             winner_score = score_b
+            loser_score = score_a
             feedback = reason_b
 
-        winner_score_ratio = winner_score / 100.0
+        # Calculate ratio as winner / (winner + loser) for equilibrium detection
+        total_score = winner_score + loser_score
+        winner_score_ratio = winner_score / total_score
 
         logging.info(f"📊 SCORES: {image_a_name}={score_a}, {image_b_name}={score_b}\n")
-        logging.info(f"🏆 WINNER: {winner} (score: {winner_score}/100)\n")
+        logging.info(f"🏆 WINNER: {winner} (ratio: {winner_score_ratio:.2%})\n")
 
         contest_duration = time.time() - contest_start
         logging.debug(f"⏱️  Contest completed: {contest_duration:.2f}s")
@@ -254,7 +277,7 @@ class ScoreCompetition:
         if num_rounds == 1:
             axes = axes.reshape(1, -1)
 
-        fig.suptitle(f"Competition Progress: {base_a} vs {base_b}", fontsize=16, fontweight="bold")
+        fig.suptitle(f"Competition Progress: {base_a} vs {base_b}", fontsize=16, fontweight="bold", y=1.02)
 
         for round_idx, round_data in enumerate(round_history):
             round_num = round_data["round"]
@@ -419,19 +442,32 @@ class ScoreCompetition:
                 "final_state_b": state_b
             }
 
+        # Track previous round scores to avoid re-evaluating unchanged winner
+        prev_score_a = None
+        prev_score_b = None
+        prev_winner = None
+
         while round_num < self.max_rounds_per_pair and not equilibrium_reached:
             round_num += 1
             logging.info(f"\n{'='*60}\n")
             logging.info(f"ROUND {round_num}/{self.max_rounds_per_pair}\n")
             logging.info(f"{'='*60}\n")
 
-            # Conduct contest
+            # Conduct contest (reuse previous winner's score if available)
             winner_name, winner_score, feedback, score_a, score_b = self._conduct_contest(
                 image_a_bytes=state_a["bytes"],
                 image_b_bytes=state_b["bytes"],
                 image_a_name=base_a,
-                image_b_name=base_b
+                image_b_name=base_b,
+                prev_score_a=prev_score_a,
+                prev_score_b=prev_score_b,
+                prev_winner=prev_winner
             )
+
+            # Store scores for next round
+            prev_score_a = score_a
+            prev_score_b = score_b
+            prev_winner = winner_name
 
             # Record history
             contest_history.append({
@@ -671,7 +707,7 @@ class OptimizationPipeline:
     """
     name: str
     parameter: str
-    judge_prompts_template: list[str]
+    comparability_prompts_template: list[str]
     comparability_threshold: float
     comparability_evaluator_model: LanguageModel
 
@@ -699,7 +735,6 @@ class OptimizationPipeline:
     def __post_init__(self):
         """Initialize the pipeline and generate judge prompts for the target parameter."""
         # Generate judge prompts dynamically based on the parameter
-        self.num_judges = len(self.judge_prompts_template)
         self.judge_prompts = self._generate_judge_prompts()
         # Track comparable pairs
         self.comparable_pairs: List[Tuple[str, str]] = []
@@ -709,7 +744,7 @@ class OptimizationPipeline:
     def _generate_judge_prompts(self) -> List[str]:
         """Generate judge prompts based on the target parameter."""
         prompts = [
-            Template(prompt).substitute(parameter=self.parameter) for prompt in self.judge_prompts_template
+            Template(prompt).substitute(parameter=self.parameter) for prompt in self.comparability_prompts_template
         ]
         return prompts
 
@@ -746,9 +781,10 @@ class OptimizationPipeline:
         # Run all evaluations in parallel (each judge evaluates twice with swapped positions)
         judge_results = {}
 
-        with ThreadPoolExecutor(max_workers=min(self.num_judges * 2, 8)) as executor:
+        num_judges = len(self.judge_prompts)
+        with ThreadPoolExecutor(max_workers=min(num_judges * 2, 8)) as executor:
             future_to_judge = {}
-            for judge_id in range(self.num_judges):
+            for judge_id in range(num_judges):
                 for is_1_first in [True, False]:
                     future = executor.submit(evaluate_single, judge_id, is_1_first)
                     future_to_judge[future] = (judge_id, is_1_first)

@@ -200,7 +200,7 @@ def create_score_output_schema(score_description: str, reason_description: str) 
     """
     class ScoreOutput(IOSchema):
         """Output schema for score-based evaluator model."""
-        score: int = Field(ge=0, le=100, description=score_description)
+        score: int = Field(ge=1, le=100, description=score_description)
         reason: str = Field(description=reason_description)
 
     return ScoreOutput

@@ -11,7 +11,7 @@ comparability_threshold: 0.6
 category_pattern: '^([^_]+)_'
 
 # List of judge prompts for comparability assessment
-judge_prompts_template:
+comparability_prompts_template:
   - You are a shopping agent comparing two product photos. Choose the image with better $parameter.
   - You are an assistant helping a customer compare two product images. Choose the image with better $parameter.
   - You are a personal shopper agent evaluating two product photos. Choose the image with better $parameter.
@@ -20,7 +20,7 @@ judge_prompts_template:
 
 # Competition settings
 competition_prompt_template: |
-  Which of these would you rate higher on $parameter?
+  Score the following product image on its $parameter from 1-100.
 max_rounds_per_pair: ${general.iterations}
 editing_context_prompt: |
   The first image is the current state of the product photo. The second is the original unedited photo, for context.
@@ -34,7 +34,7 @@ image_editing_model: ${editor}
 
 # Equilibrium detection settings
 equilibrium_threshold: 0.51
-min_rounds_before_equilibrium: 5
+min_rounds_before_equilibrium: 3
 
 # Comparability evaluator model
 comparability_evaluator_model:
@@ -73,7 +73,7 @@ evaluator_model:
   output_schema:
     _target_: nudging.schema.create_score_output_schema
     score_description: |
-      Score for the image (0-100) on the specified attribute
+      Score for the image (1-100) on the specified attribute
     reason_description: |
       Concise justification of the score (1-3 sentences)
   api_call: ${llm}
