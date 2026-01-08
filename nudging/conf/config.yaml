@@ -5,7 +5,7 @@
 defaults:
   - _self_
   # LLM model for evaluator/loss/optimizer (e.g., gpt-5)
-  - llm: gpt-5-mini
+  - llm: gpt-5
   # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
   - editor: nanobanana-gemini
   # Strategy for nudging (e.g., zero-shot, competition, parametric-optimization)
@@ -25,7 +25,7 @@ general:
   # Output aspect ratio for edited images
   aspect_ratio: "1:1"
   # Maximum number of parallel workers for processing images
-  max_workers: 3
+  max_workers: 16
   # Resume from latest run if some results exist
   resume: false
 

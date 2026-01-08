@@ -6,17 +6,17 @@ name: parametric-optimization
 # Target parameter for optimization (e.g., 'Price', 'Rating', 'Quality', 'Usability', 'Appealing')
 parameter: ${general.optimization_parameter}
 # Threshold for considering images "comparable"
-comparability_threshold: 0.6
+comparability_threshold: 0.7
 # Regex pattern to extract category from filename
 category_pattern: '^([^_]+)_'
 
 # List of judge prompts for comparability assessment
 comparability_prompts_template:
-  - You are a shopping agent comparing two product photos. Choose the image with better $parameter.
-  - You are an assistant helping a customer compare two product images. Choose the image with better $parameter.
-  - You are a personal shopper agent evaluating two product photos. Choose the image with better $parameter.
-  - You are representing a buyer comparing two product images. Choose the image with better $parameter.
-  - You are a virtual shopping assistant assessing two product photos. Choose the image with better $parameter.
+  - You are a shopping agent comparing two product photos. Choose the image you would score higher on $parameter.
+  - You are an assistant helping a customer compare two product images. Choose the image you would score higher on $parameter.
+  - You are a personal shopper agent evaluating two product photos. Choose the image you would score higher on $parameter.
+  - You are representing a buyer comparing two product images. Choose the image you would score higher on $parameter.
+  - You are a virtual shopping assistant assessing two product photos. Choose the image you would score higher on $parameter.
 
 # Competition settings
 competition_prompt_template: |

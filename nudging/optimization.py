@@ -884,11 +884,11 @@ class OptimizationPipeline:
             id_1 = os.path.splitext(os.path.basename(path_1))[0]
             id_2 = os.path.splitext(os.path.basename(path_2))[0]
 
-            # is_comparable, score, winner = self._evaluate_pair_comparability(
-            #     id_1, image_bytes_cache[path_1],
-            #     id_2, image_bytes_cache[path_2]
-            # )
-            is_comparable, score, winner = True, 0.5, id_1  # TEMP OVERRIDE FOR TESTING
+            is_comparable, score, winner = self._evaluate_pair_comparability(
+                id_1, image_bytes_cache[path_1],
+                id_2, image_bytes_cache[path_2]
+            )
+            # is_comparable, score, winner = True, 0.5, id_1  # TEMP OVERRIDE FOR TESTING
 
             return {
                 "pair": pair,
