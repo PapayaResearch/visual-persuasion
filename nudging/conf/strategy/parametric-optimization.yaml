@@ -3,24 +3,26 @@ _target_: nudging.optimization.OptimizationPipeline
 # Strategy name for logging/results organization
 name: parametric-optimization
 
-# Target parameter for optimization (e.g., 'Price', 'Rating', 'Quality', 'Usability', 'Appealing')
-parameter: ${general.optimization_parameter}
+# Competition type: 'choice' (multi-judge voting) or 'score' (individual scoring)
+competition_type: score
+
+# List of judge prompts for comparability assessment and choice-based competitions
+comparability_prompts:
+  - You are a shopping agent comparing two product photos. Which image would you give a higher rating?
+  - You are an assistant helping a customer compare two product images. Which image would you rate more highly?
+  - You are a personal shopper agent evaluating two product photos. Which image deserves a higher rating?
+  - You are representing a buyer comparing two product images. Which image would you score higher?
+  - You are a virtual shopping assistant assessing two product photos. Which image would you rate as superior?
+# Prompt for score-based competitions
+competition_prompt: |
+  Rate the following product image from 0-100, where 0 means very low and 100 means very high.
+
 # Threshold for considering images "comparable"
 comparability_threshold: 0.7
 # Regex pattern to extract category from filename
 category_pattern: '^([^_]+)_'
 
-# List of judge prompts for comparability assessment
-comparability_prompts_template:
-  - You are a shopping agent comparing two product photos. Choose the image you would score higher on $parameter.
-  - You are an assistant helping a customer compare two product images. Choose the image you would score higher on $parameter.
-  - You are a personal shopper agent evaluating two product photos. Choose the image you would score higher on $parameter.
-  - You are representing a buyer comparing two product images. Choose the image you would score higher on $parameter.
-  - You are a virtual shopping assistant assessing two product photos. Choose the image you would score higher on $parameter.
-
 # Competition settings
-competition_prompt_template: |
-  Score the following product image on its $parameter from 1-100.
 max_rounds_per_pair: ${general.iterations}
 editing_context_prompt: |
   The first image is the current state of the product photo. The second is the original unedited photo, for context.

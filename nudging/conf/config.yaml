@@ -29,10 +29,6 @@ general:
   # Resume from latest run if some results exist
   resume: false
 
-  ## OPTIMIZATION CONFIGURATION
-  # Target parameter for optimization (e.g., 'Price', 'Rating', 'Quality', 'Usability', 'Appealing')
-  optimization_parameter: Rating
-
   ## ANALYSIS CONFIGURATION
   # CSV file with evaluation results to analyze
   analysis_csv: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/test/evaluation/o3-2025-04-16/2025-11-05_15-31-05/results.csv

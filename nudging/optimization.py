@@ -9,7 +9,6 @@ from PIL import Image
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from string import Template
 from itertools import combinations
 from typing import List, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -1293,17 +1292,16 @@ class ScoreBasedCompetition(BaseCompetition):
 class OptimizationPipeline:
     """
     Orchestrates parametric optimization of product images.
-    Phase 1: Filter pairs to identify "comparable" images on the target parameter
+    Phase 1: Filter pairs to identify "comparable" images
     Phase 2: Run competition between comparable pairs
     """
     name: str
-    parameter: str
-    comparability_prompts_template: list[str]
+    comparability_prompts: list[str]
     comparability_threshold: float
     comparability_evaluator_model: LanguageModel
 
     # Competition settings
-    competition_prompt_template: str
+    competition_prompt: str
     max_rounds_per_pair: int
     editing_context_prompt: str
     initial_prompt: str
@@ -1327,20 +1325,9 @@ class OptimizationPipeline:
     category_pattern: str = r'^([^_]+)_'
 
     def __post_init__(self):
-        """Initialize the pipeline and generate judge prompts for the target parameter."""
-        # Generate judge prompts dynamically based on the parameter
-        self.judge_prompts = self._generate_judge_prompts()
+        """Initialize the pipeline."""
         # Track comparable pairs
         self.comparable_pairs: List[Tuple[str, str]] = []
-
-        self.name = os.path.join("parametric-optimization", self.parameter.lower())
-
-    def _generate_judge_prompts(self) -> List[str]:
-        """Generate judge prompts based on the target parameter."""
-        prompts = [
-            Template(prompt).substitute(parameter=self.parameter) for prompt in self.comparability_prompts_template
-        ]
-        return prompts
 
     def _evaluate_pair_comparability(
         self,
@@ -1363,7 +1350,7 @@ class OptimizationPipeline:
 
             evaluation = self.comparability_evaluator_model.get_response(
                 images=images,
-                judge_prompt=self.judge_prompts[judge_id]
+                judge_prompt=self.comparability_prompts[judge_id]
             )
 
             if evaluation is None:
@@ -1375,7 +1362,7 @@ class OptimizationPipeline:
         # Run all evaluations in parallel (each judge evaluates twice with swapped positions)
         judge_results = {}
 
-        num_judges = len(self.judge_prompts)
+        num_judges = len(self.comparability_prompts)
         with ThreadPoolExecutor(max_workers=min(num_judges * 2, 8)) as executor:
             future_to_judge = {}
             for judge_id in range(num_judges):
@@ -1436,11 +1423,11 @@ class OptimizationPipeline:
         max_workers: int = 1
     ) -> List[Tuple[str, str]]:
         """
-        Phase 1: Filter all pairs to find comparable images on the target parameter.
+        Phase 1: Filter all pairs to find comparable images.
         Returns list of (image_path_1, image_path_2) tuples for comparable pairs.
         """
         logging.info(f"\n{'='*80}")
-        logging.info(f"PHASE 1: Filtering Comparable Pairs for Parameter '{self.parameter}'")
+        logging.info(f"PHASE 1: Filtering Comparable Pairs")
         logging.info(f"{'='*80}\n")
 
         # Group images by category
@@ -1530,11 +1517,11 @@ class OptimizationPipeline:
 
     def _create_competition(self) -> BaseCompetition:
         """
-        Create a Competition instance with parameter-specific judge prompts.
+        Create a Competition instance.
         Returns either ChoiceBasedCompetition or ScoreBasedCompetition based on competition_type.
         """
         common_params = {
-            "name": f"optimization_{self.parameter.lower()}",
+            "name": self.name,
             "editing_context_prompt": self.editing_context_prompt,
             "initial_prompt": self.initial_prompt,
             "background_state_prompt": self.background_state_prompt,
@@ -1549,30 +1536,30 @@ class OptimizationPipeline:
         }
 
         if self.competition_type == 'choice':
-            # Use same prompts as comparability phase for choice-based competition
+            # Use same prompts and evaluator as comparability phase for choice-based competition
+            choice_params = common_params.copy()
+            choice_params["evaluator_model"] = self.comparability_evaluator_model
             return ChoiceBasedCompetition(
-                **common_params,
-                judge_prompts=self.judge_prompts
+                **choice_params,
+                judge_prompts=self.comparability_prompts
             )
         elif self.competition_type == 'score':
             # Use single scoring prompt for score-based competition
-            competition_judge_prompt = Template(self.competition_prompt_template).substitute(parameter=self.parameter)
             return ScoreBasedCompetition(
                 **common_params,
-                judge_prompt=competition_judge_prompt
+                judge_prompt=self.competition_prompt
             )
         else:
             raise ValueError(f"Unknown competition_type: {self.competition_type}. Must be 'choice' or 'score'.")
 
     def run(self, image_paths: List[str], results_dir: str, max_workers: int = 1):
         """
-        Run the full parametric optimization pipeline.
+        Run the full optimization pipeline.
         Phase 1: Filter pairs to find comparable images
         Phase 2: Run competition on comparable pairs
         """
         logging.info(f"\n{'='*80}")
-        logging.info(f"PARAMETRIC OPTIMIZATION PIPELINE")
-        logging.info(f"Target Parameter: {self.parameter}")
+        logging.info(f"OPTIMIZATION PIPELINE")
         logging.info(f"Number of Images: {len(image_paths)}")
         logging.info(f"{'='*80}\n")
 
@@ -1614,9 +1601,8 @@ class OptimizationPipeline:
         # Save final summary
         summary_path = os.path.join(results_dir, "optimization_summary.txt")
         with open(summary_path, "w") as f:
-            f.write(f"Parametric Optimization Summary\n")
+            f.write(f"Optimization Summary\n")
             f.write(f"{'='*80}\n\n")
-            f.write(f"Target Parameter: {self.parameter}\n")
             f.write(f"Total images: {len(image_paths)}\n")
             f.write(f"Comparable pairs found: {len(comparable_pairs)}\n")
             f.write(f"Competition results: {len(competition_results)} pairs competed\n\n")
