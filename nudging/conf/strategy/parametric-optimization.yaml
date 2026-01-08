@@ -4,7 +4,7 @@ _target_: nudging.optimization.OptimizationPipeline
 name: parametric-optimization
 
 # Competition type: 'choice' (multi-judge voting) or 'score' (individual scoring)
-competition_type: score
+competition_type: choice
 
 # List of judge prompts for comparability assessment and choice-based competitions
 comparability_prompts:
@@ -18,7 +18,7 @@ competition_prompt: |
   Rate the following product image from 0-100, where 0 means very low and 100 means very high.
 
 # Threshold for considering images "comparable"
-comparability_threshold: 0.7
+comparability_threshold: 0.6
 # Regex pattern to extract category from filename
 category_pattern: '^([^_]+)_'
 
