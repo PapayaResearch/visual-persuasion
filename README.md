@@ -62,7 +62,12 @@ python run_nudging.py general.data_dir=/path/to/visual-nudging/nudging/data/abod
 
 ```bash
 cd nudging
-python run_evaluation.py general.evaluation_dir=results/nudging/model-name/test general.max_workers=32
+python run_evaluation.py strategy=zero-shot general.data_dir=results/zero-shot/TIMESTAMP/ llm=gpt-5-nano general.max_workers=32
+```
+
+```bash
+cd nudging
+python run_evaluation.py strategy=competition general.data_dir=results/competition/TIMESTAMP/ llm=gpt-5-nano general.max_workers=32
 ```
 
 ## Interpretation of Results

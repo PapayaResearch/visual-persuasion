@@ -24,8 +24,8 @@ def main(cfg: Config):
     # Create common directories and paths
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     base_dir = os.path.join(
-        "evaluation",
-        cfg.evaluate.evaluator_model.api_call.model
+        "priors",
+        cfg.priors.evaluator_model.api_call.model
     )
 
     # Set up logging
@@ -51,13 +51,13 @@ def main(cfg: Config):
     data_dir = cfg.general.data_dir
     image_paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir)
                     if os.path.isfile(os.path.join(data_dir, f))
-                    and f.lower().endswith('.jpg')]
+                    and f.lower().endswith(('.jpg', '.jpeg', '.png'))]
 
     # Create the results directory
     results_dir = os.path.join(
         data_dir,
-        "evaluation",
-        cfg.evaluate.evaluator_model.api_call.model
+        "priors",
+        cfg.priors.evaluator_model.api_call.model
     )
     os.makedirs(results_dir, exist_ok=True)
 
@@ -67,14 +67,14 @@ def main(cfg: Config):
     with open(os.path.join(os.path.dirname(log_file), "config.yaml"), "w") as outfile:
         outfile.write(cfg_yaml)
 
-    # Create evaluation pipeline
-    eval_pipeline = hydra.utils.instantiate(cfg.evaluate)
+    # Create priors pipeline
+    priors_pipeline = hydra.utils.instantiate(cfg.priors)
 
-    # Run evaluation
-    logging.info(f"Starting evaluation on results in: {data_dir}\n")
-    eval_pipeline.run(image_paths, results_dir, cfg.general.max_workers)
+    # Run priors evaluation
+    logging.info(f"Starting priors evaluation on images in: {data_dir}\n")
+    priors_pipeline.run(image_paths, results_dir, cfg.general.max_workers)
 
-    logging.info(f"Evaluation completed: {results_dir}\n")
+    logging.info(f"Priors evaluation completed: {results_dir}\n")
 
 if __name__ == "__main__":
     main()

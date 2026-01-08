@@ -74,14 +74,13 @@ class LanguageModel:
         input_schema: Type[IOSchema],
         output_schema: Type[IOSchema],
         api_call: callable,
-        return_usage_data: bool = False,
         enable_json_schema_validation: bool = True
     ):
         self.system_prompt = system_prompt
         self.input_schema = input_schema
         self.output_schema = output_schema
         self.api_call = api_call
-        self.return_usage_data = return_usage_data
+        self.return_usage_data = False
 
         # Enable JSON schema validation for models that don't natively support it
         if enable_json_schema_validation:
@@ -158,9 +157,10 @@ class LanguageModel:
 
         return messages
 
-    def get_response(self, **kwargs) -> IOSchema:
+    def get_response(self, **kwargs):
         """
         Main method to call the LLM with structured output.
+        Returns result, or (result, usage) if return_usage_data is True.
         """
         # Validate inputs using input_schema
         validated_inputs = self.input_schema(**kwargs)

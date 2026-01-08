@@ -55,7 +55,7 @@ def main(cfg: Config):
     log_file = os.path.join(log_dir, base_dir, current_date + ".log")
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
-    logging_handlers = [logging.FileHandler(log_file)]
+    logging_handlers = [logging.FileHandler(log_file, encoding="utf-8")]
     if cfg.logging.console:
         logging_handlers.append(logging.StreamHandler())
 

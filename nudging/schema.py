@@ -147,3 +147,60 @@ def create_selector_output_schema(choice_description: str) -> Type[IOSchema]:
         choice: str = Field(description=choice_description)
 
     return SelectorOutput
+
+
+def create_difference_detector_output_schema(differences_description: str) -> Type[IOSchema]:
+    """
+    Creates a DifferenceDetectorOutput schema class with configurable field descriptions.
+    """
+    class DifferenceDetectorOutput(IOSchema):
+        """Output schema for difference detector model."""
+        differences: str = Field(description=differences_description)
+
+    return DifferenceDetectorOutput
+
+
+def create_theme_summarizer_input_schema(differences_description: str) -> Type[IOSchema]:
+    """
+    Creates a ThemeSummarizerInput schema class with configurable field descriptions.
+    """
+    class ThemeSummarizerInput(IOSchema):
+        """Input schema for theme summarizer model."""
+        differences: str = Field(description=differences_description)
+
+    return ThemeSummarizerInput
+
+
+def create_theme_summarizer_output_schema(themes_description: str) -> Type[IOSchema]:
+    """
+    Creates a ThemeSummarizerOutput schema class with configurable field descriptions.
+    """
+    class ThemeSummarizerOutput(IOSchema):
+        """Output schema for theme summarizer model."""
+        themes: str = Field(description=themes_description)
+
+    return ThemeSummarizerOutput
+
+
+def create_score_input_schema(image_description: str, judge_prompt_description: str) -> Type[IOSchema]:
+    """
+    Creates a ScoreInput schema class for single-image score evaluation.
+    """
+    class ScoreInput(IOSchema):
+        """Input schema for score-based evaluator model."""
+        image: bytes = Field(description=image_description)
+        judge_prompt: str = Field(description=judge_prompt_description)
+
+    return ScoreInput
+
+
+def create_score_output_schema(score_description: str, reason_description: str) -> Type[IOSchema]:
+    """
+    Creates a ScoreOutput schema class for single-image score evaluation.
+    """
+    class ScoreOutput(IOSchema):
+        """Output schema for score-based evaluator model."""
+        score: int = Field(ge=1, le=100, description=score_description)
+        reason: str = Field(description=reason_description)
+
+    return ScoreOutput

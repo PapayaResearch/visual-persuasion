@@ -132,10 +132,83 @@ class VisualNudge:
 class Evaluate:
     # Hydra target for evaluation pipeline class
     _target_: str
-    # Prompt for the evaluator model
-    evaluator_prompt: str
+    # Strategy name determines filename parsing logic
+    strategy_name: str
+    # List of judge prompts for multi-judge evaluation
+    judge_prompts: list
     # Evaluator model configuration
     evaluator_model: LanguageModel
+
+#######################
+# Priors Pipeline
+#######################
+
+@dataclass
+class Priors:
+    # Hydra target for priors pipeline class
+    _target_: str
+    # List of judge prompts for multi-judge evaluation
+    judge_prompts: list
+    # Evaluator model configuration
+    evaluator_model: LanguageModel
+    # Regex pattern to extract category from filename
+    category_pattern: str
+
+#######################
+# Optimization Pipeline
+#######################
+
+@dataclass
+class Optimization:
+    # Hydra target for optimization pipeline class
+    _target_: str
+    # Target parameter for optimization
+    parameter: str
+    # Number of judges for comparability assessment
+    num_judges: int
+    # Threshold for considering images "comparable"
+    comparability_threshold: float
+    # Regex pattern to extract category from filename
+    category_pattern: str
+    # Competition settings
+    max_rounds_per_pair: int
+    editing_context_prompt: str
+    initial_prompt: str
+    background_state_prompt: str
+    image_editing_model: ImageModel
+    # Equilibrium detection settings
+    equilibrium_threshold: float
+    min_rounds_before_equilibrium: int
+    # Comparability evaluator model configuration
+    comparability_evaluator_model: LanguageModel
+    # Optimizer for improving losers
+    num_improvement_proposals: int
+    proposer_model: LanguageModel
+    selector_model: LanguageModel
+    judge_prompts: list
+    # Evaluator model configuration
+    evaluator_model: LanguageModel
+    # Regex pattern to extract category from filename
+    category_pattern: str
+
+#######################
+# Interpretation Pipeline
+#######################
+
+@dataclass
+class Interp:
+    # Hydra target class for the interpretation pipeline
+    _target_: str
+    # Directory containing zero-shot results to interpret
+    results_dir: str
+    # Prompt for the difference detector model
+    difference_prompt: str
+    # Difference detector model configuration
+    difference_detector_model: LanguageModel
+    # Prompt for the theme summarizer model
+    theme_prompt: str
+    # Theme summarizer model configuration
+    theme_summarizer_model: LanguageModel
 
 #######################
 # Analysis Pipeline
@@ -162,10 +235,8 @@ class General:
     enable_editing_context: bool
     # Maximum number of parallel workers for processing images
     max_workers: int
-    # Directory to evaluate (directory with images used for nudging)
-    eval_dir: str
-    # Directory to analyze (directory with evaluation log files)
-    analysis_dir: str
+    # CSV file with evaluation results to analyze
+    analysis_csv: str
 
 #######################
 # Logging Settings
@@ -192,6 +263,12 @@ class Config:
     nudge: VisualNudge
     # Evaluation pipeline configuration
     evaluate: Evaluate
+    # Priors pipeline configuration
+    priors: Priors
+    # Optimization pipeline configuration
+    optimization: Optimization
+    # Interpretation pipeline configuration
+    interp: Interp
     # Analysis pipeline configuration
     analyze: Analyze
     # Strategy configuration

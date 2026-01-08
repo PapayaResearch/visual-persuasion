@@ -11,58 +11,47 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils.wrappers import LanguageModel
 
-class EvaluationPipeline:
+class PriorsPipeline:
     """
-    Evaluation pipeline to assess the visual nudges.
+    Pipeline to assess default model preferences between product images.
+    Compares all pairs of products within a category to determine baseline biases.
     """
     def __init__(
         self,
         evaluator_model: LanguageModel,
-        strategy_name: str,
-        judge_prompts: List[str]
+        judge_prompts: List[str],
+        category_pattern: str = r'^([^_]+)_'
     ):
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
-        self.strategy_name = strategy_name
         self.judge_prompts = judge_prompts
+        self.category_pattern = category_pattern
 
-    def _parse_filename_zero_shot(self, filename: str) -> Tuple[str, str, str]:
+    def _parse_filename(self, filename: str) -> Tuple[str, str]:
         """
-        Parse zero-shot filename: CLASS_ID_EDITTYPE.jpg
-        Returns (class_name, image_id, edit_type)
+        Parse filename to extract category and image identifier.
+        Default pattern: CATEGORY_ID.jpg
+        Returns (category, image_id) or (None, None) if parsing fails.
         """
-        match = re.match(r'([A-Za-z0-9_]+)_([A-Za-z0-9]+)_([A-Za-z0-9-]+)\.jpg', filename)
-        class_name = match.group(1)
-        image_id = match.group(2)
-        edit_type = match.group(3)
-        return class_name, image_id, edit_type
+        if not filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+            return None, None
 
-    def _parse_filename_competition(self, filename: str):
-        """
-        Parse competition filename: CATEGORY_ID_STATUS.jpg or pair-X_..._CATEGORY_ID_STATUS.jpg
-        Returns (category, image_id, status) or None if should skip.
-        """
-        if not filename.endswith('.jpg'):
-            return None
+        # Extract category using the pattern
+        match = re.match(self.category_pattern, filename)
+        if not match:
+            logging.warning(f"Could not parse category from filename: {filename}")
+            return None, None
 
-        valid_statuses = ['final', 'original', 'no-prior', 'round-1_candidate-1']
+        category = match.group(1)
+        # Use the full filename (without extension) as the image_id
+        image_id = os.path.splitext(filename)[0]
 
-        for status in valid_statuses:
-            if filename.endswith(f'_{status}.jpg'):
-                base = filename[:-4]
-                parts = base.split('_')
-                status_parts = status.split('_')
-                num_status_parts = len(status_parts)
-                image_id = parts[-(num_status_parts + 1)]
-                category = parts[-(num_status_parts + 2)]
-                return category, image_id, status
-
-        return None
+        return category, image_id
 
     def _load_completed_comparisons(self, csv_path: str) -> Set[Tuple[str, str, str]]:
         """
         Load completed comparisons from existing CSV.
-        Returns a set of (image_class, base1, base2) tuples.
+        Returns a set of (category, image_id1, image_id2) tuples.
         """
         if not os.path.exists(csv_path):
             return set()
@@ -70,38 +59,33 @@ class EvaluationPipeline:
         completed = set()
         df = pd.read_csv(csv_path)
         for _, row in df.iterrows():
-            completed.add((row['image_class'], row['base1'], row['base2']))
+            completed.add((row['category'], row['image_id1'], row['image_id2']))
 
         logging.info(f"Loaded {len(completed)} completed comparisons from existing CSV\n")
         return completed
 
-
     def _evaluate_comparison(
         self,
-        image_class: str,
+        category: str,
         image_id_1: str,
-        edit_type_1: str,
         img_bytes_1: bytes,
         image_id_2: str,
-        edit_type_2: str,
         img_bytes_2: bytes
     ) -> dict:
         """
         Evaluate a single comparison between two images using multiple judges.
         Returns a dictionary with the evaluation result based on majority vote.
         """
-        base_1 = f"{image_id_1}_{edit_type_1}"
-        base_2 = f"{image_id_2}_{edit_type_2}"
-
         def evaluate_single(judge_id: int, is_1_first: bool):
             """Single judge evaluation"""
             images = [img_bytes_1, img_bytes_2] if is_1_first else [img_bytes_2, img_bytes_1]
             choice_map = {
-                "first": base_1 if is_1_first else base_2,
-                "second": base_2 if is_1_first else base_1,
+                "first": image_id_1 if is_1_first else image_id_2,
+                "second": image_id_2 if is_1_first else image_id_1,
             }
 
-            logging.info(f"Judge {judge_id}: Evaluating with {base_1} as {'first' if is_1_first else 'second'} image.\n")
+            logging.info(f"Judge {judge_id}: Evaluating {image_id_1} vs {image_id_2} "
+                        f"with {image_id_1} as {'first' if is_1_first else 'second'} image.\n")
 
             evaluation, usage = self.evaluator_model.get_response(
                 images=images,
@@ -136,8 +120,8 @@ class EvaluationPipeline:
                 judge_results[judge_id][is_1_first] = result
 
         # Aggregate consistent judges
-        votes = {base_1: 0, base_2: 0}
-        feedback_by_choice = {base_1: [], base_2: []}
+        votes = {image_id_1: 0, image_id_2: 0}
+        feedback_by_choice = {image_id_1: [], image_id_2: []}
         total_consistent_judges = 0
         all_usages = []
 
@@ -168,15 +152,17 @@ class EvaluationPipeline:
 
         # Determine winner
         if total_consistent_judges == 0:
-            logging.warning(f"No consistent judges for {base_1} vs {base_2}. Defaulting to {base_1}.\n")
-            choice = base_1
+            logging.warning(f"No consistent judges for {image_id_1} vs {image_id_2}. "
+                          f"Defaulting to {image_id_1}.\n")
+            choice = image_id_1
             winner_score = 0.5
             vlm_reason = "No consistent preference detected."
         else:
             choice = max(votes, key=votes.get)
             winner_score = votes[choice] / total_consistent_judges
             vlm_reason = "\n".join(feedback_by_choice[choice])
-            logging.info(f"🏆 WINNER: {choice} ({votes[choice]}/{total_consistent_judges} = {winner_score:.2%})\n")
+            logging.info(f"🏆 WINNER: {choice} ({votes[choice]}/{total_consistent_judges} "
+                        f"= {winner_score:.2%})\n")
 
         # Aggregate usage data
         completion_tokens = sum(u.completion_tokens for u in all_usages if u) if all_usages else 0
@@ -187,80 +173,62 @@ class EvaluationPipeline:
             if usage and usage.completion_tokens_details:
                 reasoning_tokens += usage.completion_tokens_details.reasoning_tokens
 
-        # For backward compatibility with existing code, randomly assign first/second
-        is_img1_first = random.choice([True, False])
-        first = base_1 if is_img1_first else base_2
-        second = base_2 if is_img1_first else base_1
-
         return {
-            'image_class': image_class,
-            'base1': base_1,
-            'base2': base_2,
-            'choice': choice,
+            'category': category,
+            'image_id1': image_id_1,
+            'image_id2': image_id_2,
+            'winner': choice,
             'reason': vlm_reason,
-            'first': first,
-            'second': second,
+            'winner_score': winner_score,
+            'consistent_judges': total_consistent_judges,
             'completion_tokens': completion_tokens,
             'prompt_tokens': prompt_tokens,
             'total_tokens': total_tokens,
-            'reasoning_tokens': reasoning_tokens,
-            'consistent_judges': total_consistent_judges,
-            'winner_score': winner_score
+            'reasoning_tokens': reasoning_tokens
         }
 
     def run(self, image_paths: List[str], results_dir: str, max_workers: int = 1):
         """
-        Runs the evaluation pipeline for each image comparison in parallel.
+        Runs the priors evaluation pipeline for each image comparison in parallel.
         Supports resumption by skipping already completed comparisons.
         """
-        csv_save_path = os.path.join(results_dir, 'results.csv')
+        csv_save_path = os.path.join(results_dir, 'priors_results.csv')
 
         # Load completed comparisons from existing CSV
         completed_comparisons = self._load_completed_comparisons(csv_save_path)
 
-        # Group images by class
-        class_groups = defaultdict(set)
+        # Group images by category
+        category_groups = defaultdict(set)
 
         for img_path in image_paths:
             with open(img_path, "rb") as f:
                 img_bytes = f.read()
             filename = os.path.basename(img_path)
 
-            if self.strategy_name == 'zero-shot':
-                class_name, image_id, edit_type = self._parse_filename_zero_shot(filename)
-                class_groups[class_name].add((image_id, edit_type, img_bytes))
-            elif self.strategy_name == 'competition':
-                parsed = self._parse_filename_competition(filename)
-                if parsed is None:
-                    continue
-                category, image_id, status = parsed
-                class_groups[category].add((image_id, status, img_bytes))
+            category, image_id = self._parse_filename(filename)
+            if category is None or image_id is None:
+                continue
 
-        logging.info(f"Found {len(class_groups)} image classes to evaluate\n")
+            category_groups[category].add((image_id, img_bytes))
+
+        logging.info(f"Found {len(category_groups)} categories to evaluate\n")
 
         # Collect all comparison tasks, skipping completed ones
         comparison_tasks = []
-        for image_class in sorted(class_groups.keys()):
-            comparable_images = sorted(class_groups[image_class], key=lambda x: '_'.join(x[:2]))
+        for category in sorted(category_groups.keys()):
+            images_in_category = sorted(category_groups[category], key=lambda x: x[0])
 
-            for (image_id_1, edit_type_1, img_bytes_1), (image_id_2, edit_type_2, img_bytes_2) in \
-                    itertools.combinations(comparable_images, 2):
-
-                # Skip same image comparisons
-                if image_id_1 == image_id_2:
-                    continue
+            for (image_id_1, img_bytes_1), (image_id_2, img_bytes_2) in \
+                    itertools.combinations(images_in_category, 2):
 
                 # Check if this comparison was already completed
-                base_1 = f"{image_id_1}_{edit_type_1}"
-                base_2 = f"{image_id_2}_{edit_type_2}"
-                comparison_key = (image_class, base_1, base_2)
+                comparison_key = (category, image_id_1, image_id_2)
 
                 if comparison_key in completed_comparisons:
                     continue
 
                 comparison_tasks.append((
-                    image_class, image_id_1, edit_type_1, img_bytes_1,
-                    image_id_2, edit_type_2, img_bytes_2
+                    category, image_id_1, img_bytes_1, image_id_2, img_bytes_2
                 ))
 
         total_comparisons = len(comparison_tasks)
@@ -273,9 +241,9 @@ class EvaluationPipeline:
         # Open CSV in append mode for incremental writing
         with open(csv_save_path, 'a', newline='', encoding='utf-8') as csvfile:
             fieldnames = [
-                'image_class', 'base1', 'base2', 'choice', 'reason', 'first', 'second',
-                'completion_tokens', 'prompt_tokens', 'total_tokens', 'reasoning_tokens',
-                'consistent_judges', 'winner_score'
+                'category', 'image_id1', 'image_id2', 'winner', 'reason',
+                'winner_score', 'consistent_judges',
+                'completion_tokens', 'prompt_tokens', 'total_tokens', 'reasoning_tokens'
             ]
             writer = pd.DataFrame(columns=fieldnames)
 
@@ -296,7 +264,7 @@ class EvaluationPipeline:
                 for future in tqdm(
                         as_completed(futures),
                         total=total_comparisons,
-                        desc="Evaluating comparisons",
+                        desc="Evaluating priors",
                         unit="comparison"
                 ):
                     result = future.result()
@@ -307,4 +275,4 @@ class EvaluationPipeline:
                         result_df.to_csv(csvfile, index=False, header=False, mode='a')
                         csvfile.flush()  # Force write to disk
 
-        logging.info(f"Evaluation completed. Results saved to: {csv_save_path}\n")
+        logging.info(f"Priors evaluation completed. Results saved to: {csv_save_path}\n")

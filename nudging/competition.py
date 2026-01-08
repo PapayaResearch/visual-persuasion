@@ -495,7 +495,7 @@ class VisualNudgeCompetition:
 
         # Save summary
         summary_path = os.path.join(results_dir, f"{pair_name}_summary.txt")
-        with open(summary_path, "w") as f:
+        with open(summary_path, "w", encoding="utf-8") as f:
             f.write(f"Paired Contest Summary: {base_a} vs {base_b}\n")
             f.write(f"{'='*60}\n\n")
             f.write(f"Total rounds: {round_num}\n")
@@ -582,7 +582,7 @@ class VisualNudgeCompetition:
 
         # Generate global summary
         summary_path = os.path.join(results_dir, "global_summary.txt")
-        with open(summary_path, "w") as f:
+        with open(summary_path, "w", encoding="utf-8") as f:
             f.write(f"Paired Contest Competition - Global Summary\n")
             f.write(f"{'='*80}\n\n")
             f.write(f"Total images: {len(image_paths)}\n")
