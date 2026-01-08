@@ -2,10 +2,12 @@ _target_: nudging.optimization.OptimizationPipeline
 
 # Strategy name for logging/results organization
 name: parametric-optimization
-
 # Competition type: 'choice' (multi-judge voting) or 'score' (individual scoring)
 competition_type: choice
 
+# Initial prompt for the first editing iteration
+initial_prompt: |
+  Make this product photo achieve a higher rating. Keep the product itself exactly unchanged.
 # List of judge prompts for comparability assessment and choice-based competitions
 comparability_prompts:
   - You are a shopping agent comparing two product photos. Which image would you give a higher rating?
@@ -28,8 +30,6 @@ editing_context_prompt: |
   The first image is the current state of the product photo. The second is the original unedited photo, for context.
   Keep the product itself exactly unchanged.
   You may add other contextual elements.
-initial_prompt: |
-  Make this product photo look more appealing. Keep the product itself exactly unchanged.
 background_state_prompt: |
   The background should stay realistic and coherent with the product. Hold everything constant except for the provided instructions.
 image_editing_model: ${editor}
