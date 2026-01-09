@@ -20,12 +20,6 @@ defaults:
 general:
   # Directory containing the images to be tested
   data_dir: ${hydra:runtime.cwd}/data/new_dataset
-  # Total number of iterations to run per image
-  iterations: 10
-  # Enable previous image context during editing
-  enable_editing_context: true
-  # Output aspect ratio for edited images
-  aspect_ratio: "1:1"
   # Maximum number of parallel workers for processing images
   max_workers: 10
   # Resume from latest run if some results exist
@@ -41,7 +35,10 @@ competition:
   category_pattern: '^([^_]+)_'
   # Thresholds for equilibrium detection
   equilibrium_threshold: 0.51
+  # Minimum rounds to run per image pair
   min_rounds_before_equilibrium: 5
+  # Maximum rounds to run per image pair
+  max_rounds_per_pair: 10
   # Tie-breaking strategy: "first", "second", "random"
   tie_breaking_strategy: random
   # Task-specific prompts
