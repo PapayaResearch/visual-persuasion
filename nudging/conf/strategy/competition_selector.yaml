@@ -84,3 +84,4 @@ selector_model:
 
 equilibrium_threshold: ${competition.equilibrium_threshold}
 min_rounds_before_equilibrium: ${competition.min_rounds_before_equilibrium}
+tie_breaking_strategy: ${competition.tie_breaking_strategy}

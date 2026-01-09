@@ -42,6 +42,8 @@ competition:
   # Thresholds for equilibrium detection
   equilibrium_threshold: 0.51
   min_rounds_before_equilibrium: 5
+  # Tie-breaking strategy: "first", "second", "random"
+  tie_breaking_strategy: random
   # Task-specific prompts
   base_prior: |
     Make this product photo achieve a higher rating. Keep the product itself exactly unchanged.

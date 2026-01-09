@@ -1,6 +1,7 @@
 import os
 import io
 import time
+import random
 import logging
 import json
 import threading
@@ -13,7 +14,6 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 from utils.wrappers import ImageModel, LanguageModel
-from itertools import combinations
 
 
 @dataclasses.dataclass
@@ -42,6 +42,9 @@ class VisualNudgeCompetitionWithSelector:
     equilibrium_threshold: float = 0.51  # Win rate below this (close to 0.5) indicates equilibrium
     min_rounds_before_equilibrium: int = 10  # Minimum rounds before checking for equilibrium
     max_rounds_per_pair: int = 10  # Maximum improvement rounds per pair before declaring equilibrium
+    
+    # Tie-breaking strategy when judges are split 50-50 or inconsistent
+    tie_breaking_strategy: str = "first"
 
     def __post_init__(self):
         """Initialize tracking variables."""
@@ -216,15 +219,32 @@ class VisualNudgeCompetitionWithSelector:
 
         # Determine winner
         if total_consistent_judges == 0:
-            logging.warning("No consistent judges. Defaulting to draw.\n")
-            logging.debug("  ⚠️  No consistent judges - treating as draw.\n")
-            winner = image_a_name  # Arbitrary - treat as draw
+            logging.warning("No consistent judges. Applying tie-breaking strategy.\n")
+            logging.debug("  ⚠️  No consistent judges - applying tie-breaking.\n")
             winner_score = 0.5
             feedback = "No consistent preference detected."
+            
+            # Apply tie-breaking strategy
+            if self.tie_breaking_strategy == "second":
+                winner = image_b_name
+            elif self.tie_breaking_strategy == "random":
+                winner = random.choice([image_a_name, image_b_name])
+            else:
+                winner = image_a_name
         else:
             winner = max(votes, key=votes.get)
             winner_score = votes[winner] / total_consistent_judges
             feedback = "\n".join(feedback_by_choice[winner])
+            
+            # Check for 50-50 tie and apply tie-breaking
+            if winner_score == 0.5:
+                logging.warning("Judges split 50-50. Applying tie-breaking strategy.\n")
+                if self.tie_breaking_strategy == "second":
+                    winner = image_b_name
+                elif self.tie_breaking_strategy == "random":
+                    winner = random.choice([image_a_name, image_b_name])
+                else:
+                    winner = image_a_name
 
             logging.info(f"🏆 WINNER: {winner} ({votes[winner]}/{total_consistent_judges} = {winner_score:.2%})\n")
 
