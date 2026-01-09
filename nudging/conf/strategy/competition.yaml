@@ -1,0 +1,57 @@
+_target_: nudging.competition.VisualNudgeCompetition
+
+# Strategy name for logging/results organization
+name: competition
+
+max_rounds_per_pair: ${general.iterations}
+
+base_prior: ${competition.base_prior}
+
+image_editing_model: ${editor}
+
+judge_prompts: ${competition.judge_prompts}
+
+evaluator_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: ${competition.evaluator_system_prompt}
+  input_schema:
+    _target_: nudging.schema.create_evaluator_input_schema
+    images_description: |
+      List of image bytes: [first, second]
+    judge_prompt_description: |
+      The prompt given to the judge for this comparison
+    metadata_description: |
+      Additional context about the product or images (may be empty)
+  output_schema:
+    _target_: nudging.schema.create_evaluator_output_schema
+    choice_description: |
+      Which image is chosen: 'first' or 'second'
+    choice_options: ['first', 'second']
+    reason_description: ${competition.evaluator_reason_description}
+  api_call: ${llm}
+
+
+optimizer_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: ${competition.optimizer_system_prompt}
+  input_schema:
+    _target_: nudging.schema.create_optimizer_input_schema
+    current_prompt_description: |
+      The current best image editing prompt, which you should modify to create a new candidate prompt
+    current_image_description: |
+      The current image that was generated using the current prompt
+    history_of_prompts_description: |
+      The history of previous prompts used so far (may be empty if optimizer shouldn't see it)
+    judge_feedback_description: |
+      Feedback about why an alternative was chosen over the current prompt editing instruction
+    metadata_description: |
+      Additional context or constraints for modifying the prompt (may be empty)
+  output_schema:
+    _target_: nudging.schema.create_optimizer_output_schema
+    new_prompt_description: |
+      A new image editing prompt that modifies the current prompt based on the judge feedback and history of prompts.
+      Should be concise; 1-2 sentences at most.
+  api_call: ${llm}
+
+equilibrium_threshold: ${competition.equilibrium_threshold}
+min_rounds_before_equilibrium: ${competition.min_rounds_before_equilibrium}
