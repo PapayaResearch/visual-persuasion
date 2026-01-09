@@ -1,7 +1,7 @@
-_target_: nudging.competition_combined.VisualNudgeCompetitionCombined
+_target_: nudging.competition_selector.VisualNudgeCompetitionWithSelector
 
 # Strategy name for logging/results organization
-name: competition_combined
+name: competition_selector
 
 max_rounds_per_pair: ${general.iterations}
 use_last_winner_as_base: true
@@ -30,6 +30,8 @@ evaluator_model:
     _target_: nudging.schema.create_evaluator_input_schema
     images_description: |
       List of image bytes: [first, second]
+    judge_prompt_description: |
+      The prompt given to the judge for this comparison
     metadata_description: |
       Additional context about the product or images (may be empty)
 

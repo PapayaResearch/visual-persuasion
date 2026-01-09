@@ -8,7 +8,7 @@ defaults:
   - llm: gemini-2-5-flash
   # Image editor model (e.g., nano-banana, nano-banana-pro)
   - editor: nano-banana
-  # Strategy for nudging (e.g., zero-shot, competition)
+  # Strategy for nudging (e.g., zero-shot, competition, competition_selector)
   - strategy: competition
   # Evaluation mode (pairs vs solo)
   - evaluate: pairs
@@ -31,9 +31,14 @@ general:
   # Resume from latest run if some results exist
   resume: false
 
-  ## ANALYSIS CONFIGURATION
-  # CSV file with evaluation results to analyze
-  analysis_csv: ${hydra:runtime.cwd}/results/nudging/gpt-5-2025-08-07/test/evaluation/o3-2025-04-16/2025-11-05_15-31-05/results.csv
+######################
+# Competition Settings
+######################
+competition:
+  # Threshold for considering images "comparable"
+  comparability_threshold: 0.6
+  # Regex pattern to extract category from filename
+  category_pattern: '^([^_]+)_'
 
 ######################
 # Interpretation Settings

@@ -1,7 +1,7 @@
-_target_: nudging.competition_simplified.VisualNudgeCompetitionSimplified
+_target_: nudging.competition.VisualNudgeCompetition
 
 # Strategy name for logging/results organization
-name: competition_simplified
+name: competition
 
 max_rounds_per_pair: ${general.iterations}
 
@@ -51,6 +51,8 @@ evaluator_model:
       List of image bytes: [first, second]
     judge_prompt_description: |
       The prompt given to the judge for this comparison
+    metadata_description: |
+      Additional context about the product or images (may be empty)
 
   # Output schema for the evaluator model
   output_schema:
