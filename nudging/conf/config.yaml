@@ -8,8 +8,8 @@ defaults:
   - llm: gemini-2-5-flash
   # Image editor model (e.g., nano-banana, nano-banana-pro)
   - editor: nano-banana
-  # Strategy for nudging (e.g., zero-shot, competition, parametric-optimization)
-  - strategy: parametric-optimization
+  # Strategy for nudging (e.g., zero-shot, competition)
+  - strategy: competition
 
 ######################
 # General Settings
