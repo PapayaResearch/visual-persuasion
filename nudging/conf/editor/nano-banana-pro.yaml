@@ -1,0 +1,4 @@
+_target_: utils.models.Gemini
+model: gemini-3-pro-image-preview
+max_retries: 3
+aspect_ratio: ${general.aspect_ratio}

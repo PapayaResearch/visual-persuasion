@@ -3,7 +3,11 @@ from typing import List, Type, Literal
 from utils.wrappers import IOSchema
 
 
-def create_evaluator_input_schema(images_description: str, judge_prompt_description: str) -> Type[IOSchema]:
+def create_evaluator_input_schema(
+    images_description: str,
+    judge_prompt_description: str,
+    metadata_description: str = ""
+) -> Type[IOSchema]:
     """
     Creates an EvaluatorInput schema class with configurable field descriptions.
     """
@@ -11,6 +15,7 @@ def create_evaluator_input_schema(images_description: str, judge_prompt_descript
         """Input schema for evaluator model."""
         images: List[bytes] = Field(description=images_description)
         judge_prompt: str = Field(description=judge_prompt_description)
+        metadata: str = Field(description=metadata_description)
 
     return EvaluatorInput
 
@@ -52,22 +57,21 @@ def create_loss_output_schema(suggestions_description: str) -> Type[IOSchema]:
 
 def create_optimizer_input_schema(
     current_prompt_description: str,
-    reason_description: str,
+    current_image_description: str,
     history_of_prompts_description: str = "",
-    current_iteration_description: str = "",
-    total_iterations_description: str = ""
+    judge_feedback_description: str = "",
+    metadata_description: str = ""
 ) -> Type[IOSchema]:
     """
-    Creates an OptimizerInput schema class with configurable field descriptions.
+    Creates an OptimizerInput schema class tailored for single-step improvements.
     """
     class OptimizerInput(IOSchema):
         """Input schema for optimizer model."""
         current_prompt: str = Field(description=current_prompt_description)
-        reason: str = Field(description=reason_description)
+        current_image: bytes = Field(description=current_image_description)
         history_of_prompts: str = Field(description=history_of_prompts_description)
-        current_iteration: int = Field(description=current_iteration_description)
-        total_iterations: int = Field(description=total_iterations_description)
-
+        judge_feedback: str = Field(description=judge_feedback_description)
+        metadata: str = Field(description=metadata_description)
 
     return OptimizerInput
 

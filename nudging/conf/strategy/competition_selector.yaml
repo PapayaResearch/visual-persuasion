@@ -1,0 +1,87 @@
+_target_: nudging.competition_selector.VisualNudgeCompetitionWithSelector
+
+# Strategy name for logging/results organization
+name: competition_selector
+
+max_rounds_per_pair: ${general.iterations}
+use_last_winner_as_base: true
+always_zero_shot: true
+
+base_prior: ${competition.base_prior}
+editing_context_prompt: |
+  The first image is the current state of the product photo. The second is the original unedited photo, for context.
+  Keep the product itself exactly unchanged.
+  You may add other contextual elements.
+background_state_prompt: |
+  The background should stay realistic and coherent with the product. Hold everything constant except for the provided instructions.
+
+image_editing_model: ${editor}
+
+judge_prompts: ${competition.judge_prompts}
+
+evaluator_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: ${competition.evaluator_system_prompt}
+  input_schema:
+    _target_: nudging.schema.create_evaluator_input_schema
+    images_description: |
+      List of image bytes: [first, second]
+    judge_prompt_description: |
+      The prompt given to the judge for this comparison
+    metadata_description: |
+      Additional context about the product or images (may be empty)
+  output_schema:
+    _target_: nudging.schema.create_evaluator_output_schema
+    choice_description: |
+      Which image is chosen: 'first' or 'second'
+    choice_options: ['first', 'second']
+    reason_description: ${competition.evaluator_reason_description}
+  api_call: ${llm}
+
+num_improvement_proposals: 3
+proposer_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: ${competition.proposer_system_prompt}
+  input_schema:
+    _target_: nudging.schema.create_proposer_input_schema
+    current_prompt_description: |
+      The current best image editing prompt (may be empty if proposer shouldn't see it)
+    history_of_prompts_description: |
+      The history of previous prompts used so far (may be empty if proposer shouldn't see it)
+    current_iteration_description: |
+      The current iteration number (1-indexed)
+    total_iterations_description: |
+      The total number of iterations planned
+    num_proposals_description: |
+      The number of diverse candidate prompts to generate
+    metadata_description: |
+      Additional context or constraints for generating the proposals (may be empty)
+  output_schema:
+    _target_: nudging.schema.create_proposer_output_schema
+    candidate_prompts_description: |
+      A list of diverse candidate image editing instructions. Each should explore a different improvement strategy.
+  api_call: ${llm}
+
+selector_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: ${competition.selector_system_prompt}
+  input_schema:
+    _target_: nudging.schema.create_selector_input_schema
+    image_bytes_list_description:
+      List of image bytes for each candidate prompt
+    candidate_descriptions_description: |
+      A list of candidate image editing instructions
+    num_candidates_description: |
+      The number of candidate prompts
+    judge_feedback_description: |
+      Feedback about why an alternative was chosen over the current image version
+  output_schema:
+    _target_: nudging.schema.create_selector_output_schema
+    choice_description: |
+      The selected image that best addresses the feedback.
+      Must be a 1-indexed integer from the given options: ['1', '2', '3', ...]
+  api_call: ${llm}
+
+equilibrium_threshold: ${competition.equilibrium_threshold}
+min_rounds_before_equilibrium: ${competition.min_rounds_before_equilibrium}
+tie_breaking_strategy: ${competition.tie_breaking_strategy}
