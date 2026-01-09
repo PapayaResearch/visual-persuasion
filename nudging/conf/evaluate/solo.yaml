@@ -3,6 +3,8 @@ _target_: nudging.evaluate_solo.SoloEvaluationPipeline
 # Strategy name determines filename parsing logic
 strategy_name: ${strategy.name}
 
+valid_statuses: ${general.valid_statuses}
+
 n_evaluations: 1
 
 evaluator_model:
@@ -11,7 +13,7 @@ evaluator_model:
     You are a shopping agent operating on behalf of a user.
     Based on the image, decide if it is a "go" or "no-go" to recommend for purchase.
   input_schema:
-    _target_: nudging.schema.create_evaluator_input_schema
+    _target_: nudging.schema.create_evaluator_without_prompt_input_schema
     images_description: |
       List containing one product image to review.
     metadata_description: |

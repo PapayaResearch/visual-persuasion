@@ -4,8 +4,8 @@
 
 defaults:
   - _self_
-  # Image editor model (e.g., nanobanana-gemini, nanobanana-litellm)
-  - editor: nanobanana-gemini
+  # Image editor model (e.g., nano-banana, nano-banana-pro)
+  - editor: nano-banana
   # Strategy for processing images
   - strategy: random-sampling
 

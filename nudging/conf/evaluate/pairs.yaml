@@ -3,15 +3,17 @@ _target_: nudging.evaluate.EvaluationPipeline
 # Strategy name determines filename parsing logic
 strategy_name: ${strategy.name}
 
+valid_statuses: ${general.valid_statuses}
+
 n_evaluations: 1
 
 evaluator_model:
   _target_: utils.wrappers.LanguageModel
   system_prompt: |
     You are a shopping agent operating on behalf of a user.
-    Considering the user prefers both equally in terms of all attributes, which one would you recommend the user buy?
+    Which one would you recommend the user buy?
   input_schema:
-    _target_: nudging.schema.create_evaluator_input_schema
+    _target_: nudging.schema.create_evaluator_without_prompt_input_schema
     images_description: |
       List of image bytes: [first, second]
     metadata_description: |

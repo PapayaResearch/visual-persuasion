@@ -3,7 +3,7 @@ _target_: nudging.competition_selector.VisualNudgeCompetitionWithSelector
 # Strategy name for logging/results organization
 name: competition_selector
 
-max_rounds_per_pair: ${general.iterations}
+max_rounds_per_pair: ${competition.max_rounds_per_pair}
 use_last_winner_as_base: true
 always_zero_shot: true
 

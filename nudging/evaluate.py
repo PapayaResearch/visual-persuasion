@@ -18,12 +18,14 @@ class EvaluationPipeline:
         self,
         evaluator_model: LanguageModel,
         strategy_name: str,
+        valid_statuses: List[str],
         n_evaluations: int = 1
         # judge_prompts: List[str]
     ):
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
         self.strategy_name = strategy_name
+        self.valid_statuses = valid_statuses
         self.n_evaluations = n_evaluations
         # self.judge_prompts = judge_prompts
 
@@ -46,9 +48,7 @@ class EvaluationPipeline:
         if not filename.endswith('.jpg'):
             return None
 
-        valid_statuses = ['final', 'original', 'no-prior', 'zero-shot']
-
-        for status in valid_statuses:
+        for status in self.valid_statuses:
             if filename.endswith(f'_{status}.jpg'):
                 base = filename[:-4]
                 parts = base.split('_')
@@ -126,7 +126,7 @@ class EvaluationPipeline:
         else:
             logging.warning(f"Inconsistent judge results for {base_1} vs {base_2}: {choice_1_first} vs {choice_2_first}\n")
             choice = "inconsistent"
-            vlm_reason = "\n".join([f"Judge 1: {reason_1_first}", f"Judge 2: {reason_2_first}"])
+            vlm_reason = " ".join([f"Judge 1: {reason_1_first}", f"Judge 2: {reason_2_first}"])
 
         completion_tokens = usage_1_first.completion_tokens + usage_2_first.completion_tokens
         prompt_tokens = usage_1_first.prompt_tokens + usage_2_first.prompt_tokens
