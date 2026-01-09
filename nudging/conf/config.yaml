@@ -21,7 +21,7 @@ general:
   # Directory containing the images to be tested
   data_dir: ${hydra:runtime.cwd}/data/new_dataset
   # Total number of iterations to run per image
-  iterations: 5
+  iterations: 10
   # Enable previous image context during editing
   enable_editing_context: true
   # Output aspect ratio for edited images
@@ -63,7 +63,7 @@ competition:
     Assume the proposals in the history didn't work, so try to suggest something different.
     Your edits should use an understanding of consumer psychology and visual storytelling to make the product achieve a higher rating.
   selector_system_prompt: |
-    You are selecting the best image option from a set of candidates based on feedback about why an alternative was chosen over the previous image version.
+    You are selecting the most appropriate image option from a set of candidates based on feedback about why an alternative was chosen over the previous image version.
     Choose the option that best addresses the feedback while making a meaningful visual change to increase the rating of the product.
   judge_prompts:
     - You are a shopping agent deciding between two product photos on behalf of a user. Choose the one you would rate higher.

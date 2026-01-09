@@ -738,29 +738,15 @@ class VisualNudgeCompetitionWithSelector:
             "final_state_b": state_b
         }
 
-    def run(self, image_paths: list[str], results_dir: str, max_workers: int = 1):
+    def run(self, pairs: list[tuple[str, str]], results_dir: str, max_workers: int = 1):
         """
         Run paired contests for all combinations of images.
         Each pair competes until equilibrium is reached.
         """
         run_start = time.time()
 
-        # Generate all pairs
-        image_categories = {}
-        for image_path in image_paths:
-            base_name = os.path.splitext(os.path.basename(image_path))[0]
-            category = base_name.split("_")[0]  # Assuming category is prefix before the first underscore
-            image_categories.setdefault(category, [])
-            image_categories[category].append(image_path)
-
-        pairs = []
-        for category, paths in image_categories.items():
-            category_pairs = list(combinations(paths, 2))
-            pairs.extend(category_pairs)
-
         logging.debug(f"\n{'='*80}")
         logging.debug(f"🥊 Starting Paired Contest Competition")
-        logging.debug(f"   Images: {len(image_paths)}")
         logging.debug(f"   Total pairs: {len(pairs)}")
         logging.debug(f"   Max rounds per pair: {self.max_rounds_per_pair}")
         logging.debug(f"   Equilibrium threshold: {self.equilibrium_threshold}")
@@ -794,7 +780,6 @@ class VisualNudgeCompetitionWithSelector:
         with open(summary_path, "w") as f:
             f.write(f"Paired Contest Competition - Global Summary\n")
             f.write(f"{'='*80}\n\n")
-            f.write(f"Total images: {len(image_paths)}\n")
             f.write(f"Total pairs: {len(pairs)}\n")
             f.write(f"Total images generated: {self._total_num_images_generated}\n")
             f.write(f"Estimated cost: ${self._total_num_images_generated * self._cost_per_image_generated:.2f}\n\n")

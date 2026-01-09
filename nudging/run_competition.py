@@ -314,32 +314,14 @@ def main(cfg: Config):
     phase2_dir = os.path.join(results_dir, "phase2_competition")
     os.makedirs(phase2_dir, exist_ok=True)
 
-    # Extract unique image paths from comparable pairs
-    comparable_image_paths = list(set(
-        path for pair in comparable_pairs for path in pair
-    ))
-
-    # Run competition
-    competition_results = competition.run(
-        comparable_image_paths, phase2_dir, cfg.general.max_workers
+    # Run competition on the comparable pairs
+    competition.run(
+        pairs=comparable_pairs,
+        results_dir=phase2_dir,
+        max_workers=cfg.general.max_workers
     )
 
-    # Save final summary
-    summary_path = os.path.join(results_dir, "competition_summary.txt")
-    with open(summary_path, "w") as f:
-        f.write(f"Competition Pipeline Summary\n")
-        f.write(f"{'='*80}\n\n")
-        f.write(f"Total images: {len(image_paths)}\n")
-        f.write(f"Comparable pairs found: {len(comparable_pairs)}\n")
-        f.write(f"Competition results: {len(competition_results)} pairs competed\n\n")
-        
-        f.write(f"Comparable Pairs:\n")
-        for path_1, path_2 in comparable_pairs:
-            id_1 = os.path.splitext(os.path.basename(path_1))[0]
-            id_2 = os.path.splitext(os.path.basename(path_2))[0]
-            f.write(f"  - {id_1} vs {id_2}\n")
-
-    logging.info(f"\nCompetition pipeline complete. Summary saved to: {summary_path}")
+    logging.info(f"\nCompetition pipeline complete. Results saved to: {results_dir}\n")
 
 if __name__ == "__main__":
     main()
