@@ -3,6 +3,20 @@ from typing import List, Type, Literal
 from utils.wrappers import IOSchema
 
 
+def create_evaluator_without_prompt_input_schema(
+    images_description: str,
+    metadata_description: str = ""
+) -> Type[IOSchema]:
+    """
+    Creates an EvaluatorWithoutPromptInput schema class with configurable field descriptions.
+    """
+    class EvaluatorWithoutPromptInput(IOSchema):
+        """Input schema for evaluator model without judge prompt."""
+        images: List[bytes] = Field(description=images_description)
+        metadata: str = Field(description=metadata_description)
+
+    return EvaluatorWithoutPromptInput
+
 def create_evaluator_input_schema(
     images_description: str,
     judge_prompt_description: str,
@@ -29,30 +43,6 @@ def create_evaluator_output_schema(choice_description: str, choice_options: List
         reason: str = Field(description=reason_description)
 
     return EvaluatorOutput
-
-
-def create_loss_input_schema(choice_description: str, choice_options: List[str], reason_description: str, to_improve_description: str) -> Type[IOSchema]:
-    """
-    Creates a LossInput schema class with configurable field descriptions.
-    """
-    class LossInput(IOSchema):
-        """Input schema for loss model."""
-        choice: Literal[*choice_options] = Field(description=choice_description) # type: ignore
-        reason: str = Field(description=reason_description)
-        to_improve: Literal[*choice_options] = Field(description=to_improve_description) # type: ignore
-
-    return LossInput
-
-
-def create_loss_output_schema(suggestions_description: str) -> Type[IOSchema]:
-    """
-    Creates a CritiqueOutput schema class with configurable field descriptions.
-    """
-    class LossOutput(IOSchema):
-        """Output schema for loss model."""
-        suggestions: str = Field(description=suggestions_description)
-
-    return LossOutput
 
 
 def create_optimizer_input_schema(
@@ -184,27 +174,3 @@ def create_theme_summarizer_output_schema(themes_description: str) -> Type[IOSch
         themes: str = Field(description=themes_description)
 
     return ThemeSummarizerOutput
-
-
-def create_score_input_schema(image_description: str, judge_prompt_description: str) -> Type[IOSchema]:
-    """
-    Creates a ScoreInput schema class for single-image score evaluation.
-    """
-    class ScoreInput(IOSchema):
-        """Input schema for score-based evaluator model."""
-        image: bytes = Field(description=image_description)
-        judge_prompt: str = Field(description=judge_prompt_description)
-
-    return ScoreInput
-
-
-def create_score_output_schema(score_description: str, reason_description: str) -> Type[IOSchema]:
-    """
-    Creates a ScoreOutput schema class for single-image score evaluation.
-    """
-    class ScoreOutput(IOSchema):
-        """Output schema for score-based evaluator model."""
-        score: int = Field(ge=1, le=100, description=score_description)
-        reason: str = Field(description=reason_description)
-
-    return ScoreOutput

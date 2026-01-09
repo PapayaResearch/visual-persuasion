@@ -19,11 +19,13 @@ class SoloEvaluationPipeline:
         self,
         evaluator_model: LanguageModel,
         strategy_name: str,
+        valid_statuses: List[str],
         n_evaluations: int = 1
     ):
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
         self.strategy_name = strategy_name
+        self.valid_statuses = valid_statuses
         self.n_evaluations = n_evaluations
 
     def _parse_filename_zero_shot(self, filename: str) -> Tuple[str, str, str]:
@@ -47,9 +49,7 @@ class SoloEvaluationPipeline:
         if not filename.endswith('.jpg'):
             return None
 
-        valid_statuses = ['final', 'original', 'no-prior', 'zero-shot']
-
-        for status in valid_statuses:
+        for status in self.valid_statuses:
             if filename.endswith(f'_{status}.jpg'):
                 base = filename[:-4]
                 parts = base.split('_')
