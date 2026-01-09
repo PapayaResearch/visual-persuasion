@@ -33,7 +33,7 @@ class VisualNudgeCompetition:
     equilibrium_threshold: float = 0.51  # Win rate below this (close to 0.5) indicates equilibrium
     min_rounds_before_equilibrium: int = 10  # Minimum rounds before checking for equilibrium
     max_rounds_per_pair: int = 10  # Maximum improvement rounds per pair before declaring equilibrium
-    
+
     # Tie-breaking strategy when judges are split 50-50 or inconsistent
     tie_breaking_strategy: str = "first"
 

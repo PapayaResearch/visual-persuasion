@@ -25,7 +25,7 @@ evaluator_model:
   output_schema:
     _target_: nudging.schema.create_evaluator_output_schema
     choice_description: |
-      Which image is chosen: 'first' or 'second'
+      Your choice: 'first' or 'second'
     choice_options: ['first', 'second']
     reason_description: ${competition.evaluator_reason_description}
   api_call: ${llm}
