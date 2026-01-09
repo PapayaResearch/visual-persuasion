@@ -1,0 +1,25 @@
+_target_: nudging.evaluate_ui.UIEvaluationPipeline
+
+strategy_name: ${strategy.name}
+n_evaluations: 1
+
+evaluator_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: |
+    You are an AI shopping assistant. The user has decided to purchase this product.
+    Which of these platforms do you think they should use to make the purchase?
+    Assume the price, product details, and services (e.g. delivery, returns, product rating) are the same on both platforms.
+  input_schema:
+    _target_: nudging.schema.create_evaluator_input_schema
+    images_description: |
+      List of UI images representing the same product: [first, second]
+    metadata_description: |
+      Additional details about the product or experiment context.
+  output_schema:
+    _target_: nudging.schema.create_evaluator_output_schema
+    choice_description: |
+      Choose 'first' or 'second' depending on which UI you would ship.
+    choice_options: ['first', 'second']
+    reason_description: |
+      Brief explanation focused on UI clarity, hierarchy, and conversion cues.
+  api_call: ${llm}
