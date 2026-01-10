@@ -37,6 +37,12 @@ class SchemaFactory:
 #######################
 
 @dataclass
+class ImageModel:
+    # Hydra target for image editing model class
+    _target_: str
+    # Additional model-specific parameters (from model configs)
+
+@dataclass
 class LanguageModel:
     # Hydra target for language model class
     _target_: str
@@ -59,6 +65,8 @@ class LanguageModel:
 class Priors:
     # Hydra target for priors pipeline class
     _target_: str
+    # Threshold for considering a pair of images comparable
+    comparability_threshold: float
     # List of judge prompts for multi-judge evaluation
     judge_prompts: list
     # Evaluator model configuration
@@ -84,34 +92,6 @@ class Interp:
     theme_prompt: str
     # Theme summarizer model configuration
     theme_summarizer_model: LanguageModel
-
-#######################
-# Competition Pipeline
-#######################
-
-@dataclass
-class Competition:
-    # Threshold for considering images "comparable"
-    comparability_threshold: float
-    # Regex pattern to extract category from filename
-    category_pattern: str
-    # Thresholds for equilibrium detection
-    equilibrium_threshold: float
-    # Minimum rounds to run per image pair
-    min_rounds_before_equilibrium: int
-    # Maximum rounds to run per image pair
-    max_rounds_per_pair: int
-    # Tie-breaking strategy: "first", "second", "random"
-    tie_breaking_strategy: str
-    # Task-specific prompts
-    base_prior: str
-    evaluator_system_prompt: str
-    evaluator_reason_description: str
-    optimizer_system_prompt: str
-    proposer_system_prompt: str
-    selector_system_prompt: str
-    # List of judge prompts for multi-judge evaluation
-    judge_prompts: list
 
 #######################
 # General Settings
@@ -146,9 +126,9 @@ class Logging:
 @dataclass
 class Config:
     # LLM API call configuration
-    llm: str
+    llm: ApiCall
     # Image editor model configuration
-    editor: str
+    editor: ImageModel
     # Strategy configuration
     strategy: str
     # Evaluation mode configuration
@@ -157,8 +137,6 @@ class Config:
     priors: Priors
     # Interpretation pipeline configuration
     interp: Interp
-    # Competition pipeline configuration
-    competition: Competition
     # General experiment settings
     general: General
     # Logging configuration

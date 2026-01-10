@@ -33,41 +33,45 @@ cd setup
 python main.py general.src_dir=/path/to/visual-nudging/setup/data/abod general.dst_dir=/path/to/visual-nudging/nudging/data dataset.name=abod general.max_workers=32
 ```
 
-## Nudging Pipeline
-
-### Zero-shot
-
-With priors by default:
+## Comparability Evaluation
 
 ```bash
 cd nudging
-python run_nudging.py general.data_dir=/path/to/visual-nudging/nudging/data/abod/ strategy=zero-shot general.max_workers=32
+python run_priors.py general.data_dir=/path/to/visual-nudging/nudging/data/abod/ general.max_workers=32
 ```
 
-and without priors:
+## Optimization Pipeline
+
+### Zero-shot Strategy
 
 ```bash
 cd nudging
-python run_nudging.py general.data_dir=/path/to/visual-nudging/nudging/data/abod/ strategy=zero-shot strategy.priors=[] strategy.base_prior="Make this product photo look more appealing. Keep the product itself exactly unchanged." strategy.base_template="\{prior\}" general.max_workers=32
+python run_optimization.py general.data_dir=/path/to/visual-nudging/nudging/data/abod/ strategy=zero-shot general.max_workers=32
 ```
 
-### Competition
+### Competition Strategy
+
+#### NOTE: Comparability evaluation (run_priors.py) must be run before using the competition strategy
 
 ```bash
 cd nudging
-python run_nudging.py general.data_dir=/path/to/visual-nudging/nudging/data/abod/ strategy=competition general.max_workers=32
+python run_optimization.py general.data_dir=/path/to/visual-nudging/nudging/data/abod/ strategy=competition general.max_workers=32
 ```
 
 ## Evaluation
 
-```bash
-cd nudging
-python run_evaluation.py strategy=zero-shot general.data_dir=results/zero-shot/TIMESTAMP/ llm=gpt-5-nano general.max_workers=32
-```
+### Pair-wise Evaluation
 
 ```bash
 cd nudging
-python run_evaluation.py strategy=competition general.data_dir=results/competition/TIMESTAMP/ llm=gpt-5-nano general.max_workers=32
+python run_evaluation.py evaluate=pairs general.data_dir=results/competition/TIMESTAMP/ general.max_workers=32
+```
+
+### Solo Evaluation
+
+```bash
+cd nudging
+python run_evaluation.py evaluate=solo general.data_dir=results/competition/TIMESTAMP/ general.max_workers=32
 ```
 
 ## Interpretation of Results
