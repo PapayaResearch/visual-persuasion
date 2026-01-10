@@ -27,13 +27,9 @@ class Gemini(ImageModel):
             context_image = Image.open(io.BytesIO(context_image_bytes)).convert("RGB")
             contents.append(context_image)
 
-        # API call
+        # API call with retries
+        response = None
         for attempt in range(self.max_retries):
-            if attempt == self.max_retries:
-                logging.error("Gemini API call failed: maximum retries exceeded.\n")
-                return None, None
-            # Try to get a response
-            response = None
             try:
                 response = self.client.models.generate_content(
                     model=self.model,
@@ -45,12 +41,22 @@ class Gemini(ImageModel):
                         )
                     )
                 )
+                # Validate response has required structure
                 if response and response.candidates and response.candidates[0].content:
                     break
+                else:
+                    logging.warning(f"Gemini API returned invalid response structure (attempt {attempt + 1}/{self.max_retries})\n")
+                    response = None  # Reset to None since it's invalid
             except Exception as e:
                 logging.error(f"Gemini API call failed (attempt {attempt + 1}/{self.max_retries}): {e}\n")
-                continue
+                response = None
 
+        # Check if we got a valid response after all retries
+        if not response or not response.candidates or not response.candidates[0].content:
+            logging.error("Gemini API call failed: no valid response after all retries.\n")
+            return None, None
+
+        # Extract image from response
         edited_image = None
         edited_image_bytes = None
 
@@ -58,6 +64,7 @@ class Gemini(ImageModel):
             if part.inline_data:
                 edited_image_bytes = part.inline_data.data
                 edited_image = Image.open(io.BytesIO(edited_image_bytes)).convert("RGB")
+                break
 
         return edited_image, edited_image_bytes
 
