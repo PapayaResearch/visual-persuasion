@@ -26,6 +26,22 @@ general:
   resume: false
 
 ######################
+# Priors Settings
+######################
+
+priors:
+  # Hydra target class for the priors pipeline
+  _target_: nudging.priors.ComparabilityEvaluator
+
+  # Threshold for considering a pair of images comparable
+  comparability_threshold: 0.6
+
+  # Judge prompts for comparability evaluation
+  judge_prompts: ${strategy.judge_prompts}
+  # Evaluator model for comparability evaluation
+  evaluator_model: ${strategy.evaluator_model}
+
+######################
 # Interpretation Settings
 ######################
 

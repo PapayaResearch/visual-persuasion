@@ -1,6 +1,5 @@
 import os
 import io
-import re
 import time
 import random
 import csv
@@ -15,7 +14,6 @@ from PIL import Image
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
-from itertools import combinations
 from utils.wrappers import ImageModel, LanguageModel
 
 
@@ -744,12 +742,36 @@ class VisualNudgeCompetition:
             "final_state_b": state_b
         }
 
-    def run(self, pairs: list[tuple[str, str]], results_dir: str, max_workers: int = 1):
+    def run(self, image_paths: list[str], results_dir: str, max_workers: int = 1):
         """
         Run paired contests for all combinations of images.
         Each pair competes until equilibrium is reached.
         """
         run_start = time.time()
+
+        # Check if comparable_pairs.csv exists in the same directory as the images
+        image_dir = os.path.dirname(image_paths[0])
+        comparability_results_csv = os.path.join(image_dir, "comparability_results.csv")
+
+        if os.path.isfile(comparability_results_csv):
+            logging.info(f"Reading comparable pairs from: {comparability_results_csv}")
+            pairs = []
+            with open(comparability_results_csv, "r", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row["is_comparable"].lower() == "true":
+                        logging.info(f"Found comparable pair: {row['id_1']} and {row['id_2']}, {row["is_comparable"].lower()}")
+                        image_1_path = os.path.join(image_dir, row["id_1"] + ".jpg")
+                        image_2_path = os.path.join(image_dir, row["id_2"] + ".jpg")
+                        if os.path.isfile(image_1_path) and os.path.isfile(image_2_path):
+                            pairs.append((image_1_path, image_2_path))
+        else:
+            logging.error(f"Comparability results not found at: {comparability_results_csv}")
+            raise FileNotFoundError(f"Comparability results not found at: {comparability_results_csv}")
+
+        if not pairs:
+            logging.error("No comparable image pairs found to run contests.")
+            raise ValueError("No comparable image pairs found to run contests.")
 
         logging.debug(f"\n{'='*80}")
         logging.debug(f"🥊 Starting Paired Contest Competition")
@@ -817,297 +839,3 @@ class VisualNudgeCompetition:
         logging.debug(f"{'='*80}\n")
 
         return results
-
-
-def evaluate_pair_comparability(
-    image_id_1: str,
-    img_bytes_1: bytes,
-    image_id_2: str,
-    img_bytes_2: bytes,
-    judge_prompts: list[str],
-    evaluator_model: LanguageModel,
-    comparability_threshold: float
-) -> tuple[bool, float, str]:
-    """
-    Evaluate whether a pair of images is "comparable" on the target parameter.
-    A pair is considered comparable if the votes are evenly split.
-    """
-    def evaluate_single(judge_id: int, is_1_first: bool):
-        """Single judge evaluation with position tracking."""
-        images = [img_bytes_1, img_bytes_2] if is_1_first else [img_bytes_2, img_bytes_1]
-        choice_map = {
-            "first": image_id_1 if is_1_first else image_id_2,
-            "second": image_id_2 if is_1_first else image_id_1,
-        }
-
-        evaluation = evaluator_model.get_response(
-            images=images,
-            judge_prompt=judge_prompts[judge_id],
-            metadata="Context: the user is looking for a(n) %s." % image_id_1.split("_")[0].lower()
-        )
-
-        if evaluation is None:
-            return None
-
-        real_choice = choice_map.get(evaluation.choice.lower())
-        return (real_choice, evaluation.reason)
-
-    # Run all evaluations in parallel (each judge evaluates twice with swapped positions)
-    judge_results = {}
-
-    num_judges = len(judge_prompts)
-    with ThreadPoolExecutor(max_workers=min(num_judges * 2, 8)) as executor:
-        future_to_judge = {}
-        for judge_id in range(num_judges):
-            for is_1_first in [True, False]:
-                future = executor.submit(evaluate_single, judge_id, is_1_first)
-                future_to_judge[future] = (judge_id, is_1_first)
-
-        for future in as_completed(future_to_judge):
-            judge_id, is_1_first = future_to_judge[future]
-            result = future.result()
-
-            if judge_id not in judge_results:
-                judge_results[judge_id] = {}
-            judge_results[judge_id][is_1_first] = result
-
-    # Aggregate consistent judges
-    votes = {image_id_1: 0, image_id_2: 0}
-    total_consistent_judges = 0
-
-    for judge_id, results in judge_results.items():
-        result_1_first = results.get(True)
-        result_2_first = results.get(False)
-
-        if result_1_first is None or result_2_first is None:
-            continue
-
-        choice_1_first, _ = result_1_first
-        choice_2_first, _ = result_2_first
-
-        # Only count consistent judges
-        if choice_1_first == choice_2_first:
-            total_consistent_judges += 1
-            votes[choice_1_first] += 1
-
-    # Determine comparability
-    if total_consistent_judges == 0:
-        # No consistent judges = treat as comparable (high uncertainty)
-        return True, 0.5, image_id_1
-
-    winner = max(votes, key=votes.get)
-    winner_score = votes[winner] / total_consistent_judges
-
-    # Pair is comparable if the decision is close to even
-    is_comparable = winner_score <= comparability_threshold
-
-    logging.info(
-        f"Pair {image_id_1} vs {image_id_2}: "
-        f"winner={winner}, score={winner_score:.2%}, "
-        f"comparable={is_comparable}"
-    )
-
-    return is_comparable, winner_score, winner
-
-
-def filter_comparable_pairs(
-    image_paths: list[str],
-    results_dir: str,
-    judge_prompts: list[str],
-    evaluator_model: LanguageModel,
-    comparability_threshold: float,
-    category_pattern: str,
-    max_workers: int = 1
-) -> list[tuple[str, str]]:
-    """
-    Phase 1: Filter all pairs to find comparable images.
-    Returns list of (image_path_1, image_path_2) tuples for comparable pairs.
-    """
-    logging.info(f"\n{'='*80}")
-    logging.info(f"PHASE 1: Filtering Comparable Pairs")
-    logging.info(f"{'='*80}\n")
-
-    # Group images by category
-    image_categories = {}
-    for image_path in image_paths:
-        base_name = os.path.splitext(os.path.basename(image_path))[0]
-        match = re.match(category_pattern, base_name)
-        if match:
-            category = match.group(1)
-        else:
-            category = "default"
-        image_categories.setdefault(category, []).append(image_path)
-
-    # Generate all pairs within each category
-    all_pairs = []
-    for category, paths in image_categories.items():
-        category_pairs = list(combinations(paths, 2))
-        all_pairs.extend(category_pairs)
-
-    logging.info(f"Total pairs to evaluate: {len(all_pairs)}")
-
-    # Load image bytes
-    image_bytes_cache = {}
-    for path in image_paths:
-        with open(path, "rb") as f:
-            image_bytes_cache[path] = f.read()
-
-    # Evaluate all pairs for comparability
-    comparable_pairs = []
-    comparability_results = []
-
-    def evaluate_pair(pair: tuple[str, str]):
-        path_1, path_2 = pair
-        id_1 = os.path.splitext(os.path.basename(path_1))[0]
-        id_2 = os.path.splitext(os.path.basename(path_2))[0]
-
-        is_comparable, score, winner = evaluate_pair_comparability(
-            id_1, image_bytes_cache[path_1],
-            id_2, image_bytes_cache[path_2],
-            judge_prompts,
-            evaluator_model,
-            comparability_threshold
-        )
-
-        return {
-            "pair": pair,
-            "id_1": id_1,
-            "id_2": id_2,
-            "is_comparable": is_comparable,
-            "score": score,
-            "winner": winner
-        }
-
-    with tqdm(total=len(all_pairs), desc="Evaluating pairs", unit="pair") as pbar:
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(evaluate_pair, pair): pair for pair in all_pairs}
-
-            for future in as_completed(futures):
-                result = future.result()
-                comparability_results.append(result)
-
-                if result["is_comparable"]:
-                    comparable_pairs.append(result["pair"])
-
-                pbar.update(1)
-
-    # Save comparability results
-    comparability_csv = os.path.join(results_dir, "comparability_results.csv")
-    with open(comparability_csv, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["id_1", "id_2", "is_comparable", "score", "winner"])
-        writer.writeheader()
-        for r in comparability_results:
-            writer.writerow({
-                "id_1": r["id_1"],
-                "id_2": r["id_2"],
-                "is_comparable": r["is_comparable"],
-                "score": r["score"],
-                "winner": r["winner"]
-            })
-
-    logging.info(f"\n{'='*60}")
-    logging.info(f"Phase 1 Complete: Found {len(comparable_pairs)}/{len(all_pairs)} comparable pairs")
-    logging.info(f"Comparability results saved to: {comparability_csv}")
-    logging.info(f"{'='*60}\n")
-
-    return comparable_pairs
-
-
-@dataclasses.dataclass
-class OptimizationPipeline:
-    """
-    Orchestrates parametric optimization of product images.
-    Phase 1: Filter pairs to identify "comparable" images
-    Phase 2: Run competition between comparable pairs
-    """
-    name: str
-    base_prior: str
-    image_editing_model: ImageModel
-    judge_prompts: list[str]
-    evaluator_model: LanguageModel
-    equilibrium_threshold: float
-    min_rounds_before_equilibrium: int
-    max_rounds_per_pair: int
-    tie_breaking_strategy: str
-    use_last_winner_as_base: bool
-    optimizer_model: LanguageModel
-    num_improvement_proposals: int
-    proposer_model: LanguageModel
-    selector_model: LanguageModel
-    use_candidates: bool
-    comparability_threshold: float
-    category_pattern: str
-
-    def __post_init__(self):
-        """Initialize the pipeline."""
-        # Track comparable pairs
-        self.comparable_pairs: list[tuple[str, str]] = []
-
-    def run(self, image_paths: list[str], results_dir: str, max_workers: int = 1):
-        """
-        Run the full optimization pipeline.
-        Phase 1: Filter pairs to find comparable images
-        Phase 2: Run competition on comparable pairs
-        """
-        logging.info(f"\n{'='*80}")
-        logging.info(f"COMPETITION PIPELINE")
-        logging.info(f"Number of Images: {len(image_paths)}")
-        logging.info(f"{'='*80}\n")
-
-        # Phase 1: Filter comparable pairs
-        phase1_dir = os.path.join(results_dir, "phase1_comparability")
-        os.makedirs(phase1_dir, exist_ok=True)
-
-        comparable_pairs = filter_comparable_pairs(
-            image_paths=image_paths,
-            results_dir=phase1_dir,
-            judge_prompts=self.judge_prompts,
-            evaluator_model=self.evaluator_model,
-            comparability_threshold=self.comparability_threshold,
-            category_pattern=self.category_pattern,
-            max_workers=max_workers
-        )
-
-        if not comparable_pairs:
-            logging.warning("No comparable pairs found. Exiting competition.")
-            return
-
-        # Phase 2: Run competition on comparable pairs
-        logging.info(f"\n{'='*80}")
-        logging.info(f"PHASE 2: Running Competition on {len(comparable_pairs)} Comparable Pairs")
-        logging.info(f"{'='*80}\n")
-
-        phase2_dir = os.path.join(results_dir, "phase2_competition")
-        os.makedirs(phase2_dir, exist_ok=True)
-
-        # Run competition on the comparable pairs
-        competition = VisualNudgeCompetition(
-            name=self.name,
-            base_prior=self.base_prior,
-            image_editing_model=self.image_editing_model,
-            judge_prompts=self.judge_prompts,
-            evaluator_model=self.evaluator_model,
-            equilibrium_threshold=self.equilibrium_threshold,
-            min_rounds_before_equilibrium=self.min_rounds_before_equilibrium,
-            max_rounds_per_pair=self.max_rounds_per_pair,
-            tie_breaking_strategy=self.tie_breaking_strategy,
-            use_last_winner_as_base=self.use_last_winner_as_base,
-            optimizer_model=self.optimizer_model,
-            num_improvement_proposals=self.num_improvement_proposals,
-            proposer_model=self.proposer_model,
-            selector_model=self.selector_model,
-            use_candidates=self.use_candidates
-        )
-
-        competition_results = competition.run(
-            pairs=comparable_pairs,
-            results_dir=phase2_dir,
-            max_workers=max_workers
-        )
-
-        logging.info(f"\nCompetition pipeline complete. Results saved to: {results_dir}\n")
-
-        return {
-            "comparable_pairs": comparable_pairs,
-            "competition_results": competition_results
-        }

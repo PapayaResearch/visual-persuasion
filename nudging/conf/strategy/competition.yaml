@@ -1,4 +1,4 @@
-_target_: nudging.competition.OptimizationPipeline
+_target_: nudging.competition.VisualNudgeCompetition
 
 # Strategy name for logging/results organization
 name: competition
@@ -6,11 +6,6 @@ name: competition
 # Whether to use candidates from proposer + selector
 # or just use optimizer proposals directly
 use_candidates: true
-
-# Regex pattern to extract category from filename
-category_pattern: '^([^_]+)_'
-# Threshold for considering images "comparable"
-comparability_threshold: 0.6
 
 # Thresholds for equilibrium detection
 equilibrium_threshold: 0.51
