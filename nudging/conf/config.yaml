@@ -24,12 +24,6 @@ general:
   max_workers: 10
   # Resume from latest run if some results exist
   resume: false
-  # Valid statuses for image filenames
-  valid_statuses:
-    - final
-    - original
-    - no-prior
-    - zero-shot
 
 ######################
 # Competition Settings

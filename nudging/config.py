@@ -125,8 +125,6 @@ class General:
     max_workers: int
     # Resume from latest run if some results exist
     resume: bool
-    # Valid statuses for image filenames
-    valid_statuses: list
 
 #######################
 # Logging Settings
