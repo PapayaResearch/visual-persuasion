@@ -3,17 +3,14 @@ _target_: nudging.competition.OptimizationPipeline
 # Strategy name for logging/results organization
 name: competition
 
-# Whether to use selector-based competition or standard competition
-use_selector: true
+# Whether to use candidates from proposer + selector
+# or just use optimizer proposals directly
+use_candidates: true
 
 # Regex pattern to extract category from filename
 category_pattern: '^([^_]+)_'
 # Threshold for considering images "comparable"
 comparability_threshold: 0.6
-
-#####################################
-# Common Settings
-#####################################
 
 # Thresholds for equilibrium detection
 equilibrium_threshold: 0.51
@@ -23,6 +20,8 @@ min_rounds_before_equilibrium: 5
 max_rounds_per_pair: 10
 # Tie-breaking strategy: "first", "second", "random"
 tie_breaking_strategy: random
+# Whether to use last winning image as base for next edit
+use_last_winner_as_base: true
 # Base prior prompt for all image edits
 base_prior: |
   Make this product photo achieve a higher rating. Keep the product itself exactly unchanged.
@@ -79,10 +78,6 @@ evaluator_model:
       Focus on the visual aspects of the un-chosen image that could be improved to achieve a higher rating (not the immutable attributes of the product itself, which should remain unchanged).
   api_call: ${llm}
 
-#####################################
-# Standard Competition Settings
-#####################################
-
 optimizer_model:
   _target_: utils.wrappers.LanguageModel
   system_prompt: |
@@ -109,20 +104,6 @@ optimizer_model:
       Should be concise; 1-2 sentences at most.
   api_call: ${llm}
 
-#####################################
-# Selector-based Competition Settings
-#####################################
-
-use_last_winner_as_base: true
-always_zero_shot: true
-
-editing_context_prompt: |
-  The first image is the current state of the product photo. The second is the original unedited photo, for context.
-  Keep the product itself exactly unchanged.
-  You may add other contextual elements.
-background_state_prompt: |
-  The background should stay realistic and coherent with the product. Hold everything constant except for the provided instructions.
-
 num_improvement_proposals: 3
 proposer_model:
   _target_: utils.wrappers.LanguageModel
@@ -136,9 +117,9 @@ proposer_model:
   input_schema:
     _target_: nudging.schema.create_proposer_input_schema
     current_prompt_description: |
-      The current best image editing prompt (may be empty if proposer shouldn't see it)
+      The current best image editing prompt
     history_of_prompts_description: |
-      The history of previous prompts used so far (may be empty if proposer shouldn't see it)
+      The history of previous prompts used so far
     current_iteration_description: |
       The current iteration number (1-indexed)
     total_iterations_description: |

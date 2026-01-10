@@ -8,9 +8,9 @@ defaults:
   - llm: gemini-2-5-flash
   # Image editor model (e.g., nano-banana-flash, nano-banana-pro)
   - editor: nano-banana-flash
-  # Strategy for nudging (e.g., zero-shot, competition, competition_selector)
+  # Strategy for nudging (e.g., zero-shot, competition)
   - strategy: competition
-  # Evaluation mode (pairs vs solo)
+  # Evaluation mode (e.g., solo, pairs)
   - evaluate: pairs
 
 ######################
