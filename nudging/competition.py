@@ -95,6 +95,18 @@ class VisualNudgeCompetition:
             logging.info(f"Judge {judge_id}: Chose {real_choice} - {evaluation.reason}\n")
             return (real_choice, evaluation.reason)
 
+        def break_tie(image_a_name: str, image_b_name: str):
+            """Apply tie-breaking strategy"""
+            if self.tie_breaking_strategy == "first":
+                winner = image_a_name
+            elif self.tie_breaking_strategy == "second":
+                winner = image_b_name
+            elif self.tie_breaking_strategy == "random":
+                winner = random.choice([image_a_name, image_b_name])
+            else:
+                raise ValueError(f"Unknown tie-breaking strategy: {self.tie_breaking_strategy}")
+            return winner
+
         # Run all evaluations in parallel
         judge_results = {}  # judge_id -> {True: result, False: result}
 
@@ -138,17 +150,9 @@ class VisualNudgeCompetition:
         # Determine winner
         if total_consistent_judges == 0:
             logging.warning("No consistent judges. Applying tie-breaking strategy.\n")
-            logging.debug("  ⚠️  No consistent judges - applying tie-breaking.\n")
             winner_score = 0.5
             feedback = "No consistent preference detected."
-
-            # Apply tie-breaking strategy
-            if self.tie_breaking_strategy == "second":
-                winner = image_b_name
-            elif self.tie_breaking_strategy == "random":
-                winner = random.choice([image_a_name, image_b_name])
-            else:
-                winner = image_a_name
+            winner = break_tie(image_a_name, image_b_name)
         else:
             winner = max(votes, key=votes.get)
             winner_score = votes[winner] / total_consistent_judges
@@ -157,12 +161,7 @@ class VisualNudgeCompetition:
             # Check for 50-50 tie and apply tie-breaking
             if winner_score == 0.5:
                 logging.warning("Judges split 50-50. Applying tie-breaking strategy.\n")
-                if self.tie_breaking_strategy == "second":
-                    winner = image_b_name
-                elif self.tie_breaking_strategy == "random":
-                    winner = random.choice([image_a_name, image_b_name])
-                else:
-                    winner = image_a_name
+                winner = break_tie(image_a_name, image_b_name)
 
             logging.info(f"🏆 WINNER: {winner} ({votes[winner]}/{total_consistent_judges} = {winner_score:.2%})\n")
 
@@ -312,13 +311,9 @@ class VisualNudgeCompetition:
         plt.tight_layout()
 
         # Save visualization
-        try:
-            fig.savefig(viz_path, dpi=300, bbox_inches="tight")
-            logging.info(f"📊 Visualization saved to {viz_path}\n")
-        except Exception as e:
-            logging.error(f"Failed to save visualization: {e}\n")
-        finally:
-            plt.close(fig)
+        fig.savefig(viz_path, dpi=300, bbox_inches="tight")
+        logging.info(f"📊 Visualization saved to {viz_path}\n")
+        plt.close(fig)
 
     def _run_paired_contest(
         self,
