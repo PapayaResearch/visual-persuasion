@@ -290,8 +290,7 @@ class VisualNudgeCompetition:
         history_text = "\n".join([f"  - {p}" for p in history_entries]) if history_entries else "None"
         logging.info(f"Edit history:\n{history_text}\n")
 
-        is_original_state = (loser_image_bytes == original_image_bytes) and not has_prior_edits
-        if is_original_state:
+        if not has_prior_edits:
             logging.info("Applying base prior zero-shot edit before invoking proposer/selector.\n")
             editing_prompt = self._compose_prompt(None)
             edited_image, edited_image_bytes = self.image_editing_model.edit(
@@ -441,10 +440,10 @@ class VisualNudgeCompetition:
 
         # Format history for optimizer visibility
         history_text = "\n".join([f"  - {p}" for p in history_of_prompts]) if history_of_prompts else "None"
+        has_prior_edits = len(history_of_prompts) > 0
         logging.info(f"Edit history:\n{history_text}\n")
 
-        is_original_state = loser_image_bytes == original_image_bytes
-        if is_original_state:
+        if not has_prior_edits:
             improved_prompt = None
             logging.info("Applying base prior before switching to optimizer-driven edits.\n")
         else:
