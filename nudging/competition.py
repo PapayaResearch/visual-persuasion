@@ -760,7 +760,7 @@ class VisualNudgeCompetition:
                 reader = csv.DictReader(f)
                 for row in reader:
                     if row["is_comparable"].lower() == "true":
-                        logging.info(f"Found comparable pair: {row['id_1']} and {row['id_2']}, {row["is_comparable"].lower()}")
+                        logging.info(f"Found comparable pair: {row['id_1']} and {row['id_2']}, {row['is_comparable'].lower()}")
                         image_1_path = os.path.join(image_dir, row["id_1"] + ".jpg")
                         image_2_path = os.path.join(image_dir, row["id_2"] + ".jpg")
                         if os.path.isfile(image_1_path) and os.path.isfile(image_2_path):
