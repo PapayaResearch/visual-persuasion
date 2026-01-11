@@ -4,8 +4,8 @@
 
 defaults:
   - _self_
-  # Image editor model (e.g., nano-banana, nano-banana-pro)
-  - editor: nano-banana
+  # Image editor model (e.g., nano-banana-flash, nano-banana-pro)
+  - editor: nano-banana-flash
   # Strategy for processing images
   - strategy: random-sampling
 

@@ -3,7 +3,11 @@ _target_: nudging.evaluate_solo.SoloEvaluationPipeline
 # Strategy name determines filename parsing logic
 strategy_name: ${strategy.name}
 
-valid_statuses: ${general.valid_statuses}
+valid_statuses:
+  - final
+  - original
+  - no-prior
+  - zero-shot
 
 n_evaluations: 1
 

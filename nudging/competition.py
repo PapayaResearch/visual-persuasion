@@ -2,6 +2,8 @@ import os
 import io
 import time
 import random
+import csv
+import json
 import logging
 import threading
 import dataclasses
@@ -27,22 +29,25 @@ class VisualNudgeCompetition:
     image_editing_model: ImageModel
     judge_prompts: list[str]
     evaluator_model: LanguageModel
+    equilibrium_threshold: float
+    min_rounds_before_equilibrium: int
+    max_rounds_per_pair: int
+    tie_breaking_strategy: str
+    use_last_winner_as_base: bool
+    # For optimizer flow
     optimizer_model: LanguageModel
-
-    # Equilibrium detection
-    equilibrium_threshold: float = 0.51  # Win rate below this (close to 0.5) indicates equilibrium
-    min_rounds_before_equilibrium: int = 10  # Minimum rounds before checking for equilibrium
-    max_rounds_per_pair: int = 10  # Maximum improvement rounds per pair before declaring equilibrium
-
-    # Tie-breaking strategy when judges are split 50-50 or inconsistent
-    tie_breaking_strategy: str = "first"
+    # For proposer/selector flow
+    num_improvement_proposals: int
+    proposer_model: LanguageModel
+    selector_model: LanguageModel
+    # Whether to use proposer/selector or optimizer
+    use_candidates: bool
 
     def __post_init__(self):
         """Initialize tracking variables."""
         self._total_num_images_generated = 0
         self._cost_per_image_generated = 0.039
         self._counter_lock = threading.Lock()
-
         self.contest_history = {}
 
     def _compose_prompt(self, instruction: Optional[str] = None) -> str:
@@ -95,6 +100,18 @@ class VisualNudgeCompetition:
             logging.info(f"Judge {judge_id}: Chose {real_choice} - {evaluation.reason}\n")
             return (real_choice, evaluation.reason)
 
+        def break_tie(image_a_name: str, image_b_name: str):
+            """Apply tie-breaking strategy"""
+            if self.tie_breaking_strategy == "first":
+                winner = image_a_name
+            elif self.tie_breaking_strategy == "second":
+                winner = image_b_name
+            elif self.tie_breaking_strategy == "random":
+                winner = random.choice([image_a_name, image_b_name])
+            else:
+                raise ValueError(f"Unknown tie-breaking strategy: {self.tie_breaking_strategy}")
+            return winner
+
         # Run all evaluations in parallel
         judge_results = {}  # judge_id -> {True: result, False: result}
 
@@ -138,17 +155,9 @@ class VisualNudgeCompetition:
         # Determine winner
         if total_consistent_judges == 0:
             logging.warning("No consistent judges. Applying tie-breaking strategy.\n")
-            logging.debug("  ⚠️  No consistent judges - applying tie-breaking.\n")
             winner_score = 0.5
             feedback = "No consistent preference detected."
-
-            # Apply tie-breaking strategy
-            if self.tie_breaking_strategy == "second":
-                winner = image_b_name
-            elif self.tie_breaking_strategy == "random":
-                winner = random.choice([image_a_name, image_b_name])
-            else:
-                winner = image_a_name
+            winner = break_tie(image_a_name, image_b_name)
         else:
             winner = max(votes, key=votes.get)
             winner_score = votes[winner] / total_consistent_judges
@@ -157,12 +166,7 @@ class VisualNudgeCompetition:
             # Check for 50-50 tie and apply tie-breaking
             if winner_score == 0.5:
                 logging.warning("Judges split 50-50. Applying tie-breaking strategy.\n")
-                if self.tie_breaking_strategy == "second":
-                    winner = image_b_name
-                elif self.tie_breaking_strategy == "random":
-                    winner = random.choice([image_a_name, image_b_name])
-                else:
-                    winner = image_a_name
+                winner = break_tie(image_a_name, image_b_name)
 
             logging.info(f"🏆 WINNER: {winner} ({votes[winner]}/{total_consistent_judges} = {winner_score:.2%})\n")
 
@@ -171,7 +175,250 @@ class VisualNudgeCompetition:
 
         return winner, winner_score, feedback
 
-    def _improve_loser(
+    def _visualize_competition(
+        self,
+        pair_name: str,
+        base_a: str,
+        base_b: str,
+        round_history: list[dict],
+        results_dir: str,
+        viz_path: str
+    ):
+        """
+        Create grid display of competition progress.
+        Columns: Round number, Contestant A, Contestant B
+        Rows: Each round of competition
+        """
+        num_rounds = len(round_history)
+        if num_rounds == 0:
+            return
+
+        # Create figure with 3 columns (round label, image A, image B)
+        fig, axes = plt.subplots(num_rounds, 3, figsize=(15, 5 * num_rounds))
+
+        # Handle single round case
+        if num_rounds == 1:
+            axes = axes.reshape(1, -1)
+
+        fig.suptitle(f"Competition Progress: {base_a} vs {base_b}", fontsize=16, fontweight="bold", y=1.02)
+
+        for round_idx, round_data in enumerate(round_history):
+            round_num = round_data["round"]
+            winner = round_data["winner"]
+            score = round_data["score"]
+
+            # Round label column
+            ax_label = axes[round_idx, 0]
+            ax_label.text(0.5, 0.5, f"Round {round_num}\n{winner} wins\n{score:.1%}",
+                        ha="center", va="center", fontsize=14, fontweight="bold")
+            ax_label.axis("off")
+
+            # Image A column
+            ax_a = axes[round_idx, 1]
+            img_a = round_data["image_a"]
+            ax_a.imshow(img_a)
+            ax_a.set_title(f"{base_a}", fontsize=12, fontweight="bold" if winner == base_a else "normal")
+            ax_a.axis("off")
+
+            # Image B column
+            ax_b = axes[round_idx, 2]
+            img_b = round_data["image_b"]
+            ax_b.imshow(img_b)
+            ax_b.set_title(f"{base_b}", fontsize=12, fontweight="bold" if winner == base_b else "normal")
+            ax_b.axis("off")
+
+        plt.tight_layout()
+
+        # Save visualization
+        fig.savefig(viz_path, dpi=300, bbox_inches="tight")
+        logging.info(f"📊 Visualization saved to {viz_path}\n")
+        plt.close(fig)
+
+    def _select_best_proposal(
+        self,
+        candidate_images: list[dict],
+        feedback: str = ""
+    ) -> dict:
+        """
+        Use selector model to choose the best proposal from candidates.
+        Returns: The best candidate dict
+        """
+        logging.info(f"\n🎯 SELECTING BEST PROPOSAL from {len(candidate_images)} candidates\n")
+
+        # Prepare images and descriptions for selector
+        image_bytes_list = [c["image_bytes"] for c in candidate_images]
+        descriptions = [f"Candidate {i+1}: {c['prompt']}" for i, c in enumerate(candidate_images)]
+
+        selector_response = self.selector_model.get_response(
+            images=image_bytes_list,
+            candidate_descriptions="\n".join(descriptions),
+            num_candidates=len(candidate_images),
+            judge_feedback=feedback
+        )
+
+        selected_idx = int(selector_response.choice) - 1  # Assuming 1-indexed
+
+        best_candidate = candidate_images[selected_idx]
+        logging.info(f"✅ Selected candidate {selected_idx+1}: {best_candidate['prompt']}\n")
+
+        return best_candidate
+
+    def _improve_loser_with_candidates(
+        self,
+        loser_name: str,
+        loser_image_bytes: bytes,
+        loser_prompt: str,
+        feedback: str,
+        round_num: int,
+        results_dir: str,
+        pair_name: str,
+        history_of_prompts: list[str],
+        original_image_bytes: bytes
+    ) -> tuple[bytes, str, Image.Image]:
+        """
+        Generate improved versions of the losing image based on judge feedback.
+        Uses proposer/selector flow after the initial zero-shot edit.
+        Returns: (best_improved_bytes, best_improved_prompt, best_improved_image)
+        """
+        improve_start = time.time()
+        logging.info(f"\n🔧 IMPROVING LOSER (Round {round_num})\n")
+        logging.info(f"Previous prompt: {loser_prompt}\n")
+        logging.info(f"Judge feedback:\n{feedback}\n")
+
+        history_entries = list(history_of_prompts)
+        has_prior_edits = len(history_of_prompts) > 0
+        history_text = "\n".join([f"  - {p}" for p in history_entries]) if history_entries else "None"
+        logging.info(f"Edit history:\n{history_text}\n")
+
+        is_original_state = (loser_image_bytes == original_image_bytes) and not has_prior_edits
+        if is_original_state:
+            logging.info("Applying base prior zero-shot edit before invoking proposer/selector.\n")
+            editing_prompt = self._compose_prompt(None)
+            edited_image, edited_image_bytes = self.image_editing_model.edit(
+                editing_prompt,
+                loser_image_bytes,
+                original_image_bytes
+            )
+
+            with self._counter_lock:
+                self._total_num_images_generated += 1
+
+            optimized_path = os.path.join(
+                results_dir,
+                f"{pair_name}_{loser_name}_round-{round_num}_optimized.jpg"
+            )
+            edited_image.save(optimized_path)
+            logging.info(f"Saved zero-shot optimized candidate to {optimized_path}\n")
+
+            zero_shot_path = os.path.join(results_dir, f"{pair_name}_{loser_name}_zero-shot.jpg")
+            if not os.path.isfile(zero_shot_path):
+                edited_image.save(zero_shot_path)
+
+            prompt_txt_path = os.path.join(results_dir, f"{pair_name}_{loser_name}_zero-shot_prompt.txt")
+            with open(prompt_txt_path, "w") as prompt_file:
+                prompt_file.write(editing_prompt)
+
+            total_cost = self._total_num_images_generated * self._cost_per_image_generated
+            logging.info(f"Total images generated: {self._total_num_images_generated}, Cost: ${total_cost:.2f}\n")
+            logging.debug(f"Total images: {self._total_num_images_generated}, Cost: ${total_cost:.2f}")
+
+            improve_duration = time.time() - improve_start
+            logging.debug(f"⏱️  Improvement phase: {improve_duration:.2f}s")
+
+            return (
+                edited_image_bytes,
+                editing_prompt,
+                edited_image
+            )
+
+        proposer_response = self.proposer_model.get_response(
+            current_prompt=loser_prompt,
+            history_of_prompts=history_text,
+            current_iteration=round_num,
+            # judge_feedback=feedback,
+            total_iterations=self.min_rounds_before_equilibrium,
+            num_proposals=self.num_improvement_proposals,
+            metadata="The product here is a(n) %s; make sure your edits still center this product." % pair_name.split("_")[1].lower()
+        )
+        logging.debug(f"⏱️  Proposal category is: {pair_name.split('_')[1]}")
+
+        candidate_prompts = proposer_response.candidate_prompts
+        logging.info(f"Generated {len(candidate_prompts)} improvement candidates:\n")
+        for i, prompt in enumerate(candidate_prompts):
+            logging.info(f"  Candidate {i+1}: {prompt}\n")
+
+        def generate_single_image(i: int, prompt: str):
+            """Generate a single improved image"""
+            logging.info(f"Generating improved image {i+1}/{len(candidate_prompts)}\n")
+            editing_prompt = self._compose_prompt(prompt)
+            edited_image, edited_image_bytes = self.image_editing_model.edit(
+                editing_prompt,
+                loser_image_bytes,
+                original_image_bytes
+            )
+
+            if edited_image is None or edited_image_bytes is None:
+                logging.warning(f"Candidate {i+1} generation failed; skipping.\n")
+                return None
+
+            with self._counter_lock:
+                self._total_num_images_generated += 1
+
+            candidate_path = os.path.join(results_dir, f"{pair_name}_{loser_name}_round-{round_num}_candidate-{i+1}.jpg")
+            edited_image.save(candidate_path)
+
+            return {
+                "prompt": prompt,
+                "image": edited_image,
+                "image_bytes": edited_image_bytes,
+                "save_path": candidate_path,
+                "candidate_idx": i,
+                "full_prompt": editing_prompt
+            }
+
+        candidate_images = []
+        with ThreadPoolExecutor(max_workers=min(len(candidate_prompts), 4)) as img_executor:
+            futures = [img_executor.submit(generate_single_image, i, prompt) for i, prompt in enumerate(candidate_prompts)]
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
+                    candidate_images.append(result)
+
+        if not candidate_images:
+            logging.warning("All candidate generations failed; keeping previous image.\n")
+            return loser_image_bytes, loser_prompt, Image.open(io.BytesIO(loser_image_bytes))
+
+        candidate_images.sort(key=lambda c: c["candidate_idx"])
+        best_candidate = self._select_best_proposal(candidate_images, feedback=feedback)
+
+        total_cost = self._total_num_images_generated * self._cost_per_image_generated
+        logging.info(f"Total images generated: {self._total_num_images_generated}, Cost: ${total_cost:.2f}\n")
+        logging.debug(f"Total images: {self._total_num_images_generated}, Cost: ${total_cost:.2f}")
+
+        prompt_save_path = os.path.join(
+            results_dir,
+            f"{pair_name}_{loser_name}_round-{round_num}_prompt.txt"
+        )
+        with open(prompt_save_path, "w") as prompt_file:
+            prompt_file.write(best_candidate.get("full_prompt", self._compose_prompt(best_candidate["prompt"])))
+
+        optimized_path = os.path.join(
+            results_dir,
+            f"{pair_name}_{loser_name}_round-{round_num}_optimized.jpg"
+        )
+        best_candidate["image"].save(optimized_path)
+        logging.info(f"Saved optimized candidate to {optimized_path}\n")
+
+        improve_duration = time.time() - improve_start
+        logging.debug(f"⏱️  Improvement phase: {improve_duration:.2f}s")
+
+        return (
+            best_candidate["image_bytes"],
+            best_candidate["prompt"],
+            best_candidate["image"]
+        )
+
+    def _improve_loser_without_candidates(
         self,
         loser_name: str,
         loser_image_bytes: bytes,
@@ -257,68 +504,14 @@ class VisualNudgeCompetition:
             edited_image
         )
 
-    def _visualize_competition(
-        self,
-        pair_name: str,
-        base_a: str,
-        base_b: str,
-        round_history: list[dict],
-        results_dir: str,
-        viz_path: str
-    ):
+    def _improve_loser(self, **kwargs) -> tuple[bytes, str, Image.Image]:
         """
-        Create grid display of competition progress.
-        Columns: Round number, Contestant A, Contestant B
-        Rows: Each round of competition
+        Chooses the improvement strategy based on configuration.
         """
-        num_rounds = len(round_history)
-        if num_rounds == 0:
-            return
-
-        # Create figure with 3 columns (round label, image A, image B)
-        fig, axes = plt.subplots(num_rounds, 3, figsize=(15, 5 * num_rounds))
-
-        # Handle single round case
-        if num_rounds == 1:
-            axes = axes.reshape(1, -1)
-
-        fig.suptitle(f"Competition Progress: {base_a} vs {base_b}", fontsize=16, fontweight="bold", y=1.02)
-
-        for round_idx, round_data in enumerate(round_history):
-            round_num = round_data["round"]
-            winner = round_data["winner"]
-            score = round_data["score"]
-
-            # Round label column
-            ax_label = axes[round_idx, 0]
-            ax_label.text(0.5, 0.5, f"Round {round_num}\n{winner} wins\n{score:.1%}",
-                        ha="center", va="center", fontsize=14, fontweight="bold")
-            ax_label.axis("off")
-
-            # Image A column
-            ax_a = axes[round_idx, 1]
-            img_a = round_data["image_a"]
-            ax_a.imshow(img_a)
-            ax_a.set_title(f"{base_a}", fontsize=12, fontweight="bold" if winner == base_a else "normal")
-            ax_a.axis("off")
-
-            # Image B column
-            ax_b = axes[round_idx, 2]
-            img_b = round_data["image_b"]
-            ax_b.imshow(img_b)
-            ax_b.set_title(f"{base_b}", fontsize=12, fontweight="bold" if winner == base_b else "normal")
-            ax_b.axis("off")
-
-        plt.tight_layout()
-
-        # Save visualization
-        try:
-            fig.savefig(viz_path, dpi=300, bbox_inches="tight")
-            logging.info(f"📊 Visualization saved to {viz_path}\n")
-        except Exception as e:
-            logging.error(f"Failed to save visualization: {e}\n")
-        finally:
-            plt.close(fig)
+        if self.use_candidates:
+            return self._improve_loser_with_candidates(**kwargs)
+        else:
+            return self._improve_loser_without_candidates(**kwargs)
 
     def _run_paired_contest(
         self,
@@ -349,20 +542,29 @@ class VisualNudgeCompetition:
         with open(image_b_path, "rb") as f:
             image_b_bytes = f.read()
 
-        # Initialize state with edit history
+        image_a_obj = Image.open(io.BytesIO(image_a_bytes))
+        image_b_obj = Image.open(io.BytesIO(image_b_bytes))
+
+        # Initialize state with edit history and champion tracking
         state_a = {
             "bytes": image_a_bytes,
             "prompt": self.base_prior,
-            "image": Image.open(io.BytesIO(image_a_bytes)),
+            "image": image_a_obj,
             "name": base_a,
-            "edit_history": []  # Track all prompts used
+            "edit_history": [],  # Track all prompts used
+            "champion_bytes": image_a_bytes,
+            "champion_prompt": self.base_prior,
+            "champion_image": image_a_obj.copy()
         }
         state_b = {
             "bytes": image_b_bytes,
             "prompt": self.base_prior,
-            "image": Image.open(io.BytesIO(image_b_bytes)),
+            "image": image_b_obj,
             "name": base_b,
-            "edit_history": []
+            "edit_history": [],
+            "champion_bytes": image_b_bytes,
+            "champion_prompt": self.base_prior,
+            "champion_image": image_b_obj.copy()
         }
 
         # Save originals
@@ -408,11 +610,17 @@ class VisualNudgeCompetition:
             )
 
             # Record history
-            contest_history.append({
+            round_info = {
                 "round": round_num,
+                "pair_name": pair_name,
                 "winner": winner_name,
-                "score": winner_score
-            })
+                "score": winner_score,
+                "feedback": feedback.split("\n")
+            }
+            with open(os.path.join(results_dir, f"{pair_name}_round-{round_num}_info.json"), "w") as json_file:
+                json.dump(round_info, json_file, indent=4)
+
+            contest_history.append(round_info)
 
             # Store images for visualization
             visualization_history.append({
@@ -437,6 +645,16 @@ class VisualNudgeCompetition:
             winner_state["image"].save(os.path.join(results_dir, f"{pair_name}_{winner_name}_round-{round_num}.jpg"))
             winner_state["image"].save(os.path.join(results_dir, f"{pair_name}_{winner_name}_round-{round_num}_WINNER.jpg"))
             loser_state["image"].save(os.path.join(results_dir, f"{pair_name}_{loser_name}_round-{round_num}.jpg"))
+
+            # Update champion tracking with actual contest winner (after saving images)
+            winner_state["champion_bytes"] = winner_state["bytes"]
+            winner_state["champion_prompt"] = winner_state["prompt"]
+            winner_state["champion_image"] = winner_state["image"].copy()
+
+            if self.use_last_winner_as_base:
+                loser_state["bytes"] = loser_state["champion_bytes"]
+                loser_state["prompt"] = loser_state["champion_prompt"]
+                loser_state["image"] = loser_state["champion_image"].copy()
 
             # Check for equilibrium (score close to 0.5 = no clear winner)
             if round_num >= self.min_rounds_before_equilibrium:
@@ -524,12 +742,36 @@ class VisualNudgeCompetition:
             "final_state_b": state_b
         }
 
-    def run(self, pairs: list[tuple[str, str]], results_dir: str, max_workers: int = 1):
+    def run(self, image_paths: list[str], results_dir: str, max_workers: int = 1):
         """
         Run paired contests for all combinations of images.
         Each pair competes until equilibrium is reached.
         """
         run_start = time.time()
+
+        # Check if comparable_pairs.csv exists in the same directory as the images
+        image_dir = os.path.dirname(image_paths[0])
+        comparability_results_csv = os.path.join(image_dir, "comparability_results.csv")
+
+        if os.path.isfile(comparability_results_csv):
+            logging.info(f"Reading comparable pairs from: {comparability_results_csv}")
+            pairs = []
+            with open(comparability_results_csv, "r", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row["is_comparable"].lower() == "true":
+                        logging.info(f"Found comparable pair: {row['id_1']} and {row['id_2']}, {row["is_comparable"].lower()}")
+                        image_1_path = os.path.join(image_dir, row["id_1"] + ".jpg")
+                        image_2_path = os.path.join(image_dir, row["id_2"] + ".jpg")
+                        if os.path.isfile(image_1_path) and os.path.isfile(image_2_path):
+                            pairs.append((image_1_path, image_2_path))
+        else:
+            logging.error(f"Comparability results not found at: {comparability_results_csv}")
+            raise FileNotFoundError(f"Comparability results not found at: {comparability_results_csv}")
+
+        if not pairs:
+            logging.error("No comparable image pairs found to run contests.")
+            raise ValueError("No comparable image pairs found to run contests.")
 
         logging.debug(f"\n{'='*80}")
         logging.debug(f"🥊 Starting Paired Contest Competition")
