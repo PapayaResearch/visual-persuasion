@@ -127,8 +127,7 @@ class LanguageModel:
                                 {
                                     "type": "image_url",
                                     "image_url": {
-                                        "url": self._encode_image(img_bytes),
-                                        "detail": "low"
+                                        "url": self._encode_image(img_bytes)
                                     }
                                 }
                             ]
