@@ -5,7 +5,6 @@ import logging
 import dataclasses
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from shutil import copy
 from itertools import combinations
 from utils.wrappers import LanguageModel
 
@@ -194,7 +193,6 @@ class ComparabilityEvaluator:
                     "score": r["score"],
                     "winner": r["winner"]
                 })
-        copy(comparability_csv, os.path.join(results_dir, "comparability_results.csv"))
 
         if not comparable_pairs:
             logging.warning("No comparable pairs found.")
