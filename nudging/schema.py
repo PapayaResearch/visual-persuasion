@@ -46,9 +46,10 @@ def create_evaluator_output_schema(choice_description: str, choice_options: List
 
 
 def create_optimizer_input_schema(
-    current_prompt_description: str,
-    current_image_description: str,
+    current_prompt_description: str = "",
+    current_image_description: str = "",
     history_of_prompts_description: str = "",
+    current_iteration_description: str = "",
     judge_feedback_description: str = "",
     metadata_description: str = ""
 ) -> Type[IOSchema]:
@@ -60,6 +61,7 @@ def create_optimizer_input_schema(
         current_prompt: str = Field(description=current_prompt_description)
         current_image: bytes = Field(description=current_image_description)
         history_of_prompts: str = Field(description=history_of_prompts_description)
+        current_iteration: int = Field(description=current_iteration_description)
         judge_feedback: str = Field(description=judge_feedback_description)
         metadata: str = Field(description=metadata_description)
 

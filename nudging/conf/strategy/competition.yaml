@@ -87,7 +87,9 @@ optimizer_model:
     current_image_description: |
       The current image that was generated using the current prompt
     history_of_prompts_description: |
-      The history of previous prompts used so far (may be empty if optimizer shouldn't see it)
+      The history of previous prompts used so far
+    current_iteration_description: |
+      The current iteration number (1-indexed)
     judge_feedback_description: |
       Feedback about why an alternative was chosen over the current prompt editing instruction
     metadata_description: |

@@ -272,7 +272,7 @@ class VisualNudgeCompetition:
         round_num: int,
         results_dir: str,
         pair_name: str,
-        history_of_prompts: list[str],
+        history_of_prompts: list[dict],
         original_image_bytes: bytes
     ) -> tuple[bytes, str, Image.Image]:
         """
@@ -285,9 +285,18 @@ class VisualNudgeCompetition:
         logging.info(f"Previous prompt: {loser_prompt}\n")
         logging.info(f"Judge feedback:\n{feedback}\n")
 
-        history_entries = list(history_of_prompts)
         has_prior_edits = len(history_of_prompts) > 0
-        history_text = "\n".join([f"  - {p}" for p in history_entries]) if history_entries else "None"
+        if has_prior_edits:
+            history_text = ""
+            for entry in history_of_prompts[1:]:
+                if entry.get("won_next_round") is None:
+                    continue
+                round = entry["round"]
+                prompt = entry["prompt"]
+                won_next_round = "Won" if entry.get("won_next_round") else "Lost"
+                history_text += f"  - Round {round}: {prompt} ({won_next_round})\n"
+        else:
+            history_text = "None"
         logging.info(f"Edit history:\n{history_text}\n")
 
         if not has_prior_edits:
@@ -337,7 +346,7 @@ class VisualNudgeCompetition:
             # judge_feedback=feedback,
             total_iterations=self.min_rounds_before_equilibrium,
             num_proposals=self.num_improvement_proposals,
-            metadata="The product here is a(n) %s; make sure your edits still center this product." % pair_name.split("_")[1].lower()
+            metadata="The image here is of a(n) %s." % pair_name.split("_")[1].lower()
         )
         logging.debug(f"⏱️  Proposal category is: {pair_name.split('_')[1]}")
 
@@ -426,7 +435,7 @@ class VisualNudgeCompetition:
         round_num: int,
         results_dir: str,
         pair_name: str,
-        history_of_prompts: list[str],
+        history_of_prompts: list[dict],
         original_image_bytes: bytes
     ) -> tuple[bytes, str, Image.Image]:
         """
@@ -439,8 +448,18 @@ class VisualNudgeCompetition:
         logging.info(f"Judge feedback:\n{feedback}\n")
 
         # Format history for optimizer visibility
-        history_text = "\n".join([f"  - {p}" for p in history_of_prompts]) if history_of_prompts else "None"
         has_prior_edits = len(history_of_prompts) > 0
+        if has_prior_edits:
+            history_text = ""
+            for entry in history_of_prompts[1:]:
+                if entry.get("won_next_round") is None:
+                    continue
+                round = entry["round"]
+                prompt = entry["prompt"]
+                won_next_round = "Won" if entry.get("won_next_round") else "Lost"
+                history_text += f"  - Round {round}: {prompt} ({won_next_round})\n"
+        else:
+            history_text = "None"
         logging.info(f"Edit history:\n{history_text}\n")
 
         if not has_prior_edits:
@@ -451,8 +470,9 @@ class VisualNudgeCompetition:
                 "current_prompt": self._compose_prompt(loser_prompt),
                 "current_image": loser_image_bytes,
                 "history_of_prompts": history_text,
+                "current_iteration": round_num,
                 "judge_feedback": feedback or "No feedback provided.",
-                "metadata": "The product here is a(n) %s." % pair_name.split("_")[1]
+                "metadata": "The image here is of a(n) %s." % pair_name.split("_")[1].lower()
             }
             optimizer_response = self.optimizer_model.get_response(**optimizer_input)
             improved_prompt = optimizer_response.new_prompt.strip()
@@ -650,6 +670,10 @@ class VisualNudgeCompetition:
             winner_state["champion_prompt"] = winner_state["prompt"]
             winner_state["champion_image"] = winner_state["image"].copy()
 
+            # Mark winner's most recent edit as winning
+            if len(winner_state["edit_history"]) > 0:
+                winner_state["edit_history"][-1]["won_next_round"] = True
+
             if self.use_last_winner_as_base:
                 loser_state["bytes"] = loser_state["champion_bytes"]
                 loser_state["prompt"] = loser_state["champion_prompt"]
@@ -681,7 +705,17 @@ class VisualNudgeCompetition:
             loser_state["bytes"] = improved_bytes
             loser_state["prompt"] = improved_prompt
             loser_state["image"] = improved_image
-            loser_state["edit_history"].append(improved_prompt)
+            history_entry = {
+                "round": round_num,
+                "prompt": improved_prompt,
+                "won_next_round": None  # Will be updated after next contest
+            }
+
+            # Update previous round's history entry if it lost the very next round
+            if len(loser_state["edit_history"]) > 0:
+                if loser_state["edit_history"][-1]["won_next_round"] is None:
+                    loser_state["edit_history"][-1]["won_next_round"] = False
+            loser_state["edit_history"].append(history_entry)
 
         # Generate final visualization
         self._visualize_competition(
@@ -707,7 +741,7 @@ class VisualNudgeCompetition:
 
         # Save summary
         summary_path = os.path.join(results_dir, f"{pair_name}_summary.txt")
-        with open(summary_path, "w") as f:
+        with open(summary_path, "w", encoding="utf-8") as f:
             f.write(f"Paired Contest Summary: {base_a} vs {base_b}\n")
             f.write(f"{'='*60}\n\n")
             f.write(f"Total rounds: {round_num}\n")
@@ -720,12 +754,18 @@ class VisualNudgeCompetition:
             f.write(f"  Prompt: {state_a['prompt']}\n")
             f.write(f"  Edit History: {len(state_a['edit_history'])} edits\n")
             for i, edit in enumerate(state_a["edit_history"], 1):
-                f.write(f"    {i}. {edit}\n")
+                round = edit["round"]
+                prompt = edit["prompt"]
+                won_next_round = "Won" if edit.get("won_next_round") else "Lost"
+                f.write(f"    {i}. Round {round}: {prompt} ({won_next_round})\n")
             f.write(f"\n{base_b}:\n")
             f.write(f"  Prompt: {state_b['prompt']}\n")
             f.write(f"  Edit History: {len(state_b['edit_history'])} edits\n")
             for i, edit in enumerate(state_b["edit_history"], 1):
-                f.write(f"    {i}. {edit}\n")
+                round = edit["round"]
+                prompt = edit["prompt"]
+                won_next_round = "Won" if edit.get("won_next_round") else "Lost"
+                f.write(f"    {i}. Round {round}: {prompt} ({won_next_round})\n")
 
         pair_duration = time.time() - pair_start
         logging.debug(f"\n⏱️  Pair {pair_idx+1} total: {pair_duration:.2f}s ({pair_duration/60:.2f}m)\n")
@@ -758,10 +798,10 @@ class VisualNudgeCompetition:
             with open(comparability_results_csv, "r", newline="") as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    if row["is_comparable"].lower() == "true":
-                        logging.info(f"Found comparable pair: {row['id_1']} and {row['id_2']}, {row['is_comparable'].lower()}")
-                        image_1_path = os.path.join(image_dir, row["id_1"] + ".jpg")
-                        image_2_path = os.path.join(image_dir, row["id_2"] + ".jpg")
+                    if row['is_comparable'].lower() == "true":
+                        logging.info(f"Found comparable pair: {row['id_1']} and {row['id_2']}")
+                        image_1_path = os.path.join(image_dir, row['id_1'] + '.jpg')
+                        image_2_path = os.path.join(image_dir, row['id_2'] + '.jpg')
                         if os.path.isfile(image_1_path) and os.path.isfile(image_2_path):
                             pairs.append((image_1_path, image_2_path))
         else:
