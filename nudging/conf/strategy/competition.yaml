@@ -16,7 +16,7 @@ max_rounds_per_pair: 10
 # Tie-breaking strategy: "first", "second", "random"
 tie_breaking_strategy: random
 # Whether to use last winning image as base for next edit
-use_last_winner_as_base: false
+use_last_winner_as_base: true
 # Base prior prompt for all image edits
 base_prior: |
   Make this product photo achieve a higher rating. Keep the product itself exactly unchanged.

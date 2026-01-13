@@ -294,7 +294,7 @@ class VisualNudgeCompetition:
                 round = entry["round"]
                 prompt = entry["prompt"]
                 won_next_round = "Won" if entry.get("won_next_round") else "Lost"
-                history_text += f"  - Round {round}: {prompt} ({won_next_round})\n"
+                history_text += f"  - Round {round} ({won_next_round}): {prompt}\n"
         else:
             history_text = "None"
         logging.info(f"Edit history:\n{history_text}\n")
@@ -457,7 +457,7 @@ class VisualNudgeCompetition:
                 round = entry["round"]
                 prompt = entry["prompt"]
                 won_next_round = "Won" if entry.get("won_next_round") else "Lost"
-                history_text += f"  - Round {round}: {prompt} ({won_next_round})\n"
+                history_text += f"  - Round {round} ({won_next_round}): {prompt}\n"
         else:
             history_text = "None"
         logging.info(f"Edit history:\n{history_text}\n")
