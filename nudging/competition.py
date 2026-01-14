@@ -48,7 +48,6 @@ class VisualNudgeCompetition:
         self._total_num_images_generated = 0
         self._cost_per_image_generated = 0.039
         self._counter_lock = threading.Lock()
-        self.contest_history = {}
 
     def _compose_prompt(self, instruction: Optional[str] = None) -> str:
         """
@@ -72,13 +71,10 @@ class VisualNudgeCompetition:
         Returns: (winner_name, winner_score, aggregated_feedback)
         winner_score is the proportion of consistent judges preferring the winner (0-1)
         """
-        contest_start = time.time()
         logging.info(f"\n🥊 CONTEST: {image_a_name} vs {image_b_name}\n")
 
         def evaluate_single(judge_id: int, is_a_first: bool):
             """Single judge evaluation"""
-            judge_start = time.time()
-
             images = [image_a_bytes, image_b_bytes] if is_a_first else [image_b_bytes, image_a_bytes]
             choice_map = {
                 "first": image_a_name if is_a_first else image_b_name,
@@ -95,8 +91,6 @@ class VisualNudgeCompetition:
 
             real_choice = choice_map.get(evaluation.choice.lower())
 
-            judge_duration = time.time() - judge_start
-            logging.debug(f"  ⏱️  Judge {judge_id} ({image_a_name} {'1st' if is_a_first else '2nd'}): {judge_duration:.2f}s")
             logging.info(f"Judge {judge_id}: Chose {real_choice} - {evaluation.reason}\n")
             return (real_choice, evaluation.reason)
 
@@ -170,18 +164,13 @@ class VisualNudgeCompetition:
 
             logging.info(f"🏆 WINNER: {winner} ({votes[winner]}/{total_consistent_judges} = {winner_score:.2%})\n")
 
-        contest_duration = time.time() - contest_start
-        logging.debug(f"⏱️  Contest completed: {contest_duration:.2f}s")
-
         return winner, winner_score, feedback
 
     def _visualize_competition(
         self,
-        pair_name: str,
         base_a: str,
         base_b: str,
         round_history: list[dict],
-        results_dir: str,
         viz_path: str
     ):
         """
@@ -274,13 +263,11 @@ class VisualNudgeCompetition:
         pair_name: str,
         history_of_prompts: list[dict],
         original_image_bytes: bytes
-    ) -> tuple[bytes, str, Image.Image]:
+    ) -> tuple[bytes, str, Image.Image, dict]:
         """
         Generate improved versions of the losing image based on judge feedback.
         Uses proposer/selector flow after the initial zero-shot edit.
-        Returns: (best_improved_bytes, best_improved_prompt, best_improved_image)
         """
-        improve_start = time.time()
         logging.info(f"\n🔧 IMPROVING LOSER (Round {round_num})\n")
         logging.info(f"Previous prompt: {loser_prompt}\n")
         logging.info(f"Judge feedback:\n{feedback}\n")
@@ -322,33 +309,28 @@ class VisualNudgeCompetition:
             if not os.path.isfile(zero_shot_path):
                 edited_image.save(zero_shot_path)
 
-            prompt_txt_path = os.path.join(results_dir, f"{pair_name}_{loser_name}_zero-shot_prompt.txt")
-            with open(prompt_txt_path, "w") as prompt_file:
-                prompt_file.write(editing_prompt)
-
             total_cost = self._total_num_images_generated * self._cost_per_image_generated
             logging.info(f"Total images generated: {self._total_num_images_generated}, Cost: ${total_cost:.2f}\n")
-            logging.debug(f"Total images: {self._total_num_images_generated}, Cost: ${total_cost:.2f}")
 
-            improve_duration = time.time() - improve_start
-            logging.debug(f"⏱️  Improvement phase: {improve_duration:.2f}s")
+            metadata = {"strategy": "zero_shot"}
 
             return (
                 edited_image_bytes,
                 editing_prompt,
-                edited_image
+                edited_image,
+                metadata
             )
 
-        proposer_response = self.proposer_model.get_response(
-            current_prompt=loser_prompt,
-            history_of_prompts=history_text,
-            current_iteration=round_num,
-            # judge_feedback=feedback,
-            total_iterations=self.min_rounds_before_equilibrium,
-            num_proposals=self.num_improvement_proposals,
-            metadata="The image here is of a(n) %s." % pair_name.split("_")[1].lower()
-        )
-        logging.debug(f"⏱️  Proposal category is: {pair_name.split('_')[1]}")
+        proposer_input = {
+            "current_prompt": loser_prompt,
+            "history_of_prompts": history_text,
+            "current_iteration": round_num,
+            "judge_feedback": feedback or "No feedback provided.",
+            "total_iterations": self.min_rounds_before_equilibrium,
+            "num_proposals": self.num_improvement_proposals,
+            "metadata": "The image here is of a(n) %s." % pair_name.split("_")[1].lower()
+        }
+        proposer_response = self.proposer_model.get_response(**proposer_input)
 
         candidate_prompts = proposer_response.candidate_prompts
         logging.info(f"Generated {len(candidate_prompts)} improvement candidates:\n")
@@ -401,14 +383,6 @@ class VisualNudgeCompetition:
 
         total_cost = self._total_num_images_generated * self._cost_per_image_generated
         logging.info(f"Total images generated: {self._total_num_images_generated}, Cost: ${total_cost:.2f}\n")
-        logging.debug(f"Total images: {self._total_num_images_generated}, Cost: ${total_cost:.2f}")
-
-        prompt_save_path = os.path.join(
-            results_dir,
-            f"{pair_name}_{loser_name}_round-{round_num}_prompt.txt"
-        )
-        with open(prompt_save_path, "w") as prompt_file:
-            prompt_file.write(best_candidate.get("full_prompt", self._compose_prompt(best_candidate["prompt"])))
 
         optimized_path = os.path.join(
             results_dir,
@@ -417,13 +391,18 @@ class VisualNudgeCompetition:
         best_candidate["image"].save(optimized_path)
         logging.info(f"Saved optimized candidate to {optimized_path}\n")
 
-        improve_duration = time.time() - improve_start
-        logging.debug(f"⏱️  Improvement phase: {improve_duration:.2f}s")
+        metadata = {
+            "strategy": "proposer_selector",
+            "proposer_input": proposer_input,
+            "candidate_prompts": candidate_prompts,
+            "selector_response": {"selected_index": candidate_images.index(best_candidate)}
+        }
 
         return (
             best_candidate["image_bytes"],
             best_candidate["prompt"],
-            best_candidate["image"]
+            best_candidate["image"],
+            metadata
         )
 
     def _improve_loser_without_candidates(
@@ -437,12 +416,10 @@ class VisualNudgeCompetition:
         pair_name: str,
         history_of_prompts: list[dict],
         original_image_bytes: bytes
-    ) -> tuple[bytes, str, Image.Image]:
+    ) -> tuple[bytes, str, Image.Image, dict]:
         """
         Improve the losing image by asking the optimizer for a better prompt and regenerating once.
-        Returns: (improved_bytes, improved_prompt, improved_image)
         """
-        improve_start = time.time()
         logging.info(f"\n🔧 IMPROVING LOSER (Round {round_num})\n")
         logging.info(f"Previous prompt: {loser_prompt}\n")
         logging.info(f"Judge feedback:\n{feedback}\n")
@@ -494,12 +471,6 @@ class VisualNudgeCompetition:
             f"{pair_name}_{loser_name}_round-{round_num}_optimized.jpg"
         )
         edited_image.save(improved_path)
-        editing_prompt_path = os.path.join(
-            results_dir,
-            f"{pair_name}_{loser_name}_round-{round_num}_optimized_prompt.txt"
-        )
-        with open(editing_prompt_path, "w") as outfile:
-            outfile.write(f"Prompt used for optimization:\n\n{editing_prompt}")
 
         first_improved_path = os.path.join(
             results_dir,
@@ -512,18 +483,26 @@ class VisualNudgeCompetition:
 
         total_cost = self._total_num_images_generated * self._cost_per_image_generated
         logging.info(f"Total images generated: {self._total_num_images_generated}, Cost: ${total_cost:.2f}\n")
-        logging.debug(f"Total images: {self._total_num_images_generated}, Cost: ${total_cost:.2f}")
 
-        improve_duration = time.time() - improve_start
-        logging.debug(f"⏱️  Improvement phase: {improve_duration:.2f}s")
+        if has_prior_edits:
+            optimizer_input_to_log = optimizer_input.copy()
+            optimizer_input_to_log.pop("current_image")
+            metadata = {
+                "strategy": "optimizer",
+                "optimizer_input": optimizer_input_to_log,
+                "optimizer_output": improved_prompt
+            }
+        else:
+            metadata = {"strategy": "zero_shot"}
 
         return (
             edited_image_bytes,
             improved_prompt,
-            edited_image
+            edited_image,
+            metadata
         )
 
-    def _improve_loser(self, **kwargs) -> tuple[bytes, str, Image.Image]:
+    def _improve_loser(self, **kwargs) -> tuple[bytes, str, Image.Image, dict]:
         """
         Chooses the improvement strategy based on configuration.
         """
@@ -545,11 +524,12 @@ class VisualNudgeCompetition:
         Only the loser is improved each round.
         Returns final state of both images.
         """
-        pair_start = time.time()
-
         base_a = os.path.splitext(os.path.basename(image_a_path))[0]
         base_b = os.path.splitext(os.path.basename(image_b_path))[0]
         pair_name = f"pair-{pair_idx+1}_{base_a}_vs_{base_b}"
+
+        # Initialize structured log for this pair
+        pair_log = {"image_a": base_a, "image_b": base_b, "rounds": []}
 
         logging.info(f"\n{'='*80}\n")
         logging.info(f"PAIRED CONTEST {pair_idx+1}/{total_pairs}: {base_a} vs {base_b}\n")
@@ -567,22 +547,22 @@ class VisualNudgeCompetition:
         # Initialize state with edit history and champion tracking
         state_a = {
             "bytes": image_a_bytes,
-            "prompt": self.base_prior,
+            "prompt": None,
             "image": image_a_obj,
             "name": base_a,
             "edit_history": [],  # Track all prompts used
             "champion_bytes": image_a_bytes,
-            "champion_prompt": self.base_prior,
+            "champion_prompt": None,
             "champion_image": image_a_obj.copy()
         }
         state_b = {
             "bytes": image_b_bytes,
-            "prompt": self.base_prior,
+            "prompt": None,
             "image": image_b_obj,
             "name": base_b,
             "edit_history": [],
             "champion_bytes": image_b_bytes,
-            "champion_prompt": self.base_prior,
+            "champion_prompt": None,
             "champion_image": image_b_obj.copy()
         }
 
@@ -596,7 +576,6 @@ class VisualNudgeCompetition:
         # Contest loop
         round_num = 0
         equilibrium_reached = False
-        contest_history = []
         visualization_history = []  # For matplotlib visualization
 
         viz_path = os.path.join(results_dir, f"{pair_name}_visualization.png")
@@ -616,6 +595,14 @@ class VisualNudgeCompetition:
 
         while round_num < self.max_rounds_per_pair and not equilibrium_reached:
             round_num += 1
+
+            # Initialize round log entry
+            round_log = {
+                "round_number": round_num,
+                "contest": {},
+                "improvement": {}
+            }
+
             logging.info(f"\n{'='*60}\n")
             logging.info(f"ROUND {round_num}/{self.max_rounds_per_pair}\n")
             logging.info(f"{'='*60}\n")
@@ -627,19 +614,18 @@ class VisualNudgeCompetition:
                 image_a_name=base_a,
                 image_b_name=base_b
             )
-
-            # Record history
-            round_info = {
-                "round": round_num,
-                "pair_name": pair_name,
+            
+            # Add contest results to log
+            round_log["contest"] = {
                 "winner": winner_name,
-                "score": winner_score,
-                "feedback": feedback.split("\n")
+                "loser": base_b if winner_name == base_a else base_a,
+                "winner_score": winner_score,
+                "feedback": feedback.split("\n"),
+                "winner_prompt": (self._compose_prompt(state_a["prompt"]) if winner_name == base_a
+                                    else self._compose_prompt(state_b["prompt"])),
+                "loser_prompt": (self._compose_prompt(state_b["prompt"]) if winner_name == base_a
+                                    else self._compose_prompt(state_a["prompt"]))
             }
-            with open(os.path.join(results_dir, f"{pair_name}_round-{round_num}_info.json"), "w") as json_file:
-                json.dump(round_info, json_file, indent=4)
-
-            contest_history.append(round_info)
 
             # Store images for visualization
             visualization_history.append({
@@ -684,12 +670,13 @@ class VisualNudgeCompetition:
                 if winner_score < self.equilibrium_threshold:
                     logging.info(f"\n🎯 EQUILIBRIUM REACHED! (score: {winner_score:.2%} < {self.equilibrium_threshold:.2%})\n")
                     equilibrium_reached = True
+                    pair_log["rounds"].append(round_log)
                     break
 
             # Improve ONLY the loser
             logging.info(f"\n🔄 Improving {loser_name} (loser of round {round_num})\n")
 
-            improved_bytes, improved_prompt, improved_image = self._improve_loser(
+            improved_bytes, improved_prompt, improved_image, improvement_metadata = self._improve_loser(
                 loser_name=loser_name,
                 loser_image_bytes=loser_state["bytes"],
                 loser_prompt=loser_state["prompt"],
@@ -700,6 +687,15 @@ class VisualNudgeCompetition:
                 history_of_prompts=loser_state["edit_history"],
                 original_image_bytes=image_a_bytes_original if loser_name == base_a else image_b_bytes_original
             )
+
+            # Log improvement to structured log
+            round_log["improvement"] = {
+                "improved_image": loser_name,
+                "previous_prompt": self._compose_prompt(loser_state["prompt"]),
+                "improved_prompt": self._compose_prompt(improved_prompt)
+            }
+            round_log["improvement"].update(improvement_metadata)
+            pair_log["rounds"].append(round_log)
 
             # Update ONLY loser's state
             loser_state["bytes"] = improved_bytes
@@ -719,11 +715,9 @@ class VisualNudgeCompetition:
 
         # Generate final visualization
         self._visualize_competition(
-            pair_name=pair_name,
             base_a=base_a,
             base_b=base_b,
             round_history=visualization_history,
-            results_dir=results_dir,
             viz_path=viz_path
         )
 
@@ -739,6 +733,12 @@ class VisualNudgeCompetition:
         state_a["image"].save(os.path.join(results_dir, f"{pair_name}_{base_a}_final.jpg"))
         state_b["image"].save(os.path.join(results_dir, f"{pair_name}_{base_b}_final.jpg"))
 
+        # Save structured log to JSON
+        log_path = os.path.join(results_dir, f"{pair_name}_log.json")
+        with open(log_path, "w", encoding="utf-8") as f:
+            json.dump(pair_log, f, indent=2, ensure_ascii=False)
+        logging.info(f"📝 Detailed log for pair saved to {log_path}\n")
+
         # Save summary
         summary_path = os.path.join(results_dir, f"{pair_name}_summary.txt")
         with open(summary_path, "w", encoding="utf-8") as f:
@@ -747,8 +747,9 @@ class VisualNudgeCompetition:
             f.write(f"Total rounds: {round_num}\n")
             f.write(f"Equilibrium reached: {equilibrium_reached}\n\n")
             f.write(f"Contest History:\n")
-            for entry in contest_history:
-                f.write(f"  Round {entry['round']}: {entry['winner']} won ({entry['score']:.2%})\n")
+            for round_log in pair_log["rounds"]:
+                if "contest" in round_log and "winner" in round_log["contest"]:
+                    f.write(f"  Round {round_log['round_number']}: {round_log['contest']['winner']} won ({round_log['contest']['winner_score']:.2%})\n")
             f.write(f"\nFinal State:\n")
             f.write(f"\n{base_a}:\n")
             f.write(f"  Prompt: {state_a['prompt']}\n")
@@ -765,16 +766,12 @@ class VisualNudgeCompetition:
                 prompt = edit["prompt"]
                 f.write(f"    {i}. Round {round}: {prompt}\n")
 
-        pair_duration = time.time() - pair_start
-        logging.debug(f"\n⏱️  Pair {pair_idx+1} total: {pair_duration:.2f}s ({pair_duration/60:.2f}m)\n")
-
         return {
             "pair_name": pair_name,
             "image_a": base_a,
             "image_b": base_b,
             "rounds": round_num,
             "equilibrium": equilibrium_reached,
-            "history": contest_history,
             "final_state_a": state_a,
             "final_state_b": state_b
         }
@@ -810,13 +807,13 @@ class VisualNudgeCompetition:
             logging.error("No comparable image pairs found to run contests.")
             raise ValueError("No comparable image pairs found to run contests.")
 
-        logging.debug(f"\n{'='*80}")
-        logging.debug(f"🥊 Starting Paired Contest Competition")
-        logging.debug(f"   Total pairs: {len(pairs)}")
-        logging.debug(f"   Max rounds per pair: {self.max_rounds_per_pair}")
-        logging.debug(f"   Equilibrium threshold: {self.equilibrium_threshold}")
-        logging.debug(f"   Max workers: {max_workers}")
-        logging.debug(f"{'='*80}\n")
+        logging.info(f"\n{'='*80}")
+        logging.info(f"🥊 Starting Paired Contest Competition")
+        logging.info(f"   Total pairs: {len(pairs)}")
+        logging.info(f"   Max rounds per pair: {self.max_rounds_per_pair}")
+        logging.info(f"   Equilibrium threshold: {self.equilibrium_threshold}")
+        logging.info(f"   Max workers: {max_workers}")
+        logging.info(f"{'='*80}\n")
 
         os.makedirs(results_dir, exist_ok=True)
 
@@ -853,26 +850,15 @@ class VisualNudgeCompetition:
             f.write(f"Pairs reaching equilibrium: {equilibrium_count}/{len(pairs)}\n")
             f.write(f"Average rounds per pair: {sum(r['rounds'] for r in results)/len(results):.1f}\n\n")
 
-            f.write(f"Individual Pair Results:\n")
-            f.write(f"{'-'*80}\n")
-            for r in results:
-                f.write(f"\n{r['pair_name']}:\n")
-                f.write(f"  Rounds: {r['rounds']}\n")
-                f.write(f"  Equilibrium: {r['equilibrium']}\n")
-                f.write(f"  History: ")
-                for h in r["history"]:
-                    f.write(f"R{h['round']}:{h['winner']}({h['score']:.0%}) ")
-                f.write(f"\n")
-
         run_duration = time.time() - run_start
-        logging.debug(f"\n{'='*80}")
-        logging.debug(f"✅ Paired Contest Competition Complete!")
-        logging.debug(f"⏱️  TOTAL RUNTIME: {run_duration:.2f}s ({run_duration/60:.2f}m)")
-        logging.debug(f"   Total pairs: {len(pairs)}")
-        logging.debug(f"   Pairs with equilibrium: {equilibrium_count}/{len(pairs)}")
-        logging.debug(f"   Average rounds: {sum(r['rounds'] for r in results)/len(results):.1f}")
-        logging.debug(f"   Total images generated: {self._total_num_images_generated}")
-        logging.debug(f"   Estimated cost: ${self._total_num_images_generated * self._cost_per_image_generated:.2f}")
-        logging.debug(f"{'='*80}\n")
+        logging.info(f"\n{'='*80}")
+        logging.info(f"✅ Paired Contest Competition Complete!")
+        logging.info(f"⏱️  TOTAL RUNTIME: {run_duration:.2f}s ({run_duration/60:.2f}m)")
+        logging.info(f"   Total pairs: {len(pairs)}")
+        logging.info(f"   Pairs with equilibrium: {equilibrium_count}/{len(pairs)}")
+        logging.info(f"   Average rounds: {sum(r['rounds'] for r in results)/len(results):.1f}")
+        logging.info(f"   Total images generated: {self._total_num_images_generated}")
+        logging.info(f"   Estimated cost: ${self._total_num_images_generated * self._cost_per_image_generated:.2f}")
+        logging.info(f"{'='*80}\n")
 
         return results

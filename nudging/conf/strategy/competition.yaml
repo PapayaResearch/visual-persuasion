@@ -5,7 +5,7 @@ name: competition
 
 # Whether to use candidates from proposer + selector
 # or just use optimizer proposals directly
-use_candidates: false
+use_candidates: true
 
 # Thresholds for equilibrium detection
 equilibrium_threshold: 0.51
@@ -91,7 +91,7 @@ optimizer_model:
     current_iteration_description: |
       The current iteration number (1-indexed)
     judge_feedback_description: |
-      Feedback about why an alternative was chosen over the current prompt editing instruction
+      Feedback about why an alternative was chosen over the current image version
     metadata_description: |
       Additional context or constraints for modifying the prompt (may be empty)
   output_schema:
@@ -119,6 +119,8 @@ proposer_model:
       The history of previous prompts used so far
     current_iteration_description: |
       The current iteration number (1-indexed)
+    judge_feedback_description: |
+      Feedback about why an alternative was chosen over the current image version
     total_iterations_description: |
       The total number of iterations planned
     num_proposals_description: |
