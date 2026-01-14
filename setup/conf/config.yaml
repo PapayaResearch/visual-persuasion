@@ -18,8 +18,6 @@ general:
   src_dir: ${hydra:runtime.cwd}/data/test
   # Destination directory for saving the processed images
   dst_dir: ${hydra:runtime.cwd}/../nudging/data
-  # Output aspect ratio for edited images
-  aspect_ratio: "1:1"
   # Maximum number of parallel workers for processing
   max_workers: 1
 
@@ -32,9 +30,7 @@ dataset:
   name: test
   # Number of image folders to process (set to -1 to process all)
   num_folders: -1
-  # Number of images to evaluate from each folder (set to -1 to evaluate all)
-  num_evaluate_per_folder: -1
-  # Number of images to finally select for processing from each folder (set to -1 to choose all)
+  # Number of images to select for processing from each folder (set to -1 to choose all)
   num_process_per_folder: -1
 
 #######################

@@ -14,6 +14,21 @@ class IOSchema(BaseModel):
     Provides automatic formatting for logging and message construction.
     """
 
+    @classmethod
+    def to_description_string(cls) -> str:
+        """
+        Generates a description string listing all fields and their descriptions.
+        """
+        parts = []
+        for field_name, field_info in cls.model_fields.items():
+            description = field_info.description or "No description provided"
+
+            # Format: FIELD_NAME:\ndescription\n\n
+            formatted_field = f"{field_name.upper()}:\n{description.strip()}\n\n"
+            parts.append(formatted_field)
+
+        return "".join(parts).strip()
+
     def to_formatted_string(self) -> str:
         """
         Converts the schema to a formatted string for logging or message construction.
@@ -26,7 +41,7 @@ class IOSchema(BaseModel):
                 continue
 
             # Format: FIELD_NAME:\nvalue\n\n
-            formatted_field = f"{field_name.upper()}:\n{field_value}\n\n"
+            formatted_field = f"{field_name.upper()}:\n{str(field_value).strip()}\n\n"
             parts.append(formatted_field)
 
         return "".join(parts).strip()
@@ -76,7 +91,11 @@ class LanguageModel:
         api_call: callable,
         enable_json_schema_validation: bool = True
     ):
-        self.system_prompt = system_prompt
+        # Build full system prompt with input schema description
+        input_description = input_schema.to_description_string()
+        full_system_prompt = f"{system_prompt}\n\nExpect the following inputs:\n\n{input_description}"
+        
+        self.system_prompt = full_system_prompt
         self.input_schema = input_schema
         self.output_schema = output_schema
         self.api_call = api_call
@@ -127,8 +146,7 @@ class LanguageModel:
                                 {
                                     "type": "image_url",
                                     "image_url": {
-                                        "url": self._encode_image(img_bytes),
-                                        "detail": "low"
+                                        "url": self._encode_image(img_bytes)
                                     }
                                 }
                             ]

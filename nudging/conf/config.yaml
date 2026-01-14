@@ -19,7 +19,7 @@ defaults:
 
 general:
   # Directory containing the images to be tested
-  data_dir: ${hydra:runtime.cwd}/results/competition/2026-01-11_00-54-55
+  data_dir: ${hydra:runtime.cwd}/data/new_dataset
   # Maximum number of parallel workers for processing images
   max_workers: 10
   # Resume from latest run if some results exist

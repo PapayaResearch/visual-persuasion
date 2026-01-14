@@ -46,9 +46,10 @@ def create_evaluator_output_schema(choice_description: str, choice_options: List
 
 
 def create_optimizer_input_schema(
-    current_prompt_description: str,
-    current_image_description: str,
+    current_prompt_description: str = "",
+    current_image_description: str = "",
     history_of_prompts_description: str = "",
+    current_iteration_description: str = "",
     judge_feedback_description: str = "",
     metadata_description: str = ""
 ) -> Type[IOSchema]:
@@ -60,6 +61,7 @@ def create_optimizer_input_schema(
         current_prompt: str = Field(description=current_prompt_description)
         current_image: bytes = Field(description=current_image_description)
         history_of_prompts: str = Field(description=history_of_prompts_description)
+        current_iteration: int = Field(description=current_iteration_description)
         judge_feedback: str = Field(description=judge_feedback_description)
         metadata: str = Field(description=metadata_description)
 
@@ -81,7 +83,7 @@ def create_proposer_input_schema(
     current_prompt_description: str = "",
     history_of_prompts_description: str = "",
     current_iteration_description: str = "",
-    # judge_feedback_description: str = "",
+    judge_feedback_description: str = "",
     total_iterations_description: str = "",
     num_proposals_description: str = "",
     metadata_description: str = ""
@@ -94,7 +96,7 @@ def create_proposer_input_schema(
         current_prompt: str = Field(description=current_prompt_description)
         history_of_prompts: str = Field(description=history_of_prompts_description)
         current_iteration: int = Field(description=current_iteration_description)
-        # judge_feedback: str = Field(description=judge_feedback_description)
+        judge_feedback: str = Field(description=judge_feedback_description)
         total_iterations: int = Field(description=total_iterations_description)
         num_proposals: int = Field(description=num_proposals_description)
         metadata: str = Field(description=metadata_description)
@@ -132,13 +134,14 @@ def create_selector_input_schema(
     return SelectorInput
 
 
-def create_selector_output_schema(choice_description: str) -> Type[IOSchema]:
+def create_selector_output_schema(choice_description: str, reason_description: str) -> Type[IOSchema]:
     """
     Creates a SelectorOutput schema class with configurable field descriptions.
     """
     class SelectorOutput(IOSchema):
         """Output schema for selector model."""
         choice: str = Field(description=choice_description)
+        reason: str = Field(description=reason_description)
 
     return SelectorOutput
 

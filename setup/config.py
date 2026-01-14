@@ -37,13 +37,11 @@ class SamplingStrategy:
 
 @dataclass
 class Dataset:
-    # Name of the dataset to be processed
+    # Name of the dataset (used for creating destination subfolder)
     name: str
     # Number of image folders to process (set to -1 to process all)
     num_folders: int
-    # Number of images to evaluate from each folder (set to -1 to evaluate all)
-    num_evaluate_per_folder: int
-    # Number of images to finally select for processing from each folder (set to -1 to choose all)
+    # Number of images to select for processing from each folder (set to -1 to choose all)
     num_process_per_folder: int
 
 #######################
@@ -56,8 +54,6 @@ class General:
     src_dir: str
     # Destination directory for saving the processed images
     dst_dir: str
-    # Output aspect ratio for edited images
-    aspect_ratio: str
     # Maximum number of parallel workers for processing
     max_workers: int
 
