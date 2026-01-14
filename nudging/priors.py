@@ -18,6 +18,7 @@ class ComparabilityEvaluator:
     comparability_threshold: float
     judge_prompts: list[str]
     evaluator_model: LanguageModel
+    tie_breaking_strategy: str
     
     def _conduct_contest(
         self,
