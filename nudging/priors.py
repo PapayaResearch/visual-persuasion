@@ -1,6 +1,7 @@
 import os
 import re
 import csv
+import random
 import logging
 import dataclasses
 from tqdm import tqdm
@@ -17,101 +18,115 @@ class ComparabilityEvaluator:
     comparability_threshold: float
     judge_prompts: list[str]
     evaluator_model: LanguageModel
-
-    def __post_init__(self):
-        """Initialize the pipeline."""
-        # Track comparable pairs
-        self.comparable_pairs: list[tuple[str, str]] = []
     
-    def _evaluate_pair_comparability(
+    def _conduct_contest(
         self,
-        image_id_1: str,
-        img_bytes_1: bytes,
-        image_id_2: str,
-        img_bytes_2: bytes
-    ) -> tuple[bool, float, str]:
+        image_a_bytes: bytes,
+        image_b_bytes: bytes,
+        image_a_name: str,
+        image_b_name: str
+    ) -> tuple[str, float, str]:
         """
-        Evaluate whether a pair of images is "comparable" on the target parameter.
-        A pair is considered comparable if the votes are evenly split.
+        Conduct a multi-judge contest between two images.
+        Returns: (winner_name, winner_score, aggregated_feedback)
+        winner_score is the proportion of consistent judges preferring the winner (0-1)
         """
-        def evaluate_single(judge_id: int, is_1_first: bool):
-            """Single judge evaluation with position tracking."""
-            images = [img_bytes_1, img_bytes_2] if is_1_first else [img_bytes_2, img_bytes_1]
+        logging.info(f"\n🥊 CONTEST: {image_a_name} vs {image_b_name}\n")
+
+        def evaluate_single(judge_id: int, is_a_first: bool):
+            """Single judge evaluation"""
+            images = [image_a_bytes, image_b_bytes] if is_a_first else [image_b_bytes, image_a_bytes]
             choice_map = {
-                "first": image_id_1 if is_1_first else image_id_2,
-                "second": image_id_2 if is_1_first else image_id_1,
+                "first": image_a_name if is_a_first else image_b_name,
+                "second": image_b_name if is_a_first else image_a_name,
             }
+
+            logging.info(f"Judge {judge_id}: Evaluating with {image_a_name} as {'first' if is_a_first else 'second'} image.\n")
 
             evaluation = self.evaluator_model.get_response(
                 images=images,
                 judge_prompt=self.judge_prompts[judge_id],
-                metadata="Context: the user is looking for a(n) %s." % image_id_1.split("_")[0].lower()
+                metadata="Context: the user is looking for a(n) %s." % image_a_name.split("_")[0].lower()
             )
 
-            if evaluation is None:
-                return None
-
             real_choice = choice_map.get(evaluation.choice.lower())
+
+            logging.info(f"Judge {judge_id}: Chose {real_choice} - {evaluation.reason}\n")
             return (real_choice, evaluation.reason)
 
-        # Run all evaluations in parallel (each judge evaluates twice with swapped positions)
-        judge_results = {}
+        def break_tie(image_a_name: str, image_b_name: str):
+            """Apply tie-breaking strategy"""
+            if self.tie_breaking_strategy == "first":
+                winner = image_a_name
+            elif self.tie_breaking_strategy == "second":
+                winner = image_b_name
+            elif self.tie_breaking_strategy == "random":
+                winner = random.choice([image_a_name, image_b_name])
+            else:
+                raise ValueError(f"Unknown tie-breaking strategy: {self.tie_breaking_strategy}")
+            return winner
+
+        # Run all evaluations in parallel
+        judge_results = {}  # judge_id -> {True: result, False: result}
 
         num_judges = len(self.judge_prompts)
-        with ThreadPoolExecutor(max_workers=min(num_judges * 2, 8)) as executor:
+        with ThreadPoolExecutor(max_workers=min(num_judges * 2, 8)) as eval_executor:
             future_to_judge = {}
             for judge_id in range(num_judges):
-                for is_1_first in [True, False]:
-                    future = executor.submit(evaluate_single, judge_id, is_1_first)
-                    future_to_judge[future] = (judge_id, is_1_first)
+                for is_a_first in [True, False]:
+                    future = eval_executor.submit(evaluate_single, judge_id, is_a_first)
+                    future_to_judge[future] = (judge_id, is_a_first)
 
             for future in as_completed(future_to_judge):
-                judge_id, is_1_first = future_to_judge[future]
+                judge_id, is_a_first = future_to_judge[future]
                 result = future.result()
 
                 if judge_id not in judge_results:
                     judge_results[judge_id] = {}
-                judge_results[judge_id][is_1_first] = result
+                judge_results[judge_id][is_a_first] = result
 
         # Aggregate consistent judges
-        votes = {image_id_1: 0, image_id_2: 0}
+        votes = {image_a_name: 0, image_b_name: 0}
+        feedback_by_choice = {image_a_name: [], image_b_name: []}
         total_consistent_judges = 0
 
         for judge_id, results in judge_results.items():
-            result_1_first = results.get(True)
-            result_2_first = results.get(False)
+            result_a_first = results.get(True)
+            result_b_first = results.get(False)
 
-            if result_1_first is None or result_2_first is None:
-                continue
-
-            choice_1_first, _ = result_1_first
-            choice_2_first, _ = result_2_first
+            choice_a_first, reason_a_first = result_a_first
+            choice_b_first, reason_b_first = result_b_first
 
             # Only count consistent judges
-            if choice_1_first == choice_2_first:
+            if choice_a_first == choice_b_first:
+                logging.info(f"Judge {judge_id}: Consistent - chose '{choice_a_first}'\n")
                 total_consistent_judges += 1
-                votes[choice_1_first] += 1
+                votes[choice_a_first] += 1
+                feedback_by_choice[choice_a_first].append(reason_a_first)
+            else:
+                logging.warning(f"Judge {judge_id}: Inconsistent - skipping.\n")
 
-        # Determine comparability
+        # Determine winner
         if total_consistent_judges == 0:
-            # No consistent judges = treat as comparable (high uncertainty)
-            return True, 0.5, image_id_1
+            logging.warning("No consistent judges. Applying tie-breaking strategy.\n")
+            winner_score = 0.5
+            feedback = "No consistent preference detected."
+            winner = break_tie(image_a_name, image_b_name)
+        else:
+            winner = max(votes, key=votes.get)
+            winner_score = votes[winner] / total_consistent_judges
+            feedback = "\n".join(feedback_by_choice[winner])
 
-        winner = max(votes, key=votes.get)
-        winner_score = votes[winner] / total_consistent_judges
+            # Check for 50-50 tie and apply tie-breaking
+            if winner_score == 0.5:
+                logging.warning("Judges split 50-50. Applying tie-breaking strategy.\n")
+                winner = break_tie(image_a_name, image_b_name)
 
-        # Pair is comparable if the decision is close to even
-        is_comparable = winner_score <= self.comparability_threshold
+            logging.info(f"🏆 WINNER: {winner} ({votes[winner]}/{total_consistent_judges} = {winner_score:.2%})\n")
 
-        logging.info(
-            f"Pair {image_id_1} vs {image_id_2}: "
-            f"winner={winner}, score={winner_score:.2%}, "
-            f"comparable={is_comparable}"
-        )
+        return winner, winner_score, feedback
 
-        return is_comparable, winner_score, winner
-
-    def run(self, image_paths: list[str], results_dir: str, max_workers: int = 1):
+    def run(self, image_paths: list[str], max_workers: int = 1):
         """
         Filter image pairs to identify comparable images
         """
@@ -153,17 +168,20 @@ class ComparabilityEvaluator:
             id_1 = os.path.splitext(os.path.basename(path_1))[0]
             id_2 = os.path.splitext(os.path.basename(path_2))[0]
 
-            is_comparable, score, winner = self._evaluate_pair_comparability(
-                id_1, image_bytes_cache[path_1],
-                id_2, image_bytes_cache[path_2]
+            winner, winner_score, feedback = self._conduct_contest(
+                image_bytes_cache[path_1],
+                image_bytes_cache[path_2],
+                id_1, id_2
             )
+
+            is_comparable = (winner_score <= self.comparability_threshold)
 
             return {
                 "pair": pair,
                 "id_1": id_1,
                 "id_2": id_2,
                 "is_comparable": is_comparable,
-                "score": score,
+                "score": winner_score,
                 "winner": winner
             }
 

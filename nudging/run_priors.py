@@ -68,7 +68,7 @@ def main(cfg: Config):
 
     # Run the nudging pipeline
     logging.info(f"Starting Comparability evaluation...\n")
-    comparison_pipeline.run(image_paths, results_dir, cfg.general.max_workers)
+    comparison_pipeline.run(image_paths, cfg.general.max_workers)
 
     logging.info(f"Comparability evaluation completed.\n")
 
