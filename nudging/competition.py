@@ -316,13 +316,13 @@ class VisualNudgeCompetition:
 
             return (
                 edited_image_bytes,
-                editing_prompt,
+                None,
                 edited_image,
                 metadata
             )
 
         proposer_input = {
-            "current_prompt": loser_prompt,
+            "current_prompt": self._compose_prompt(loser_prompt),
             "history_of_prompts": history_text,
             "current_iteration": round_num,
             "judge_feedback": feedback or "No feedback provided.",
@@ -529,7 +529,7 @@ class VisualNudgeCompetition:
         pair_name = f"pair-{pair_idx+1}_{base_a}_vs_{base_b}"
 
         # Initialize structured log for this pair
-        pair_log = {"image_a": base_a, "image_b": base_b, "rounds": []}
+        pair_logs = []
 
         logging.info(f"\n{'='*80}\n")
         logging.info(f"PAIRED CONTEST {pair_idx+1}/{total_pairs}: {base_a} vs {base_b}\n")
@@ -670,7 +670,7 @@ class VisualNudgeCompetition:
                 if winner_score < self.equilibrium_threshold:
                     logging.info(f"\n🎯 EQUILIBRIUM REACHED! (score: {winner_score:.2%} < {self.equilibrium_threshold:.2%})\n")
                     equilibrium_reached = True
-                    pair_log["rounds"].append(round_log)
+                    pair_logs.append(round_log)
                     break
 
             # Improve ONLY the loser
@@ -695,7 +695,7 @@ class VisualNudgeCompetition:
                 "improved_prompt": self._compose_prompt(improved_prompt)
             }
             round_log["improvement"].update(improvement_metadata)
-            pair_log["rounds"].append(round_log)
+            pair_logs.append(round_log)
 
             # Update ONLY loser's state
             loser_state["bytes"] = improved_bytes
@@ -736,7 +736,7 @@ class VisualNudgeCompetition:
         # Save structured log to JSON
         log_path = os.path.join(results_dir, f"{pair_name}_log.json")
         with open(log_path, "w", encoding="utf-8") as f:
-            json.dump(pair_log, f, indent=2, ensure_ascii=False)
+            json.dump(pair_logs, f, indent=2, ensure_ascii=False)
         logging.info(f"📝 Detailed log for pair saved to {log_path}\n")
 
         # Save summary
@@ -747,7 +747,7 @@ class VisualNudgeCompetition:
             f.write(f"Total rounds: {round_num}\n")
             f.write(f"Equilibrium reached: {equilibrium_reached}\n\n")
             f.write(f"Contest History:\n")
-            for round_log in pair_log["rounds"]:
+            for round_log in pair_logs:
                 if "contest" in round_log and "winner" in round_log["contest"]:
                     f.write(f"  Round {round_log['round_number']}: {round_log['contest']['winner']} won ({round_log['contest']['winner_score']:.2%})\n")
             f.write(f"\nFinal State:\n")
