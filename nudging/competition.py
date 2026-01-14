@@ -756,16 +756,14 @@ class VisualNudgeCompetition:
             for i, edit in enumerate(state_a["edit_history"], 1):
                 round = edit["round"]
                 prompt = edit["prompt"]
-                won_next_round = "Won" if edit.get("won_next_round") else "Lost"
-                f.write(f"    {i}. Round {round}: {prompt} ({won_next_round})\n")
+                f.write(f"    {i}. Round {round}: {prompt}\n")
             f.write(f"\n{base_b}:\n")
             f.write(f"  Prompt: {state_b['prompt']}\n")
             f.write(f"  Edit History: {len(state_b['edit_history'])} edits\n")
             for i, edit in enumerate(state_b["edit_history"], 1):
                 round = edit["round"]
                 prompt = edit["prompt"]
-                won_next_round = "Won" if edit.get("won_next_round") else "Lost"
-                f.write(f"    {i}. Round {round}: {prompt} ({won_next_round})\n")
+                f.write(f"    {i}. Round {round}: {prompt}\n")
 
         pair_duration = time.time() - pair_start
         logging.debug(f"\n⏱️  Pair {pair_idx+1} total: {pair_duration:.2f}s ({pair_duration/60:.2f}m)\n")

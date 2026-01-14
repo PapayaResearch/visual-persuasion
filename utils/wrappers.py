@@ -23,8 +23,8 @@ class IOSchema(BaseModel):
         for field_name, field_info in cls.model_fields.items():
             description = field_info.description or "No description provided"
 
-            # Format: FIELD_NAME:\nvalue\n\n
-            formatted_field = f"{field_name.upper()}:\n{description}\n\n"
+            # Format: FIELD_NAME:\ndescription\n\n
+            formatted_field = f"{field_name.upper()}:\n{description.strip()}\n\n"
             parts.append(formatted_field)
 
         return "".join(parts).strip()
@@ -41,7 +41,7 @@ class IOSchema(BaseModel):
                 continue
 
             # Format: FIELD_NAME:\nvalue\n\n
-            formatted_field = f"{field_name.upper()}:\n{field_value}\n\n"
+            formatted_field = f"{field_name.upper()}:\n{str(field_value).strip()}\n\n"
             parts.append(formatted_field)
 
         return "".join(parts).strip()
