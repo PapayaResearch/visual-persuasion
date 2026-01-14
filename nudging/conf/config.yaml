@@ -41,9 +41,6 @@ priors:
   # Evaluator model for comparability evaluation
   evaluator_model: ${strategy.evaluator_model}
 
-  # Tie-breaking strategy: "first", "second", "random"
-  tie_breaking_strategy: random
-
 ######################
 # Interpretation Settings
 ######################
