@@ -116,13 +116,13 @@ class ComparabilityEvaluator:
         else:
             winner = max(votes, key=votes.get)
             winner_score = votes[winner] / total_consistent_judges
-            feedback = "\n".join(feedback_by_choice[winner])
 
             # Check for 50-50 tie and apply tie-breaking
             if winner_score == 0.5:
                 logging.warning("Judges split 50-50. Applying tie-breaking strategy.\n")
                 winner = break_tie(image_a_name, image_b_name)
 
+            feedback = "\n".join(feedback_by_choice[winner])
             logging.info(f"🏆 WINNER: {winner} ({votes[winner]}/{total_consistent_judges} = {winner_score:.2%})\n")
 
         return winner, winner_score, feedback

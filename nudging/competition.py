@@ -155,13 +155,13 @@ class VisualNudgeCompetition:
         else:
             winner = max(votes, key=votes.get)
             winner_score = votes[winner] / total_consistent_judges
-            feedback = "\n".join(feedback_by_choice[winner])
 
             # Check for 50-50 tie and apply tie-breaking
             if winner_score == 0.5:
                 logging.warning("Judges split 50-50. Applying tie-breaking strategy.\n")
                 winner = break_tie(image_a_name, image_b_name)
 
+            feedback = "\n".join(feedback_by_choice[winner])
             logging.info(f"🏆 WINNER: {winner} ({votes[winner]}/{total_consistent_judges} = {winner_score:.2%})\n")
 
         return winner, winner_score, feedback
@@ -376,7 +376,13 @@ class VisualNudgeCompetition:
 
         if not candidate_images:
             logging.warning("All candidate generations failed; keeping previous image.\n")
-            return loser_image_bytes, loser_prompt, Image.open(io.BytesIO(loser_image_bytes))
+            metadata = "All candidate generations failed"
+            return (
+                loser_image_bytes,
+                loser_prompt,
+                Image.open(io.BytesIO(loser_image_bytes)),
+                metadata
+            )
 
         candidate_images.sort(key=lambda c: c["candidate_idx"])
         best_candidate, reason = self._select_best_proposal(candidate_images, feedback=feedback)
