@@ -1,5 +1,6 @@
 import os
 import io
+import csv
 import logging
 import dataclasses
 from PIL import Image
@@ -78,6 +79,35 @@ class ZeroShot:
         """
         Runs zero-shot editing for each image, optionally in parallel.
         """
+        # Filter to only images that appear in comparable pairs
+        image_dir = os.path.dirname(image_paths[0])
+        comparability_results_csv = os.path.join(image_dir, "comparability_results.csv")
+
+        if os.path.isfile(comparability_results_csv):
+            logging.info(f"Reading comparable pairs from: {comparability_results_csv}")
+            comparable_image_ids = set()
+
+            with open(comparability_results_csv, "r", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row['is_comparable'].lower() == "true":
+                        logging.info(f"Found comparable pair: {row['id_1']} and {row['id_2']}")
+                        image_1_path = os.path.join(image_dir, row['id_1'] + '.jpg')
+                        image_2_path = os.path.join(image_dir, row['id_2'] + '.jpg')
+                        if os.path.isfile(image_1_path) and os.path.isfile(image_2_path):
+                            comparable_image_ids.add(image_1_path)
+                            comparable_image_ids.add(image_2_path)
+
+            image_paths = list(comparable_image_ids)
+            logging.info(f"Filtered to {len(image_paths)} images from comparable pairs")
+        else:
+            logging.error(f"Comparability results not found at: {comparability_results_csv}")
+            raise FileNotFoundError(f"Comparability results not found at: {comparability_results_csv}")
+
+        if not image_paths:
+            logging.error("No comparable image pairs found to run contests.")
+            raise ValueError("No comparable image pairs found to run contests.")
+
         num_edits_per_image = len(self.priors) if self.priors else 1
         total_edits = len(image_paths) * num_edits_per_image
 
