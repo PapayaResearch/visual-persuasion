@@ -227,7 +227,7 @@ class VisualNudgeCompetition:
         self,
         candidate_images: list[dict],
         feedback: str = ""
-    ) -> dict:
+    ) -> tuple[dict, str]:
         """
         Use selector model to choose the best proposal from candidates.
         Returns: The best candidate dict
@@ -250,7 +250,7 @@ class VisualNudgeCompetition:
         best_candidate = candidate_images[selected_idx]
         logging.info(f"✅ Selected candidate {selected_idx+1}: {best_candidate['prompt']}\n")
 
-        return best_candidate
+        return best_candidate, selector_response.reason
 
     def _improve_loser_with_candidates(
         self,
@@ -379,7 +379,7 @@ class VisualNudgeCompetition:
             return loser_image_bytes, loser_prompt, Image.open(io.BytesIO(loser_image_bytes))
 
         candidate_images.sort(key=lambda c: c["candidate_idx"])
-        best_candidate = self._select_best_proposal(candidate_images, feedback=feedback)
+        best_candidate, reason = self._select_best_proposal(candidate_images, feedback=feedback)
 
         total_cost = self._total_num_images_generated * self._cost_per_image_generated
         logging.info(f"Total images generated: {self._total_num_images_generated}, Cost: ${total_cost:.2f}\n")
@@ -395,7 +395,7 @@ class VisualNudgeCompetition:
             "strategy": "proposer_selector",
             "proposer_input": proposer_input,
             "candidate_prompts": candidate_prompts,
-            "selector_response": {"selected_index": candidate_images.index(best_candidate)}
+            "selector_response": {"selected_index": candidate_images.index(best_candidate), "reason": reason}
         }
 
         return (

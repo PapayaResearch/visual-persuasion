@@ -134,13 +134,14 @@ def create_selector_input_schema(
     return SelectorInput
 
 
-def create_selector_output_schema(choice_description: str) -> Type[IOSchema]:
+def create_selector_output_schema(choice_description: str, reason_description: str) -> Type[IOSchema]:
     """
     Creates a SelectorOutput schema class with configurable field descriptions.
     """
     class SelectorOutput(IOSchema):
         """Output schema for selector model."""
         choice: str = Field(description=choice_description)
+        reason: str = Field(description=reason_description)
 
     return SelectorOutput
 
