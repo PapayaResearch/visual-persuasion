@@ -11,6 +11,9 @@ valid_statuses:
 
 n_evaluations: 1
 
+# Only evaluate pairs that were marked as comparable in priors
+only_comparable_pairs: true
+
 evaluator_model:
   _target_: utils.wrappers.LanguageModel
   system_prompt: |

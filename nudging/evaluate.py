@@ -1,5 +1,6 @@
 import os
 import re
+import csv
 import logging
 import itertools
 import threading
@@ -19,7 +20,8 @@ class EvaluationPipeline:
         evaluator_model: LanguageModel,
         strategy_name: str,
         valid_statuses: List[str],
-        n_evaluations: int = 1
+        n_evaluations: int = 1,
+        only_comparable_pairs: bool = False
         # judge_prompts: List[str]
     ):
         self.evaluator_model = evaluator_model
@@ -27,6 +29,7 @@ class EvaluationPipeline:
         self.strategy_name = strategy_name
         self.valid_statuses = valid_statuses
         self.n_evaluations = n_evaluations
+        self.only_comparable_pairs = only_comparable_pairs
         # self.judge_prompts = judge_prompts
 
     def _parse_filename_zero_shot(self, filename: str) -> Tuple[str, str, str]:
@@ -75,6 +78,23 @@ class EvaluationPipeline:
 
         logging.info(f"Loaded {len(completed)} completed comparisons from existing CSV\n")
         return completed
+
+    def _load_comparable_pairs(self, data_dir: str) -> Set[Tuple[str, str]]:
+        comparability_csv = os.path.join(data_dir, "comparability_results.csv")
+
+        comparable_pairs = set()
+        with open(comparability_csv, "r", newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row['is_comparable'].lower() == "true":
+                    id_1 = row['id_1']
+                    id_2 = row['id_2']
+                    # Store both orderings since we don't know which order we'll encounter them
+                    comparable_pairs.add((id_1, id_2))
+                    comparable_pairs.add((id_2, id_1))
+
+        logging.info(f"Loaded {len(comparable_pairs) // 2} comparable pairs from {comparability_csv}\n")
+        return comparable_pairs
 
 
     def _evaluate_comparison(
@@ -148,7 +168,7 @@ class EvaluationPipeline:
             'reasoning_tokens': reasoning_tokens
         }
 
-    def run(self, image_paths: List[str], results_dir: str, max_workers: int = 1):
+    def run(self, image_paths: List[str], results_dir: str, data_dir: str, max_workers: int = 1):
         """
         Runs the evaluation pipeline for each image comparison in parallel.
         Supports resumption by skipping already completed comparisons.
@@ -157,6 +177,10 @@ class EvaluationPipeline:
 
         # Load completed comparisons from existing CSV
         completed_comparisons = self._load_completed_comparisons(csv_save_path)
+
+        # Load comparable pairs if only_comparable_pairs is enabled
+        if self.only_comparable_pairs:
+            comparable_pairs = self._load_comparable_pairs(data_dir)
 
         # Group images by class
         class_groups = defaultdict(set)
@@ -189,6 +213,15 @@ class EvaluationPipeline:
                 # Skip same image comparisons
                 if image_id_1 == image_id_2:
                     continue
+
+                # If only_comparable_pairs is enabled, check if this pair was marked comparable
+                if self.only_comparable_pairs:
+                    # Construct full IDs with category prefix (e.g., "Apples_001")
+                    full_id_1 = f"{image_class}_{image_id_1}"
+                    full_id_2 = f"{image_class}_{image_id_2}"
+
+                    if (full_id_1, full_id_2) not in comparable_pairs:
+                        continue
 
                 # Check if this comparison was already completed
                 base_1 = f"{image_id_1}_{edit_type_1}"
