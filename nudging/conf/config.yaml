@@ -37,9 +37,9 @@ priors:
   comparability_threshold: 0.6
 
   # Judge prompts for comparability evaluation
-  judge_prompts: ${strategy.judge_prompts}
+  judge_prompts: ${oc.select:strategy.judge_prompts,null}
   # Evaluator model for comparability evaluation
-  evaluator_model: ${strategy.evaluator_model}
+  evaluator_model: ${oc.select:strategy.evaluator_model,null}
 
 ######################
 # Interpretation Settings
