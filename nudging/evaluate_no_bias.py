@@ -48,10 +48,10 @@ class EvaluationPipeline:
         if status not in self.valid_statuses:
             return None
 
-        # Include variant in image_id if present
+        # Include variant in full_image_id for unique identification
         full_image_id = f"{image_id}_{variant}" if variant else image_id
 
-        return category, full_image_id, status
+        return category, image_id, full_image_id, status
 
     def _load_completed_comparisons(self, csv_path: str) -> Set[Tuple[str, str, str]]:
         """
@@ -161,8 +161,8 @@ class EvaluationPipeline:
 
             parsed = self._parse_filename_competition(filename)
             if parsed:
-                category, image_id, status = parsed
-                class_groups[category].add((image_id, status, img_bytes))
+                category, base_id, full_id, status = parsed
+                class_groups[category].add((base_id, full_id, status, img_bytes))
 
         logging.info(f"Found {len(class_groups)} image classes to evaluate\n")
 
@@ -171,24 +171,24 @@ class EvaluationPipeline:
         for image_class in sorted(class_groups.keys()):
             comparable_images = sorted(class_groups[image_class], key=lambda x: '_'.join(x[:2]))
 
-            for (image_id_1, edit_type_1, img_bytes_1), (image_id_2, edit_type_2, img_bytes_2) in \
+            for (base_id_1, full_id_1, edit_type_1, img_bytes_1), (base_id_2, full_id_2, edit_type_2, img_bytes_2) in \
                     itertools.combinations(comparable_images, 2):
 
-                # Skip same image comparisons
-                if image_id_1 == image_id_2:
+                # Skip same base image comparisons
+                if base_id_1 == base_id_2:
                     continue
 
                 # Check if this comparison was already completed
-                base_1 = f"{image_id_1}_{edit_type_1}"
-                base_2 = f"{image_id_2}_{edit_type_2}"
+                base_1 = f"{full_id_1}_{edit_type_1}"
+                base_2 = f"{full_id_2}_{edit_type_2}"
                 comparison_key = (image_class, base_1, base_2)
 
                 if comparison_key in completed_comparisons:
                     continue
 
                 comparison_tasks.append((
-                    image_class, image_id_1, edit_type_1, img_bytes_1,
-                    image_id_2, edit_type_2, img_bytes_2
+                    image_class, full_id_1, edit_type_1, img_bytes_1,
+                    full_id_2, edit_type_2, img_bytes_2
                 ))
 
         comparison_tasks = list(comparison_tasks) * self.n_evaluations  # Repeat tasks for multiple evaluations if >1 specified
