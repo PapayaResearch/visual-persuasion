@@ -1,7 +1,7 @@
-_target_: nudging.competition.VisualNudgeCompetition
+_target_: nudging.competition_no_bias.VisualNudgeCompetition
 
 # Strategy name for logging/results organization
-name: competition
+name: competition-no-bias
 
 # Whether to use candidates from proposer + selector
 # or just use optimizer proposals directly
