@@ -44,6 +44,10 @@ class EvaluationPipeline:
         variant = match.group(3)  # None if no variant
         status = match.group(4)
 
+        # Only process files with valid statuses
+        if status not in self.valid_statuses:
+            return None
+
         # Include variant in image_id if present
         full_image_id = f"{image_id}_{variant}" if variant else image_id
 
@@ -155,8 +159,10 @@ class EvaluationPipeline:
                 img_bytes = f.read()
             filename = os.path.basename(img_path)
 
-            category, image_id, status = self._parse_filename_competition(filename)
-            class_groups[category].add((image_id, status, img_bytes))
+            parsed = self._parse_filename_competition(filename)
+            if parsed:
+                category, image_id, status = parsed
+                class_groups[category].add((image_id, status, img_bytes))
 
         logging.info(f"Found {len(class_groups)} image classes to evaluate\n")
 
