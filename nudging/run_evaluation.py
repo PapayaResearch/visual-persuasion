@@ -72,7 +72,7 @@ def main(cfg: Config):
 
     # Run evaluation
     logging.info(f"Starting evaluation on results in: {data_dir}\n")
-    eval_pipeline.run(image_paths, results_dir, data_dir, cfg.general.max_workers)
+    eval_pipeline.run(image_paths, results_dir, cfg.general.max_workers)
 
     logging.info(f"Evaluation completed: {results_dir}\n")
 

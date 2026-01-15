@@ -11,8 +11,7 @@ valid_statuses:
 
 n_evaluations: 1
 
-# Only evaluate pairs that were marked as comparable in priors
-only_comparable_pairs: true
+comparability_csv_dir: null # null (all pairs) or path to comparability_results.csv
 
 evaluator_model:
   _target_: utils.wrappers.LanguageModel
