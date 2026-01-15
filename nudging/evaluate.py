@@ -1,6 +1,5 @@
 import os
 import re
-import csv
 import logging
 import itertools
 import threading
@@ -20,8 +19,7 @@ class EvaluationPipeline:
         evaluator_model: LanguageModel,
         strategy_name: str,
         valid_statuses: List[str],
-        n_evaluations: int = 1,
-        comparability_csv_dir: str = None
+        n_evaluations: int = 1
         # judge_prompts: List[str]
     ):
         self.evaluator_model = evaluator_model
@@ -29,7 +27,6 @@ class EvaluationPipeline:
         self.strategy_name = strategy_name
         self.valid_statuses = valid_statuses
         self.n_evaluations = n_evaluations
-        self.comparability_csv_dir = comparability_csv_dir
         # self.judge_prompts = judge_prompts
 
     def _parse_filename_zero_shot(self, filename: str) -> Tuple[str, str, str]:
@@ -78,23 +75,6 @@ class EvaluationPipeline:
 
         logging.info(f"Loaded {len(completed)} completed comparisons from existing CSV\n")
         return completed
-
-    def _load_comparable_pairs(self, data_dir: str) -> Set[Tuple[str, str]]:
-        comparability_csv = os.path.join(data_dir, "comparability_results.csv")
-
-        comparable_pairs = set()
-        with open(comparability_csv, "r", newline="") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row['is_comparable'].lower() == "true":
-                    id_1 = row['id_1']
-                    id_2 = row['id_2']
-                    # Store both orderings since we don't know which order we'll encounter them
-                    comparable_pairs.add((id_1, id_2))
-                    comparable_pairs.add((id_2, id_1))
-
-        logging.info(f"Loaded {len(comparable_pairs) // 2} comparable pairs from {comparability_csv}\n")
-        return comparable_pairs
 
 
     def _evaluate_comparison(
@@ -178,10 +158,6 @@ class EvaluationPipeline:
         # Load completed comparisons from existing CSV
         completed_comparisons = self._load_completed_comparisons(csv_save_path)
 
-        # Load comparable pairs if comparability_csv_dir is set
-        if self.comparability_csv_dir:
-            comparable_pairs = self._load_comparable_pairs(self.comparability_csv_dir)
-
         # Group images by class
         class_groups = defaultdict(set)
 
@@ -213,15 +189,6 @@ class EvaluationPipeline:
                 # Skip same image comparisons
                 if image_id_1 == image_id_2:
                     continue
-
-                # If comparability_csv_dir is set, check if this pair was marked comparable
-                if self.comparability_csv_dir:
-                    # Construct full IDs with category prefix (e.g., "Apples_001")
-                    full_id_1 = f"{image_class}_{image_id_1}"
-                    full_id_2 = f"{image_class}_{image_id_2}"
-
-                    if (full_id_1, full_id_2) not in comparable_pairs:
-                        continue
 
                 # Check if this comparison was already completed
                 base_1 = f"{image_id_1}_{edit_type_1}"
