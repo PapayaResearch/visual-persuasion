@@ -37,7 +37,7 @@ python main.py general.src_dir=/path/to/visual-nudging/setup/data/abod general.d
 
 ```bash
 cd nudging
-python run_priors.py general.data_dir=/path/to/visual-nudging/nudging/data/abod/ general.max_workers=32
+python run_priors.py general.data_dir=/path/to/visual-nudging/nudging/data/abod/ strategy=competition general.max_workers=32
 ```
 
 ## Optimization Pipeline
