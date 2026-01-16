@@ -304,10 +304,6 @@ class VisualNudgeCompetition:
             edited_image.save(optimized_path)
             logging.info(f"Saved zero-shot optimized candidate to {optimized_path}\n")
 
-            zero_shot_path = os.path.join(results_dir, f"{loser_name}_zero-shot.jpg")
-            if not os.path.isfile(zero_shot_path):
-                edited_image.save(zero_shot_path)
-
             total_cost = self._total_num_images_generated * self._cost_per_image_generated
             logging.info(f"Total images generated: {self._total_num_images_generated}, Cost: ${total_cost:.2f}\n")
 
@@ -476,13 +472,6 @@ class VisualNudgeCompetition:
             f"{loser_name}_round-{round_num}_optimized.jpg"
         )
         edited_image.save(improved_path)
-
-        first_improved_path = os.path.join(
-            results_dir,
-            f"{loser_name}_zero-shot.jpg"
-        )
-        if not os.path.isfile(first_improved_path):
-            edited_image.save(first_improved_path)
 
         logging.info(f"Saved optimized candidate to {improved_path}\n")
 
