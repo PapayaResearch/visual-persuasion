@@ -597,14 +597,13 @@ class VisualNudgeCompetition:
 
         # Save original (only one since both variants come from same source)
         original_image_obj.save(os.path.join(results_dir, f"{base_img}_original.jpg"))
-        # Save initial zero-shot edits for both variants
-        state_a["image"].save(os.path.join(results_dir, f"{base_a}_zero-shot.jpg"))
-        state_b["image"].save(os.path.join(results_dir, f"{base_b}_zero-shot.jpg"))
 
         # Contest loop
         round_num = 0
         equilibrium_reached = False
         visualization_history = []  # For matplotlib visualization
+        final_winner_name = None
+        final_winner_state = None
 
         viz_path = os.path.join(results_dir, f"{base_img}_visualization.png")
 
@@ -688,6 +687,15 @@ class VisualNudgeCompetition:
             if len(winner_state["edit_history"]) > 0:
                 winner_state["edit_history"][-1]["won_next_round"] = True
 
+            # Track final winner
+            final_winner_name = winner_name
+            final_winner_state = winner_state
+
+            # Save zero-shot winner after first round
+            if round_num == 1:
+                winner_state["image"].save(os.path.join(results_dir, f"{base_img}_zero-shot.jpg"))
+                logging.info(f"💾 Saved zero-shot winner: {winner_name}\n")
+
             if self.use_last_winner_as_base:
                 loser_state["bytes"] = loser_state["champion_bytes"]
                 loser_state["prompt"] = loser_state["champion_prompt"]
@@ -757,9 +765,9 @@ class VisualNudgeCompetition:
             logging.info(f"⚠️  Max rounds ({self.max_rounds_per_pair}) reached\n")
         logging.info(f"{'='*60}\n")
 
-        # Save finals
-        state_a["image"].save(os.path.join(results_dir, f"{base_a}_final.jpg"))
-        state_b["image"].save(os.path.join(results_dir, f"{base_b}_final.jpg"))
+        # Save only the final winner
+        logging.info(f"Final winner: {final_winner_name}\n")
+        final_winner_state["image"].save(os.path.join(results_dir, f"{base_img}_final.jpg"))
 
         # Save structured log to JSON
         log_path = os.path.join(results_dir, f"{base_img}_log.json")

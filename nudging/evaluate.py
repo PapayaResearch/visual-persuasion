@@ -169,7 +169,7 @@ class EvaluationPipeline:
             if self.strategy_name == 'zero-shot':
                 class_name, image_id, edit_type = self._parse_filename_zero_shot(filename)
                 class_groups[class_name].add((image_id, edit_type, img_bytes))
-            elif self.strategy_name == 'competition':
+            elif self.strategy_name in ['competition', 'competition-no-bias']:
                 parsed = self._parse_filename_competition(filename)
                 if parsed is None:
                     continue
