@@ -84,7 +84,11 @@ def main():
     for _, row in df.iterrows():
         if row['choice'] == 'inconsistent':
             continue  # Skip inconsistent choices
-        pairs.setdefault(row['base1'].rsplit("_", 1)[0] + ' vs ' + row['base2'].rsplit("_", 1)[0], []).append(row['choice'].rsplit("_", 1)[0])
+        category = row['image_class']
+        base1_full = f"{category}_{row['base1'].rsplit('_', 1)[0]}"
+        base2_full = f"{category}_{row['base2'].rsplit('_', 1)[0]}"
+        choice_full = f"{category}_{row['choice'].rsplit('_', 1)[0]}"
+        pairs.setdefault(base1_full + ' vs ' + base2_full, []).append(choice_full)
 
     # Print win counts and rates for each base product within each pair
     print("\nWin counts and rates for each base product within each pair:")
