@@ -5,7 +5,7 @@
 defaults:
   - _self_
   # LLM model for evaluator/loss/optimizer (e.g., gpt-5)
-  - llm: gemini-2-5-flash
+  - llm: gemini-3-flash
   # Image editor model (e.g., nano-banana-flash, nano-banana-pro)
   - editor: nano-banana-flash
   # Strategy for nudging (e.g., zero-shot, competition)
