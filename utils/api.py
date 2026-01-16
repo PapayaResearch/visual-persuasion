@@ -2,6 +2,9 @@ import litellm
 import time
 from typing import Callable
 
+# Suppress litellm info messages
+litellm.suppress_debug_info = True
+
 def create_api_call(
         model: str,
         delay: float,

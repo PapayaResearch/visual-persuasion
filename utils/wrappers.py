@@ -8,6 +8,9 @@ from pydantic import BaseModel
 from PIL import Image
 from abc import ABC, abstractmethod
 
+# Suppress litellm info messages
+litellm.suppress_debug_info = True
+
 class IOSchema(BaseModel):
     """
     Base class for all input and output schemas.
