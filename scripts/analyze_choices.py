@@ -79,30 +79,48 @@ def main():
                 print(f"{edit_type_2:20s} beats {edit_type_1:20s} {count:5d} ({win_rate:5.1f}%)")
 
 
-    # Check win counts/rates for each base
-    pairs = {}
+    # Group results by category
+    category_data = {}
     for _, row in df.iterrows():
-        if row['choice'] == 'inconsistent':
-            continue  # Skip inconsistent choices
         category = row['image_class']
-        base1_full = f"{category}_{row['base1'].rsplit('_', 1)[0]}"
-        base2_full = f"{category}_{row['base2'].rsplit('_', 1)[0]}"
-        choice_full = f"{category}_{row['choice'].rsplit('_', 1)[0]}"
-        pairs.setdefault(base1_full + ' vs ' + base2_full, []).append(choice_full)
+        if category not in category_data:
+            category_data[category] = []
+        category_data[category].append(row)
 
-    # Print win counts and rates for each base product within each pair
-    print("\nWin counts and rates for each base product within each pair:")
-    print("-" * 80)
-    for pair, choices in pairs.items():
-        base1, base2 = pair.split(' vs ')
-        count_base1 = sum(1 for choice in choices if choice == base1)
-        count_base2 = sum(1 for choice in choices if choice == base2)
-        total = count_base1 + count_base2
-        if total > 0:
-            win_rate_base1 = (count_base1 / total) * 100
-            win_rate_base2 = (count_base2 / total) * 100
-            print(f"{base1:30s} {count_base1:5d} ({win_rate_base1:5.1f}%) vs {base2:30s} {count_base2:5d} ({win_rate_base2:5.1f}%)")
-            print("-" * 80)
+    # Print per-category summaries
+    print("\n" + "=" * 80)
+    print("PER-CATEGORY SUMMARIES")
+    print("=" * 80)
+
+    for category in sorted(category_data.keys()):
+        rows = category_data[category]
+
+        # Calculate pairwise win counts for this category
+        category_pair_counts = Counter()
+        for row in rows:
+            edit_type_1 = extract_edit_type(row['base1'])
+            edit_type_2 = extract_edit_type(row['base2'])
+            pair = sorted([edit_type_1, edit_type_2])
+            if row['choice'] == 'inconsistent':
+                continue  # Skip inconsistent choices
+            winner = row['choice'].split('_', 1)[1]  # Get the edit type of the chosen image
+            pair_win = (pair[0], pair[1], winner)
+            category_pair_counts[pair_win] += 1
+
+        if not category_pair_counts:
+            continue
+
+        # Report results
+        print(f"\nCategory: {category}")
+        print("-" * 40)
+        for (edit_type_1, edit_type_2, winner), count in sorted(category_pair_counts.items(), key=lambda x: -x[1]):
+            total_pair = category_pair_counts[(edit_type_1, edit_type_2, edit_type_1)] + category_pair_counts[(edit_type_1, edit_type_2, edit_type_2)]
+            if total_pair > 0:
+                win_rate = (count / total_pair) * 100
+                if winner == edit_type_1:
+                    print(f"{edit_type_1:20s} beats {edit_type_2:20s} {count:5d} ({win_rate:5.1f}%)")
+                else:
+                    print(f"{edit_type_2:20s} beats {edit_type_1:20s} {count:5d} ({win_rate:5.1f}%)")
 
 if __name__ == "__main__":
     main()
