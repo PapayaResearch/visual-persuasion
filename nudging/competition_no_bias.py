@@ -540,12 +540,11 @@ class VisualNudgeCompetition:
 
         original_image_obj = Image.open(io.BytesIO(original_image_bytes))
 
-        # Generate two zero-shot edits with the same prompt
-        prompt = self._compose_prompt(None)
-        logging.info(f"\n🎨 Generating two zero-shot edits with prompt: {prompt}\n")
+        # Generate first zero-shot edit
+        prompt_a = self._compose_prompt(None)
 
         edited_image_a, edited_image_a_bytes = self.image_editing_model.edit(
-            prompt,
+            prompt_a,
             original_image_bytes,
             original_image_bytes
         )
@@ -553,10 +552,15 @@ class VisualNudgeCompetition:
         with self._counter_lock:
             self._total_num_images_generated += 1
 
+        # Generate second zero-shot edit with instruction to be different
+        prompt_b = self._compose_prompt(
+            "IMPORTANT: Generate a very different image from the other image shown."
+        )
+
         edited_image_b, edited_image_b_bytes = self.image_editing_model.edit(
-            prompt,
+            prompt_b,
             original_image_bytes,
-            original_image_bytes
+            edited_image_a_bytes  # Pass image A as context to differentiate from
         )
 
         with self._counter_lock:
