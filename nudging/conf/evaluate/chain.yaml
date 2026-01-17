@@ -1,13 +1,7 @@
 _target_: nudging.evaluate_chain.ChainEvaluationPipeline
 
-# Strategy name (competition or competition-no-bias)
-strategy: competition-no-bias
-
-# Directory containing competition results to analyze (MUST override this when running)
-results_dir: ${hydra:runtime.cwd}/results/competition-no-bias/TIMESTAMP
-
-# Optional: specific product to analyze (leave null to analyze all)
-specific_product: null
+# Strategy name determines how to parse log files and extract chains
+strategy_name: ${strategy.name}
 
 # Evaluator model for chain evaluation
 evaluator_model:
