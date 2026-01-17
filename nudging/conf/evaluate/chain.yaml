@@ -1,5 +1,4 @@
-# Chain evaluation configuration
-# Usage: python scripts/evaluate_chain.py evaluate=chain evaluate.results_dir=results/competition-no-bias/2026-01-17_14-30-00
+_target_: nudging.evaluate_chain.ChainEvaluationPipeline
 
 # Strategy name (competition or competition-no-bias)
 strategy: competition-no-bias
