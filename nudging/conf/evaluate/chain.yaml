@@ -1,9 +1,10 @@
-_target_: nudging.evaluate_chain.ChainEvaluationPipeline
+_target_: nudging.evaluate_chain.EvaluationPipeline
 
-# Strategy name determines how to parse log files and extract chains
+# Strategy name determines filename parsing logic
 strategy_name: ${strategy.name}
 
-# Evaluator model for chain evaluation
+n_evaluations: 1
+
 evaluator_model:
   _target_: utils.wrappers.LanguageModel
   system_prompt: |

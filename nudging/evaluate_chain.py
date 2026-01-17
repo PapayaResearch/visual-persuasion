@@ -1,121 +1,81 @@
 import os
-import json
+import re
 import logging
 import threading
 import pandas as pd
-from pathlib import Path
 from typing import List
+from collections import defaultdict
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils.wrappers import LanguageModel
 
-
-class ChainEvaluationPipeline:
+class EvaluationPipeline:
     """
-    Evaluation pipeline to assess progression along optimization chains.
-    Tests if images get progressively better: final > winners > zero-shot > original
+    Chain evaluation pipeline to assess optimization progression.
+    For each product, compares: original vs zero-shot, original vs final, zero-shot vs final.
     """
     def __init__(
         self,
         evaluator_model: LanguageModel,
-        strategy_name: str
+        strategy_name: str,
+        n_evaluations: int = 1
     ):
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
         self.strategy_name = strategy_name
+        self.n_evaluations = n_evaluations
 
-    def _extract_chain_from_log(self, log_path: str, images_dir: str) -> list[dict]:
+    def _parse_filename_competition(self, filename: str):
         """
-        Extract the chain of winner images from the competition log.
-        Returns list of dicts with 'name', 'path', 'stage' for each image in the chain.
+        Parse competition-no-bias filename: CATEGORY_ID_VARIANT_STATUS.jpg or CATEGORY_ID_STATUS.jpg
+        Example: SOFA_12345_A_final.jpg -> category=SOFA, image_id=12345, status=final
+        Example: SOFA_12345_original.jpg -> category=SOFA, image_id=12345, status=original
+        Returns (category, image_id, status) or None.
+        Only accepts: original, zero-shot, final
         """
-        with open(log_path, 'r') as f:
-            log_data = json.load(f)
+        # Match: CATEGORY_ID_[VARIANT_]STATUS.jpg
+        match = re.match(r'^([A-Z]+)_([a-z0-9]+)_(?:([AB])_)?(.+)\.jpg$', filename)
 
-        base_name = os.path.basename(log_path).replace('_log.json', '')
-        chain = []
+        if not match:
+            return None
 
-        if self.strategy_name == 'competition-no-bias':
-            # Format: CATEGORY_ID_log.json
-            # Original: CATEGORY_ID_original.jpg
-            original_path = os.path.join(images_dir, f"{base_name}_original.jpg")
-            if os.path.exists(original_path):
-                chain.append({
-                    'name': f"{base_name}_original",
-                    'path': original_path,
-                    'stage': 'original',
-                    'round': 0
-                })
+        category = match.group(1)
+        image_id = match.group(2)
+        variant = match.group(3)  # None if no variant
+        status = match.group(4)
 
-            # Zero-shot winner (after round 1)
-            zero_shot_path = os.path.join(images_dir, f"{base_name}_zero-shot.jpg")
-            if os.path.exists(zero_shot_path):
-                chain.append({
-                    'name': f"{base_name}_zero-shot",
-                    'path': zero_shot_path,
-                    'stage': 'zero-shot',
-                    'round': 1
-                })
+        # Only process chain-relevant files
+        if status not in ['original', 'zero-shot', 'final']:
+            return None
 
-            # Extract winners from each round
-            for round_log in log_data:
-                round_num = round_log['round_number']
-                if 'contest' in round_log and 'winner' in round_log['contest']:
-                    winner_name = round_log['contest']['winner']
-                    winner_path = os.path.join(images_dir, f"{winner_name}_round-{round_num}_WINNER.jpg")
-
-                    if os.path.exists(winner_path):
-                        chain.append({
-                            'name': f"{winner_name}_round-{round_num}",
-                            'path': winner_path,
-                            'stage': f'round-{round_num}-winner',
-                            'round': round_num
-                        })
-
-            # Final image
-            final_path = os.path.join(images_dir, f"{base_name}_final.jpg")
-            if os.path.exists(final_path):
-                chain.append({
-                    'name': f"{base_name}_final",
-                    'path': final_path,
-                    'stage': 'final',
-                    'round': len(log_data) + 1
-                })
-
-        elif self.strategy_name == 'competition':
-            # Format: pair-X_CATEGORY_ID_vs_CATEGORY_ID_log.json
-            # For now, skip - can be extended later
-            logging.warning("Competition strategy chain extraction not yet implemented")
-            return []
-
-        return chain
+        return category, image_id, status
 
     def _evaluate_comparison(
         self,
-        product: str,
-        earlier_stage: str,
-        earlier_round: int,
-        earlier_bytes: bytes,
-        later_stage: str,
-        later_round: int,
-        later_bytes: bytes
+        base: str,
+        category: str,
+        first_status: str,
+        second_status: str,
+        img_bytes_first: bytes,
+        img_bytes_second: bytes
     ) -> dict:
         """
-        Evaluate a single comparison between two images in the chain.
+        Evaluate a single comparison between two stages of the same product.
         Returns a dictionary with the evaluation result.
         """
-        def evaluate_single(is_earlier_first: bool):
+        def evaluate_single(is_first_order: bool):
             """Single judge evaluation"""
-            images = [earlier_bytes, later_bytes] if is_earlier_first else [later_bytes, earlier_bytes]
+            images = [img_bytes_first, img_bytes_second] if is_first_order else [img_bytes_second, img_bytes_first]
             choice_map = {
-                "first": "earlier" if is_earlier_first else "later",
-                "second": "later" if is_earlier_first else "earlier"
+                "first": "first" if is_first_order else "second",
+                "second": "second" if is_first_order else "first"
             }
 
-            logging.info(f"Evaluating {earlier_stage} vs {later_stage} ({'earlier first' if is_earlier_first else 'later first'})\n")
+            logging.info(f"Evaluating {base}: {first_status} vs {second_status} ({'first-second order' if is_first_order else 'second-first order'})\n")
 
             evaluation, usage = self.evaluator_model.get_response(
-                images=images
+                images=images,
+                metadata="The product here is a(n) %s." % category
             )
 
             real_choice = choice_map.get(evaluation.choice.lower())
@@ -123,19 +83,16 @@ class ChainEvaluationPipeline:
             logging.info(f"Judge chose {real_choice} - {evaluation.reason}\n")
             return (real_choice, evaluation.reason, usage)
 
-        choice_1_first, reason_1_first, usage_1_first = evaluate_single(is_earlier_first=True)
-        choice_2_first, reason_2_first, usage_2_first = evaluate_single(is_earlier_first=False)
+        choice_1_first, reason_1_first, usage_1_first = evaluate_single(is_first_order=True)
+        choice_2_first, reason_2_first, usage_2_first = evaluate_single(is_first_order=False)
 
-        choice = None
         if choice_1_first == choice_2_first:
             choice = choice_1_first
             vlm_reason = reason_1_first
-            consistent = True
         else:
-            logging.warning(f"Inconsistent judge results for {earlier_stage} vs {later_stage}: {choice_1_first} vs {choice_2_first}\n")
+            logging.warning(f"Inconsistent judge results for {base} {first_status} vs {second_status}: {choice_1_first} vs {choice_2_first}\n")
             choice = "inconsistent"
             vlm_reason = f"Judge 1: {reason_1_first} | Judge 2: {reason_2_first}"
-            consistent = False
 
         completion_tokens = usage_1_first.completion_tokens + usage_2_first.completion_tokens
         prompt_tokens = usage_1_first.prompt_tokens + usage_2_first.prompt_tokens
@@ -146,14 +103,11 @@ class ChainEvaluationPipeline:
             reasoning_tokens = usage_1_first.completion_tokens_details.reasoning_tokens + usage_2_first.completion_tokens_details.reasoning_tokens
 
         return {
-            'product': product,
-            'earlier_stage': earlier_stage,
-            'earlier_round': earlier_round,
-            'later_stage': later_stage,
-            'later_round': later_round,
+            'image_class': category,
+            'base': base,
+            'first': first_status,
+            'second': second_status,
             'choice': choice,
-            'consistent': consistent,
-            'correct': (choice == 'later'),
             'reason': vlm_reason,
             'completion_tokens': completion_tokens,
             'prompt_tokens': prompt_tokens,
@@ -163,74 +117,55 @@ class ChainEvaluationPipeline:
 
     def run(self, image_paths: List[str], results_dir: str, max_workers: int = 1):
         """
-        Runs the chain evaluation pipeline.
-        Finds log files in the data directory and evaluates progression chains.
+        Runs chain evaluation: for each product, compares original vs zero-shot, original vs final, zero-shot vs final.
         """
         csv_save_path = os.path.join(results_dir, 'chain_results.csv')
 
-        # Determine images directory from image_paths
-        if not image_paths:
-            logging.error("No image paths provided")
-            return
+        # Group images by (category, base_id) to form chains
+        product_images = defaultdict(dict)  # key: (category, base_id), value: {status: img_bytes}
 
-        images_dir = os.path.dirname(image_paths[0])
-        logging.info(f"Looking for log files in: {images_dir}\n")
+        for img_path in image_paths:
+            with open(img_path, "rb") as f:
+                img_bytes = f.read()
+            filename = os.path.basename(img_path)
 
-        # Find log files in the images directory
-        log_files = list(Path(images_dir).glob("*_log.json"))
-        logging.info(f"Found {len(log_files)} log files to analyze\n")
+            parsed = self._parse_filename_competition(filename)
+            if parsed:
+                category, base_id, status = parsed
+                product_key = (category, base_id)
+                product_images[product_key][status] = img_bytes
 
-        if not log_files:
-            logging.warning("No log files found in the data directory")
-            return
+        logging.info(f"Found {len(product_images)} products to evaluate\n")
 
-        # Extract chains and prepare comparison tasks
+        # Collect comparison tasks
         comparison_tasks = []
+        for (category, base_id), status_dict in sorted(product_images.items()):
+            base = f"{category}_{base_id}"
 
-        for log_file in sorted(log_files):
-            logging.info(f"Processing log: {log_file.name}")
+            # Get the three images if they exist
+            original = status_dict.get('original')
+            zero_shot = status_dict.get('zero-shot')
+            final = status_dict.get('final')
 
-            # Extract chain
-            chain = self._extract_chain_from_log(str(log_file), images_dir)
+            # Create the 3 comparisons
+            if original and zero_shot:
+                comparison_tasks.append((
+                    base, category, 'original', 'zero-shot', original, zero_shot
+                ))
 
-            if len(chain) < 2:
-                logging.warning(f"Chain too short ({len(chain)} images), skipping\n")
-                continue
+            if original and final:
+                comparison_tasks.append((
+                    base, category, 'original', 'final', original, final
+                ))
 
-            logging.info(f"Chain length: {len(chain)} images")
-            for img in chain:
-                logging.info(f"  - {img['stage']}: {img['name']}")
+            if zero_shot and final:
+                comparison_tasks.append((
+                    base, category, 'zero-shot', 'final', zero_shot, final
+                ))
 
-            product = log_file.stem.replace('_log', '')
-
-            # Create all pairwise comparisons where i < j (earlier vs later)
-            for i in range(len(chain)):
-                for j in range(i + 1, len(chain)):
-                    earlier = chain[i]
-                    later = chain[j]
-
-                    # Load images
-                    with open(earlier['path'], 'rb') as f:
-                        earlier_bytes = f.read()
-                    with open(later['path'], 'rb') as f:
-                        later_bytes = f.read()
-
-                    comparison_tasks.append((
-                        product,
-                        earlier['stage'],
-                        earlier['round'],
-                        earlier_bytes,
-                        later['stage'],
-                        later['round'],
-                        later_bytes
-                    ))
-
+        comparison_tasks = list(comparison_tasks) * self.n_evaluations
         total_comparisons = len(comparison_tasks)
-        logging.info(f"\nTotal comparisons to evaluate: {total_comparisons}\n")
-
-        if total_comparisons == 0:
-            logging.warning("No comparisons to evaluate")
-            return
+        logging.info(f"Total comparisons to evaluate: {total_comparisons}\n")
 
         # Prepare CSV file for incremental writing
         csv_lock = threading.Lock()
@@ -239,8 +174,7 @@ class ChainEvaluationPipeline:
         # Open CSV in append mode for incremental writing
         with open(csv_save_path, 'a', newline='', encoding='utf-8') as csvfile:
             fieldnames = [
-                'product', 'earlier_stage', 'earlier_round', 'later_stage', 'later_round',
-                'choice', 'consistent', 'correct', 'reason',
+                'image_class', 'base', 'first', 'second', 'choice', 'reason',
                 'completion_tokens', 'prompt_tokens', 'total_tokens', 'reasoning_tokens'
             ]
             writer = pd.DataFrame(columns=fieldnames)
@@ -273,18 +207,4 @@ class ChainEvaluationPipeline:
                         result_df.to_csv(csvfile, index=False, header=False, mode='a')
                         csvfile.flush()  # Force write to disk
 
-        logging.info(f"\nChain evaluation completed. Results saved to: {csv_save_path}\n")
-
-        # Print summary
-        df = pd.read_csv(csv_save_path)
-        total = len(df)
-        correct = df['correct'].sum()
-        consistent = df['consistent'].sum()
-
-        logging.info(f"="*80)
-        logging.info(f"SUMMARY")
-        logging.info(f"="*80)
-        logging.info(f"Total comparisons: {total}")
-        logging.info(f"Correct (later wins): {correct} ({correct/total*100:.1f}%)")
-        logging.info(f"Consistent: {consistent} ({consistent/total*100:.1f}%)")
-        logging.info(f"="*80)
+        logging.info(f"Chain evaluation completed. Results saved to: {csv_save_path}\n")
