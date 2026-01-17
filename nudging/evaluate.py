@@ -214,9 +214,9 @@ class EvaluationPipeline:
         # Open CSV in append mode for incremental writing
         with open(csv_save_path, 'a', newline='', encoding='utf-8') as csvfile:
             fieldnames = [
-                'image_class', 'base1', 'base2', 'choice', 'reason', 'first', 'second',
-                'completion_tokens', 'prompt_tokens', 'total_tokens', 'reasoning_tokens',
-                'consistent_judges', 'winner_score'
+                'image_class', 'base1', 'base2', 'choice', 'reason',
+                'completion_tokens', 'prompt_tokens', 'total_tokens',
+                'reasoning_tokens'
             ]
             writer = pd.DataFrame(columns=fieldnames)
 
