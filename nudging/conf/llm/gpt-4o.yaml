@@ -1,10 +1,6 @@
 _target_: utils.api.create_api_call
-model: gpt-4o
+model: gpt-4o-2024-08-06 # Default
 delay: 0
-temperature: null
-max_tokens: null
-reasoning_effort: medium
-additional_drop_params:
-    - reasoning_effort
-    - temperature
-    - max_tokens
+params:
+  temperature: 1.0 # Default: 1.0; Range: [0, 2]
+  additional_drop_params: []
