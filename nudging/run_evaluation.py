@@ -61,10 +61,11 @@ def main(cfg: Config):
     results_dir = os.path.join(data_dir, "evaluation", model_name)
     os.makedirs(results_dir, exist_ok=True)
 
-    # Save config to output directories
-    with open(os.path.join(results_dir, "config.yaml"), "w") as outfile:
+    # Save config to output directories with evaluation-specific names
+    config_filename = f"config_{cfg.evaluate.name}.yaml"
+    with open(os.path.join(results_dir, config_filename), "w") as outfile:
         outfile.write(cfg_yaml)
-    with open(os.path.join(os.path.dirname(log_file), "config.yaml"), "w") as outfile:
+    with open(os.path.join(os.path.dirname(log_file), config_filename), "w") as outfile:
         outfile.write(cfg_yaml)
 
     # Create evaluation pipeline

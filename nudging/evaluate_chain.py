@@ -124,7 +124,7 @@ class EvaluationPipeline:
         """
         Runs chain evaluation: for each product, compares original vs zero-shot, original vs final, zero-shot vs final.
         """
-        csv_save_path = os.path.join(results_dir, 'chain_results.csv')
+        csv_save_path = os.path.join(results_dir, 'results_chain.csv')
 
         # Group images by (category, base_id) to form chains
         product_images = defaultdict(dict)  # key: (category, base_id), value: {status: img_bytes}

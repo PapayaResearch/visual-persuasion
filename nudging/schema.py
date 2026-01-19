@@ -3,6 +3,20 @@ from typing import List, Type, Literal
 from utils.wrappers import IOSchema
 
 
+def create_difference_detector_input_schema(
+    images_description: str
+) -> Type[IOSchema]:
+    """
+    Creates a DifferenceDetectorInput schema class with configurable field descriptions.
+    Used for autointerp where we only need images, no metadata or prompts.
+    """
+    class DifferenceDetectorInput(IOSchema):
+        """Input schema for difference detector model."""
+        images: List[bytes] = Field(description=images_description)
+
+    return DifferenceDetectorInput
+
+
 def create_evaluator_without_prompt_input_schema(
     images_description: str,
     metadata_description: str = ""

@@ -1,6 +1,7 @@
 import os
 import re
 import io
+import csv
 import logging
 import dataclasses
 from PIL import Image
@@ -20,8 +21,7 @@ class ResultsInterpreter:
     results_dir: str
     difference_detector_model: LanguageModel
     theme_summarizer_model: LanguageModel
-    difference_prompt: str
-    theme_prompt: str
+    name: str
 
     def _parse_filename(self, filename: str) -> Tuple[str, str, str]:
         """
@@ -90,7 +90,6 @@ class ResultsInterpreter:
         logging.info(f"  Comparing {label}...")
 
         response = self.difference_detector_model.get_response(
-            task=self.difference_prompt,
             images=[original_bytes, edited_bytes]
         )
 
@@ -103,7 +102,7 @@ class ResultsInterpreter:
         Summarize all differences into main themes using LLM.
 
         Args:
-            all_differences: List of difference descriptions from all products
+            all_differences: List of difference descriptions from all images
 
         Returns:
             String describing main themes
@@ -130,12 +129,15 @@ class ResultsInterpreter:
 
         grouped_images = self._group_images(image_paths)
 
-        for category, products in grouped_images.items():
+        # Collect all results for CSV
+        all_results = []
+
+        for category, images_in_category in grouped_images.items():
             logging.info(f"\n===== Processing Category: {category} =====\n")
 
             # Prepare all comparison tasks
             comparison_tasks = []
-            for base_id, images in products.items():
+            for base_id, images in images_in_category.items():
                 logging.info(f"Image: {base_id}")
 
                 # Get available images
@@ -159,22 +161,31 @@ class ResultsInterpreter:
                         unit="comparison"
                 ):
                     label, diff = future.result()
-                    category_differences.append(f"[{label}] {diff}")
+                    category_differences.append(diff)
+                    # Store temporarily without themes
+                    all_results.append({
+                        'category': category,
+                        'base_id': label,
+                        'differences': diff,
+                        'themes': None  # Will be filled in after summarization
+                    })
 
             # Summarize themes for this category
             logging.info(f"Summarizing themes for {category}...\n")
             themes = self._summarize_themes(category_differences)
             logging.info(f"Themes for {category}:\n{themes}\n")
 
-            # Save to file
-            output_file = os.path.join(results_dir, f"{category}_themes.txt")
-            with open(output_file, "w") as f:
-                f.write(f"Category: {category}\n\n")
-                f.write(f"Main Optimization Themes:\n{themes}\n\n")
-                f.write(f"All Differences (Original vs Final, {len(category_differences)} images):\n")
-                for diff in category_differences:
-                    f.write(f"{diff}\n")
+            # Update all results for this category with the themes
+            for result in all_results:
+                if result['category'] == category and result['themes'] is None:
+                    result['themes'] = themes
 
-            logging.info(f"Saved themes to: {output_file}\n")
+        # Save all results to CSV
+        csv_save_path = os.path.join(results_dir, 'results_autointerp.csv')
+        with open(csv_save_path, 'w', newline='') as csvfile:
+            fieldnames = ['category', 'base_id', 'differences', 'themes']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(all_results)
 
-        logging.info(f"Interpretation complete. Results saved to: {results_dir}\n")
+        logging.info(f"Interpretation complete. Results saved to: {csv_save_path}\n")

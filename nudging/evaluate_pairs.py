@@ -145,7 +145,7 @@ class EvaluationPipeline:
         Runs the evaluation pipeline for each image comparison in parallel.
         Supports resumption by skipping already completed comparisons.
         """
-        csv_save_path = os.path.join(results_dir, 'results.csv')
+        csv_save_path = os.path.join(results_dir, 'results_pairs.csv')
 
         # Load completed comparisons from existing CSV
         completed_comparisons = self._load_completed_comparisons(csv_save_path)
