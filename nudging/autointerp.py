@@ -49,9 +49,12 @@ class ResultsInterpreter:
 
         return category, product_id, edit_type, prior_index
 
-    def _group_images(self) -> Dict[str, Dict[str, Dict[str, str]]]:
+    def _group_images(self, image_paths: List[str]) -> Dict[str, Dict[str, Dict[str, str]]]:
         """
         Group images by category and product.
+
+        Args:
+            image_paths: List of absolute paths to image files
 
         Returns:
             {
@@ -67,7 +70,8 @@ class ResultsInterpreter:
         """
         grouped = defaultdict(lambda: defaultdict(dict))
 
-        for filename in os.listdir(self.results_dir):
+        for image_path in image_paths:
+            filename = os.path.basename(image_path)
             if not filename.endswith('.jpg'):
                 continue
 
@@ -80,7 +84,7 @@ class ResultsInterpreter:
             else:
                 key = f'prior-{prior_index}'
 
-            grouped[category][product_id][key] = os.path.join(self.results_dir, filename)
+            grouped[category][product_id][key] = image_path
 
         return grouped
 
@@ -125,13 +129,18 @@ class ResultsInterpreter:
 
         return response.themes
 
-    def run(self, output_dir: str, max_workers: int = 8):
+    def run(self, image_paths: List[str], results_dir: str, max_workers: int = 8):
         """
         Analyze all results and generate theme summaries per category.
-        """
-        os.makedirs(output_dir, exist_ok=True)
 
-        grouped_images = self._group_images()
+        Args:
+            image_paths: List of absolute paths to image files to analyze
+            results_dir: Directory where results will be saved
+            max_workers: Maximum number of parallel workers
+        """
+        os.makedirs(results_dir, exist_ok=True)
+
+        grouped_images = self._group_images(image_paths)
 
         for category, products in grouped_images.items():
             logging.info(f"\n===== Processing Category: {category} =====\n")
@@ -172,7 +181,7 @@ class ResultsInterpreter:
             logging.info(f"Themes for {category}:\n{themes}\n")
 
             # Save to file
-            output_file = os.path.join(output_dir, f"{category}_themes.txt")
+            output_file = os.path.join(results_dir, f"{category}_themes.txt")
             with open(output_file, "w") as f:
                 f.write(f"Category: {category}\n\n")
                 f.write(f"Main Themes:\n{themes}\n\n")
@@ -181,3 +190,5 @@ class ResultsInterpreter:
                     f.write(f"{diff}\n")
 
             logging.info(f"Saved themes to: {output_file}\n")
+
+        logging.info(f"Interpretation complete. Results saved to: {results_dir}\n")
