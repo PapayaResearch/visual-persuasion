@@ -26,6 +26,21 @@ AWS_ACCESS_KEY_ID=your_aws_key_id
 AWS_SECRET_ACCESS_KEY=your_aws_secret_key
 ```
 
+## Task Configurations
+
+The system includes task-specific prompts for different domains. Task configurations are located in `nudging/conf/tasks/`:
+
+- **people.yaml** - Job candidate images
+- **products.yaml** - Product images
+- **houses.yaml** - Real estate images
+
+Each task contains prompts for both optimization (during image generation) and evaluation (when comparing results). To use a different task, specify it when running:
+
+```bash
+python run_optimization.py tasks=products ...
+python run_evaluation.py tasks=houses ...
+```
+
 ## Dataset Preprocessing
 
 ```bash
@@ -33,29 +48,13 @@ cd setup
 python main.py general.src_dir=/path/to/visual-nudging/setup/data/abod general.dst_dir=/path/to/visual-nudging/nudging/data dataset.name=abod general.max_workers=32
 ```
 
-## Comparability Evaluation
-
-```bash
-cd nudging
-python run_priors.py general.data_dir=/path/to/visual-nudging/nudging/data/abod/ strategy=competition general.max_workers=32
-```
-
 ## Optimization Pipeline
-
-### Zero-shot Strategy
-
-```bash
-cd nudging
-python run_optimization.py general.data_dir=/path/to/visual-nudging/nudging/data/abod/ strategy=zero-shot general.max_workers=32
-```
 
 ### Competition Strategy
 
-#### NOTE: Comparability evaluation (run_priors.py) must be run before using the competition strategy
-
 ```bash
 cd nudging
-python run_optimization.py general.data_dir=/path/to/visual-nudging/nudging/data/abod/ strategy=competition general.max_workers=32
+python run_optimization.py strategy=competition general.data_dir=/path/to/visual-nudging/nudging/data/abod_enhanced/ general.max_workers=64
 ```
 
 ## Evaluation
@@ -64,19 +63,26 @@ python run_optimization.py general.data_dir=/path/to/visual-nudging/nudging/data
 
 ```bash
 cd nudging
-python run_evaluation.py evaluate=pairs general.data_dir=results/competition/TIMESTAMP/ general.max_workers=32
+python run_evaluation.py evaluate=pairs general.data_dir=/path/to/visual-nudging/nudging/results/competition/TIMESTAMP/ general.max_workers=64
 ```
 
 ### Solo Evaluation
 
 ```bash
 cd nudging
-python run_evaluation.py evaluate=solo general.data_dir=results/competition/TIMESTAMP/ general.max_workers=32
+python run_evaluation.py evaluate=solo general.data_dir=/path/to/visual-nudging/nudging/results/competition/TIMESTAMP/ general.max_workers=64
+```
+
+### Chain Evaluation
+
+```bash
+cd nudging
+python run_evaluation.py evaluate=chain general.data_dir=/path/to/visual-nudging/nudging/results/competition/TIMESTAMP/ general.max_workers=64
 ```
 
 ## Interpretation of Results
 
 ```bash
 cd nudging
-python run_interpret.py interpret.results_dir=results/nudging/model-name/test general.max_workers=32
+python run_evaluation.py evaluate=autointerp general.data_dir=/path/to/visual-nudging/nudging/results/competition/TIMESTAMP general.max_workers=64
 ```

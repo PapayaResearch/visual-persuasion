@@ -85,7 +85,7 @@ def create_proposer_input_schema(
     current_iteration_description: str = "",
     judge_feedback_description: str = "",
     total_iterations_description: str = "",
-    num_proposals_description: str = "",
+    num_candidates_description: str = "",
     metadata_description: str = ""
 ) -> Type[IOSchema]:
     """
@@ -98,7 +98,7 @@ def create_proposer_input_schema(
         current_iteration: int = Field(description=current_iteration_description)
         judge_feedback: str = Field(description=judge_feedback_description)
         total_iterations: int = Field(description=total_iterations_description)
-        num_proposals: int = Field(description=num_proposals_description)
+        num_candidates: int = Field(description=num_candidates_description)
         metadata: str = Field(description=metadata_description)
 
     return ProposerInput
