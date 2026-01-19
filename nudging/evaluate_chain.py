@@ -32,7 +32,7 @@ class EvaluationPipeline:
 
     def _parse_filename_competition(self, filename: str):
         """
-        Parse competition-no-bias filename: CATEGORY_ID_VARIANT_STATUS.jpg or CATEGORY_ID_STATUS.jpg
+        Parse competition filename: CATEGORY_ID_VARIANT_STATUS.jpg or CATEGORY_ID_STATUS.jpg
         Example: SOFA_12345_A_final.jpg -> category=SOFA, image_id=12345, status=final
         Example: SOFA_12345_original.jpg -> category=SOFA, image_id=12345, status=original
         Returns (category, image_id, status) or None.

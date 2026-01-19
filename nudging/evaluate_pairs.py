@@ -32,17 +32,6 @@ class EvaluationPipeline:
         self.max_comparisons = max_comparisons
         self.sampling_seed = sampling_seed
 
-    def _parse_filename_zero_shot(self, filename: str) -> Tuple[str, str, str]:
-        """
-        Parse zero-shot filename: CLASS_ID_EDITTYPE.jpg
-        Returns (class_name, image_id, edit_type)
-        """
-        match = re.match(r'([A-Za-z0-9_]+)_([A-Za-z0-9]+)_([A-Za-z0-9-]+)\.jpg', filename)
-        class_name = match.group(1)
-        image_id = match.group(2)
-        edit_type = match.group(3)
-        return class_name, image_id, edit_type
-
     def _parse_filename_competition(self, filename: str):
         """
         Parse competition filename: CATEGORY_ID_STATUS.jpg or pair-X_..._CATEGORY_ID_STATUS.jpg
@@ -169,10 +158,7 @@ class EvaluationPipeline:
                 img_bytes = f.read()
             filename = os.path.basename(img_path)
 
-            if self.strategy_name == 'zero-shot':
-                class_name, image_id, edit_type = self._parse_filename_zero_shot(filename)
-                class_groups[class_name].add((image_id, edit_type, img_bytes))
-            elif self.strategy_name in ['competition', 'competition-no-bias']:
+            if self.strategy_name == 'competition':
                 parsed = self._parse_filename_competition(filename)
                 if parsed is None:
                     continue

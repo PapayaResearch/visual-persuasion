@@ -1,7 +1,7 @@
 _target_: nudging.competition.VisualNudgeCompetition
 
 # Strategy name for logging/results organization
-name: competition-no-bias
+name: competition
 
 # Number of candidates (0: optimizer, 0+: proposer)
 num_candidates: 0
