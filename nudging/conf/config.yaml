@@ -9,7 +9,7 @@ defaults:
   # Image editor model (e.g., nano-banana-flash, nano-banana-pro)
   - editor: nano-banana-flash
   # Task type (e.g., people, products, houses)
-  - tasks: people
+  - task: people
   # Strategy for nudging (e.g., competition)
   - strategy: competition
   # Evaluation mode (e.g., solo, pairs, chain, autointerp)
