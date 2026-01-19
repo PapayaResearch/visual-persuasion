@@ -1,4 +1,4 @@
-_target_: nudging.evaluate.EvaluationPipeline
+_target_: nudging.evaluate_pairs.EvaluationPipeline
 
 # Strategy name determines filename parsing logic
 strategy_name: ${strategy.name}

@@ -58,42 +58,6 @@ class LanguageModel:
     enable_json_schema_validation: bool = True
 
 #######################
-# Priors Pipeline
-#######################
-
-@dataclass
-class Priors:
-    # Hydra target for priors pipeline class
-    _target_: str
-    # Threshold for considering a pair of images comparable
-    comparability_threshold: float
-    # List of judge prompts for multi-judge evaluation
-    judge_prompts: list
-    # Evaluator model configuration
-    evaluator_model: LanguageModel
-    # Regex pattern to extract category from filename
-    category_pattern: str
-
-#######################
-# Interpretation Pipeline
-#######################
-
-@dataclass
-class Interp:
-    # Hydra target class for the interpretation pipeline
-    _target_: str
-    # Directory containing zero-shot results to interpret
-    results_dir: str
-    # Prompt for the difference detector model
-    difference_prompt: str
-    # Difference detector model configuration
-    difference_detector_model: LanguageModel
-    # Prompt for the theme summarizer model
-    theme_prompt: str
-    # Theme summarizer model configuration
-    theme_summarizer_model: LanguageModel
-
-#######################
 # General Settings
 #######################
 
@@ -129,14 +93,12 @@ class Config:
     llm: ApiCall
     # Image editor model configuration
     editor: ImageModel
-    # Strategy configuration
+    # Task configuration (people, products, houses)
+    tasks: str
+    # Strategy configuration (competition, etc.)
     strategy: str
-    # Evaluation mode configuration
+    # Evaluation mode configuration (pairs, chain, autointerp, solo)
     evaluate: str
-    # Priors pipeline configuration
-    priors: Priors
-    # Interpretation pipeline configuration
-    interp: Interp
     # General experiment settings
     general: General
     # Logging configuration
