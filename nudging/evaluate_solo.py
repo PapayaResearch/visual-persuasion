@@ -20,12 +20,14 @@ class SoloEvaluationPipeline:
         evaluator_model: LanguageModel,
         strategy_name: str,
         valid_statuses: List[str],
+        name: str,
         n_evaluations: int = 1
     ):
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
         self.strategy_name = strategy_name
         self.valid_statuses = valid_statuses
+        self.name = name
         self.n_evaluations = n_evaluations
 
     def _parse_filename_competition(self, filename: str):

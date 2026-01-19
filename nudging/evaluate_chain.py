@@ -19,6 +19,7 @@ class EvaluationPipeline:
         self,
         evaluator_model: LanguageModel,
         strategy_name: str,
+        name: str,
         n_evaluations: int = 1,
         max_comparisons: int = -1,
         sampling_seed: int = 42
@@ -26,6 +27,7 @@ class EvaluationPipeline:
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
         self.strategy_name = strategy_name
+        self.name = name
         self.n_evaluations = n_evaluations
         self.max_comparisons = max_comparisons
         self.sampling_seed = sampling_seed
