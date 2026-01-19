@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import random
 import itertools
 import threading
 import pandas as pd
@@ -19,15 +20,17 @@ class EvaluationPipeline:
         evaluator_model: LanguageModel,
         strategy_name: str,
         valid_statuses: List[str],
-        n_evaluations: int = 1
-        # judge_prompts: List[str]
+        n_evaluations: int = 1,
+        max_comparisons: int = -1,
+        sampling_seed: int = 42
     ):
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
         self.strategy_name = strategy_name
         self.valid_statuses = valid_statuses
         self.n_evaluations = n_evaluations
-        # self.judge_prompts = judge_prompts
+        self.max_comparisons = max_comparisons
+        self.sampling_seed = sampling_seed
 
     def _parse_filename_zero_shot(self, filename: str) -> Tuple[str, str, str]:
         """
@@ -202,6 +205,34 @@ class EvaluationPipeline:
                     image_class, image_id_1, edit_type_1, img_bytes_1,
                     image_id_2, edit_type_2, img_bytes_2
                 ))
+
+        # Sample comparisons if max_comparisons is set and we have more tasks
+        if self.max_comparisons > 0 and len(comparison_tasks) > self.max_comparisons:
+            logging.info(f"Sampling {self.max_comparisons} comparisons from {len(comparison_tasks)} total (balanced by comparison type, seed={self.sampling_seed})\n")
+
+            # Seed the random number generator for reproducibility
+            random.seed(self.sampling_seed)
+
+            # Group by comparison type
+            comparison_groups = defaultdict(list)
+            for task in comparison_tasks:
+                edit_type_1 = task[2]
+                edit_type_2 = task[5]
+                comp_type = tuple(sorted([edit_type_1, edit_type_2]))
+                comparison_groups[comp_type].append(task)
+
+            # Sample equally from each group
+            num_groups = len(comparison_groups)
+            per_group = self.max_comparisons // num_groups
+
+            sampled_tasks = []
+            for comp_type, tasks in comparison_groups.items():
+                sample_size = min(per_group, len(tasks))
+                sampled = random.sample(tasks, sample_size)
+                sampled_tasks.extend(sampled)
+                logging.info(f"  {comp_type}: sampled {sample_size}/{len(tasks)}")
+
+            comparison_tasks = sampled_tasks
 
         comparison_tasks = list(comparison_tasks) * self.n_evaluations  # Repeat tasks for multiple evaluations if >1 specified
         total_comparisons = len(comparison_tasks)
