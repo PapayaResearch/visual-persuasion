@@ -6,6 +6,10 @@ name: autointerp
 # Directory containing results to interpret
 results_dir: ${general.data_dir}
 
+# Instruction for comparing images
+difference_instruction: |
+  Compare these two images and identify the key differences.
+
 difference_detector_model:
   # Hydra target class for the difference detector model
   _target_: utils.wrappers.LanguageModel
@@ -20,6 +24,8 @@ difference_detector_model:
   # Input schema for the difference detector model
   input_schema:
     _target_: nudging.schema.create_difference_detector_input_schema
+    instruction_description: |
+      Instruction to compare the two images.
     images_description: |
       List of image bytes: [original, edited].
 

@@ -22,6 +22,7 @@ class ResultsInterpreter:
     difference_detector_model: LanguageModel
     theme_summarizer_model: LanguageModel
     name: str
+    difference_instruction: str
 
     def _parse_filename(self, filename: str) -> Tuple[str, str, str]:
         """
@@ -90,6 +91,7 @@ class ResultsInterpreter:
         logging.info(f"  Comparing {label}...")
 
         response = self.difference_detector_model.get_response(
+            instruction=self.difference_instruction,
             images=[original_bytes, edited_bytes]
         )
 

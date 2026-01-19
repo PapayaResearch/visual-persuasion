@@ -4,14 +4,16 @@ from utils.wrappers import IOSchema
 
 
 def create_difference_detector_input_schema(
-    images_description: str
+    images_description: str,
+    instruction_description: str
 ) -> Type[IOSchema]:
     """
     Creates a DifferenceDetectorInput schema class with configurable field descriptions.
-    Used for autointerp where we only need images, no metadata or prompts.
+    Used for autointerp where we only need images, no metadata.
     """
     class DifferenceDetectorInput(IOSchema):
         """Input schema for difference detector model."""
+        instruction: str = Field(description=instruction_description)
         images: List[bytes] = Field(description=images_description)
 
     return DifferenceDetectorInput
