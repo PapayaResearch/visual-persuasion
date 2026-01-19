@@ -6,12 +6,13 @@ name: solo
 # Strategy name determines filename parsing logic
 strategy_name: ${strategy.name}
 
+# Images used for the comparisons
 valid_statuses:
   - final
   - original
-  - no-prior
   - zero-shot
 
+# Number of evaluations
 n_evaluations: 1
 
 evaluator_model:

@@ -6,11 +6,13 @@ name: pairs
 # Strategy name determines filename parsing logic
 strategy_name: ${strategy.name}
 
+# Images used for the comparisons
 valid_statuses:
   - final
   - original
   - zero-shot
 
+# Number of evaluations
 n_evaluations: 1
 
 # Maximum number of comparisons to evaluate (random sample if exceeded, -1 for all)
