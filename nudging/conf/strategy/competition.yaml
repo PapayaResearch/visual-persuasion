@@ -1,4 +1,4 @@
-_target_: nudging.competition_no_bias.VisualNudgeCompetition
+_target_: nudging.competition.VisualNudgeCompetition
 
 # Strategy name for logging/results organization
 name: competition-no-bias
