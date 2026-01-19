@@ -13,8 +13,9 @@ from utils.wrappers import LanguageModel
 @dataclasses.dataclass
 class ResultsInterpreter:
     """
-    Analyzes zero-shot nudging results by comparing edited images against originals.
-    Groups results by category and identifies thematic differences.
+    Analyzes optimization results by comparing original images to final optimized versions.
+    Identifies thematic differences that emerge from the optimization process.
+    Groups results by category and generates theme summaries.
     """
     results_dir: str
     difference_detector_model: LanguageModel
@@ -22,36 +23,28 @@ class ResultsInterpreter:
     difference_prompt: str
     theme_prompt: str
 
-    def _parse_filename(self, filename: str) -> Tuple[str, str, str, int]:
+    def _parse_filename(self, filename: str) -> Tuple[str, str, str]:
         """
-        Parse filename to extract category, product_id, edit_type, and prior_index.
+        Parse filename to extract category, base_id, and status.
 
         Examples:
-            SOFA_9760b07b_original.jpg -> ('SOFA', '9760b07b', 'original', -1)
-            SOFA_9760b07b_no-prior.jpg -> ('SOFA', '9760b07b', 'no-prior', -1)
-            SOFA_9760b07b_prior-0.jpg -> ('SOFA', '9760b07b', 'prior', 0)
+            SOFA_9760b07b_original.jpg -> ('SOFA', '9760b07b', 'original')
+            SOFA_9760b07b_final.jpg -> ('SOFA', '9760b07b', 'final')
         """
-        match = re.match(r'([A-Z_]+)_([a-f0-9]+)_(original|no-prior|prior-(\d+))\.jpg', filename)
+        match = re.match(r'([A-Z_]+)_([a-f0-9]+)_(original|final)\.jpg', filename)
+
+        if not match:
+            return None, None, None
 
         category = match.group(1)
-        product_id = match.group(2)
-        edit_type_full = match.group(3)
+        base_id = match.group(2)
+        status = match.group(3)
 
-        if edit_type_full == 'original':
-            edit_type = 'original'
-            prior_index = None
-        elif edit_type_full == 'no-prior':
-            edit_type = 'no-prior'
-            prior_index = None
-        else:
-            edit_type = 'prior'
-            prior_index = int(match.group(4))
-
-        return category, product_id, edit_type, prior_index
+        return category, base_id, status
 
     def _group_images(self, image_paths: List[str]) -> Dict[str, Dict[str, Dict[str, str]]]:
         """
-        Group images by category and product.
+        Group images by category and base_id.
 
         Args:
             image_paths: List of absolute paths to image files
@@ -61,9 +54,7 @@ class ResultsInterpreter:
                 'SOFA': {
                     '9760b07b': {
                         'original': '/path/to/SOFA_9760b07b_original.jpg',
-                        'no-prior': '/path/to/SOFA_9760b07b_no-prior.jpg',
-                        'prior-0': '/path/to/SOFA_9760b07b_prior-0.jpg',
-                        ...
+                        'final': '/path/to/SOFA_9760b07b_final.jpg'
                     }
                 }
             }
@@ -75,16 +66,12 @@ class ResultsInterpreter:
             if not filename.endswith('.jpg'):
                 continue
 
-            category, product_id, edit_type, prior_index = self._parse_filename(filename)
+            category, base_id, status = self._parse_filename(filename)
 
-            if edit_type == 'original':
-                key = 'original'
-            elif edit_type == 'no-prior':
-                key = 'no-prior'
-            else:
-                key = f'prior-{prior_index}'
+            if category is None:
+                continue
 
-            grouped[category][product_id][key] = image_path
+            grouped[category][base_id][status] = image_path
 
         return grouped
 
@@ -131,7 +118,8 @@ class ResultsInterpreter:
 
     def run(self, image_paths: List[str], results_dir: str, max_workers: int = 8):
         """
-        Analyze all results and generate theme summaries per category.
+        Analyze optimization results by comparing original vs final images.
+        Generates theme summaries per category showing what the optimization changed.
 
         Args:
             image_paths: List of absolute paths to image files to analyze
@@ -147,18 +135,16 @@ class ResultsInterpreter:
 
             # Prepare all comparison tasks
             comparison_tasks = []
-            for product_id, images in products.items():
-                logging.info(f"Product: {product_id}")
+            for base_id, images in products.items():
+                logging.info(f"Image: {base_id}")
 
-                original_path = images['original']
+                # Get available images
+                original = images.get('original')
+                final = images.get('final')
 
-                # Add no-prior comparison
-                comparison_tasks.append((original_path, images['no-prior'], 'no-prior'))
-
-                # Add all prior comparisons
-                prior_keys = sorted([k for k in images.keys() if k.startswith('prior-')])
-                for prior_key in prior_keys:
-                    comparison_tasks.append((original_path, images[prior_key], prior_key))
+                # Compare original vs final to identify optimization themes
+                if original and final:
+                    comparison_tasks.append((original, final, base_id))
 
             # Run all comparisons in parallel
             category_differences = []
@@ -184,8 +170,8 @@ class ResultsInterpreter:
             output_file = os.path.join(results_dir, f"{category}_themes.txt")
             with open(output_file, "w") as f:
                 f.write(f"Category: {category}\n\n")
-                f.write(f"Main Themes:\n{themes}\n\n")
-                f.write(f"All Differences ({len(category_differences)} comparisons):\n")
+                f.write(f"Main Optimization Themes:\n{themes}\n\n")
+                f.write(f"All Differences (Original vs Final, {len(category_differences)} images):\n")
                 for diff in category_differences:
                     f.write(f"{diff}\n")
 
