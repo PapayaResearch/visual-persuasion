@@ -94,7 +94,7 @@ class Config:
     # Image editor model configuration
     editor: ImageModel
     # Task configuration (people, products, houses)
-    tasks: str
+    task: str
     # Strategy configuration (competition, etc.)
     strategy: str
     # Evaluation mode configuration (pairs, chain, autointerp, solo)

@@ -28,7 +28,7 @@ AWS_SECRET_ACCESS_KEY=your_aws_secret_key
 
 ## Task Configurations
 
-The system includes task-specific prompts for different domains. Task configurations are located in `nudging/conf/tasks/`:
+The system includes task-specific prompts for different domains. Task configurations are located in `nudging/conf/task/`:
 
 - **people.yaml** - Job candidate images
 - **products.yaml** - Product images
@@ -37,8 +37,8 @@ The system includes task-specific prompts for different domains. Task configurat
 Each task contains prompts for both optimization (during image generation) and evaluation (when comparing results). To use a different task, specify it when running:
 
 ```bash
-python run_optimization.py tasks=products ...
-python run_evaluation.py tasks=houses ...
+python run_optimization.py task=products ...
+python run_evaluation.py task=houses ...
 ```
 
 ## Dataset Preprocessing
