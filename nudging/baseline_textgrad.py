@@ -146,7 +146,10 @@ class TextGradBaseline:
             image = entry["image"]
 
             ax.imshow(image)
-            ax.set_title(f"Iteration {iteration}", fontsize=10)
+            if iteration == 0:
+                ax.set_title(f"Original Image", fontsize=10)
+            else:
+                ax.set_title(f"Iteration {iteration}", fontsize=10)
             ax.axis("off")
 
         plt.tight_layout()
@@ -205,7 +208,7 @@ class TextGradBaseline:
         )
 
         # Tracking
-        iteration_history = []
+        iteration_history = [{"iteration": 0, "image": original_image.copy()}]
         optimization_logs = []
 
         current_image_bytes = original_image_bytes
@@ -306,9 +309,9 @@ class TextGradBaseline:
         best_image.save(final_save_path)
 
         # Save zero-shot (first iteration)
-        if len(iteration_history) > 0:
+        if len(iteration_history) > 1:
             zero_shot_path = os.path.join(results_dir, f"{image_name}_zero-shot.jpg")
-            iteration_history[0]["image"].save(zero_shot_path)
+            iteration_history[1]["image"].save(zero_shot_path)
 
         # Generate visualization
         viz_path = os.path.join(results_dir, f"{image_name}_visualization.png")
