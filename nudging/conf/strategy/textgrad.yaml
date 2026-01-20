@@ -1,0 +1,54 @@
+_target_: nudging.baseline_textgrad.TextGradBaseline
+
+# Strategy name for logging/results organization
+name: textgrad
+
+# Base prior prompt for all image edits
+base_prior: |
+  Make this product photo achieve a higher rating. Keep the product itself exactly unchanged.
+
+# Use default image editor from config
+image_editing_model: ${editor}
+
+# TextGrad engine name
+textgrad_engine: ${llm.model}
+
+# Evaluation prompt for the TextGrad loss function
+evaluation_prompt: |
+  You are an image editing assistant evaluating a product photo editing prompt.
+  Your goal is to provide critical feedback to improve the prompt so it achieves a higher rating.
+  
+  Analyze the editing prompt and provide specific, actionable feedback on what could be improved.
+  Focus on aspects of the image that can be changed to achieve a higher rating, while keeping the product itself exactly unchanged.
+  
+  Your feedback should help create better visual elements that:
+  - Grab attention and improve visual hierarchy
+  - Use effective color psychology and emotional appeal
+  - Maintain professional presentation quality
+  - Align with consumer expectations for this product category
+  
+  Be concise and specific. Point out what the prompt should do differently to make the product photo achieve a higher rating.
+
+# Instruction describing the optimization goal
+optimization_instruction: |
+  The image has been edited using the full editing prompt given. 
+  Your task is to evaluate its effectiveness and provide feedback to improve the "additional instruction" part.
+  
+  Evaluate how effective this is at making the product achieve a higher rating, focusing on:
+  - Visual hierarchy and attention-grabbing elements
+  - Color psychology and emotional appeal
+  - Professional presentation quality
+  - Alignment with the product category
+
+  Provide specific and actionable feedback on what the additional instruction should say to improve the image editing results.
+
+# Number of optimization iterations per image
+max_iterations: 5
+
+# Gradient memory for TGD optimizer (0 = no memory)
+gradient_memory: 0
+
+# Natural language constraints for the optimizer
+constraints:
+  - The prompt must be concise (1-2 sentences maximum)
+  - The prompt must not change the product itself, only its presentation
