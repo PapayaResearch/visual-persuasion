@@ -177,3 +177,31 @@ def create_theme_summarizer_output_schema(themes_description: str) -> Type[IOSch
         themes: str = Field(description=themes_description)
 
     return ThemeSummarizerOutput
+
+
+def create_feedback_descent_proposer_input_schema(
+    current_artifact_description: str = "",
+    feedback_history_description: str = "",
+    metadata_description: str = ""
+) -> Type[IOSchema]:
+    """
+    Creates a FeedbackDescentProposerInput schema class with configurable field descriptions.
+    """
+    class FeedbackDescentProposerInput(IOSchema):
+        """Input schema for Feedback Descent proposer model."""
+        current_artifact: str = Field(description=current_artifact_description)
+        feedback_history: str = Field(description=feedback_history_description)
+        metadata: str = Field(description=metadata_description)
+
+    return FeedbackDescentProposerInput
+
+
+def create_feedback_descent_proposer_output_schema(new_instruction_description: str) -> Type[IOSchema]:
+    """
+    Creates a FeedbackDescentProposerOutput schema class with configurable field descriptions.
+    """
+    class FeedbackDescentProposerOutput(IOSchema):
+        """Output schema for Feedback Descent proposer model."""
+        new_instruction: str = Field(description=new_instruction_description)
+
+    return FeedbackDescentProposerOutput
