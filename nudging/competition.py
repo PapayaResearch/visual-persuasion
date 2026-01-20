@@ -168,7 +168,8 @@ class VisualNudgeCompetition:
         base_a: str,
         base_b: str,
         round_history: list[dict],
-        viz_path: str
+        viz_path: str,
+        results_dir: str
     ):
         """
         Create grid display of competition progress.
@@ -199,19 +200,23 @@ class VisualNudgeCompetition:
                         ha="center", va="center", fontsize=14, fontweight="bold")
             ax_label.axis("off")
 
-            # Image A column
+            # Image A column - load from saved file
             ax_a = axes[round_idx, 1]
-            img_a = round_data["image_a"]
+            img_a_path = os.path.join(results_dir, f"{base_a}_round-{round_num}.jpg")
+            img_a = Image.open(img_a_path)
             ax_a.imshow(img_a)
             ax_a.set_title(f"{base_a}", fontsize=12, fontweight="bold" if winner == base_a else "normal")
             ax_a.axis("off")
+            img_a.close()  # Free memory immediately
 
-            # Image B column
+            # Image B column - load from saved file
             ax_b = axes[round_idx, 2]
-            img_b = round_data["image_b"]
+            img_b_path = os.path.join(results_dir, f"{base_b}_round-{round_num}.jpg")
+            img_b = Image.open(img_b_path)
             ax_b.imshow(img_b)
             ax_b.set_title(f"{base_b}", fontsize=12, fontweight="bold" if winner == base_b else "normal")
             ax_b.axis("off")
+            img_b.close()  # Free memory immediately
 
         plt.tight_layout()
 
@@ -220,34 +225,61 @@ class VisualNudgeCompetition:
         logging.info(f"📊 Visualization saved to {viz_path}\n")
         plt.close(fig)
 
-    def _select_best_proposal(
+    def _run_tournament(
         self,
         candidate_images: list[dict],
-        feedback: str = ""
-    ) -> tuple[dict, str]:
+        rival_name: str,
+        rival_image_bytes: bytes
+    ) -> dict:
         """
-        Use selector model to choose the best proposal from candidates.
-        Returns: The best candidate dict
+        Run a tournament between all candidates and the rival.
+        Each candidate competes against the rival, and the best performer wins.
+
+        Args:
+            candidate_images: List of candidate dicts with 'prompt', 'image', 'image_bytes'
+            rival_name: Name of the rival image
+            rival_image_bytes: Bytes of the rival image
+
+        Returns: The winning candidate dict (or a dict representing the rival if it wins)
         """
-        logging.info(f"\n🎯 SELECTING BEST PROPOSAL from {len(candidate_images)} candidates\n")
+        logging.info(f"\n🏆 TOURNAMENT: {len(candidate_images)} candidates vs {rival_name}\n")
 
-        # Prepare images and descriptions for selector
-        image_bytes_list = [c["image_bytes"] for c in candidate_images]
-        descriptions = [f"Candidate {i+1}: {c['prompt']}" for i, c in enumerate(candidate_images)]
+        # Track scores for each candidate
+        scores = {}
 
-        selector_response = self.selector_model.get_response(
-            images=image_bytes_list,
-            candidate_descriptions="\n".join(descriptions),
-            num_candidates=len(candidate_images),
-            judge_feedback=feedback
-        )
+        # Run each candidate against the rival
+        for i, candidate in enumerate(candidate_images):
+            candidate_name = f"candidate_{i+1}"
 
-        selected_idx = int(selector_response.choice) - 1  # Assuming 1-indexed
+            logging.info(f"\n--- Match {i+1}/{len(candidate_images)}: {candidate_name} vs {rival_name} ---\n")
 
-        best_candidate = candidate_images[selected_idx]
-        logging.info(f"✅ Selected candidate {selected_idx+1}: {best_candidate['prompt']}\n")
+            winner_name, winner_score, feedback = self._conduct_contest(
+                image_a_bytes=candidate["image_bytes"],
+                image_b_bytes=rival_image_bytes,
+                image_a_name=candidate_name,
+                image_b_name=rival_name
+            )
 
-        return best_candidate, selector_response.reason
+            # Record scores: higher is better for the candidate
+            if winner_name == candidate_name:
+                scores[i] = winner_score
+                logging.info(f"✅ Candidate {i+1} wins with score {winner_score:.2%}\n")
+            else:
+                # Rival won - give candidate the inverse score
+                scores[i] = 1 - winner_score
+                logging.info(f"❌ Candidate {i+1} loses (rival wins with score {winner_score:.2%})\n")
+
+        # Find the best performing candidate (always pick one, even if all lost to rival)
+        best_idx = max(scores.keys(), key=lambda k: scores[k])
+        best_score = scores[best_idx]
+        winner = candidate_images[best_idx]
+
+        if best_score > 0.5:
+            logging.info(f"\n🏆 TOURNAMENT WINNER: Candidate {best_idx+1} with score {best_score:.2%} (beat rival)\n")
+        else:
+            logging.info(f"\n🏆 TOURNAMENT WINNER: Candidate {best_idx+1} with score {best_score:.2%} (best among candidates, but lost to rival)\n")
+
+        return winner
 
     def _improve_loser_with_candidates(
         self,
@@ -259,7 +291,9 @@ class VisualNudgeCompetition:
         results_dir: str,
         pair_name: str,
         history_of_prompts: list[dict],
-        original_image_bytes: bytes
+        original_image_bytes: bytes,
+        winner_name: str = None,
+        winner_image_bytes: bytes = None
     ) -> tuple[bytes, str, Image.Image, dict]:
         """
         Generate improved versions of the losing image based on judge feedback.
@@ -272,7 +306,7 @@ class VisualNudgeCompetition:
         has_prior_edits = len(history_of_prompts) > 0
         if has_prior_edits:
             history_text = ""
-            for entry in history_of_prompts[1:]:
+            for entry in history_of_prompts:
                 if entry.get("won_next_round") is None:
                     continue
                 round = entry["round"]
@@ -283,37 +317,7 @@ class VisualNudgeCompetition:
             history_text = "None"
         logging.info(f"Edit history:\n{history_text}\n")
 
-        if not has_prior_edits:
-            logging.info("Applying base prior zero-shot edit before invoking proposer/selector.\n")
-            editing_prompt = self._compose_prompt(None)
-            edited_image, edited_image_bytes = self.image_editing_model.edit(
-                editing_prompt,
-                loser_image_bytes,
-                original_image_bytes
-            )
-
-            with self._counter_lock:
-                self._total_num_images_generated += 1
-
-            optimized_path = os.path.join(
-                results_dir,
-                f"{loser_name}_round-{round_num}_optimized.jpg"
-            )
-            edited_image.save(optimized_path)
-            logging.info(f"Saved zero-shot optimized candidate to {optimized_path}\n")
-
-            total_cost = self._total_num_images_generated * self._cost_per_image_generated
-            logging.info(f"Total images generated: {self._total_num_images_generated}, Cost: ${total_cost:.2f}\n")
-
-            metadata = {"strategy": "zero_shot"}
-
-            return (
-                edited_image_bytes,
-                None,
-                edited_image,
-                metadata
-            )
-
+        # For first round with no history, use empty history
         proposer_input = {
             "current_prompt": self._compose_prompt(loser_prompt),
             "history_of_prompts": history_text,
@@ -378,29 +382,41 @@ class VisualNudgeCompetition:
             )
 
         candidate_images.sort(key=lambda c: c["candidate_idx"])
-        best_candidate, reason = self._select_best_proposal(candidate_images, feedback=feedback)
+
+        # Run tournament between all candidates and the winner (rival)
+        tournament_winner = self._run_tournament(
+            candidate_images=candidate_images,
+            rival_name=winner_name,
+            rival_image_bytes=winner_image_bytes
+        )
+
+        # Free memory: close losing candidate images
+        for candidate in candidate_images:
+            if candidate is not tournament_winner:
+                candidate["image"].close()
 
         total_cost = self._total_num_images_generated * self._cost_per_image_generated
         logging.info(f"Total images generated: {self._total_num_images_generated}, Cost: ${total_cost:.2f}\n")
 
+        # Save the tournament winner (always a candidate now)
         optimized_path = os.path.join(
             results_dir,
             f"{loser_name}_round-{round_num}_optimized.jpg"
         )
-        best_candidate["image"].save(optimized_path)
+        tournament_winner["image"].save(optimized_path)
         logging.info(f"Saved optimized candidate to {optimized_path}\n")
 
         metadata = {
-            "strategy": "proposer_selector",
+            "strategy": "proposer_tournament",
             "proposer_input": proposer_input,
             "candidate_prompts": candidate_prompts,
-            "selector_response": {"selected_index": candidate_images.index(best_candidate), "reason": reason}
+            "tournament_winner": candidate_images.index(tournament_winner) if tournament_winner in candidate_images else "unknown"
         }
 
         return (
-            best_candidate["image_bytes"],
-            best_candidate["prompt"],
-            best_candidate["image"],
+            tournament_winner["image_bytes"],
+            tournament_winner["prompt"],
+            tournament_winner["image"],
             metadata
         )
 
@@ -427,7 +443,7 @@ class VisualNudgeCompetition:
         has_prior_edits = len(history_of_prompts) > 0
         if has_prior_edits:
             history_text = ""
-            for entry in history_of_prompts[1:]:
+            for entry in history_of_prompts:
                 if entry.get("won_next_round") is None:
                     continue
                 round = entry["round"]
@@ -574,8 +590,7 @@ class VisualNudgeCompetition:
             "name": base_a,
             "edit_history": [],  # Track all prompts used
             "champion_bytes": edited_image_a_bytes,
-            "champion_prompt": None,
-            "champion_image": edited_image_a.copy()
+            "champion_prompt": None
         }
         state_b = {
             "bytes": edited_image_b_bytes,
@@ -584,8 +599,7 @@ class VisualNudgeCompetition:
             "name": base_b,
             "edit_history": [],
             "champion_bytes": edited_image_b_bytes,
-            "champion_prompt": None,
-            "champion_image": edited_image_b.copy()
+            "champion_prompt": None
         }
 
         # Save original (only one since both variants come from same source)
@@ -647,13 +661,11 @@ class VisualNudgeCompetition:
                                     else self._compose_prompt(state_a["prompt"]))
             }
 
-            # Store images for visualization
+            # Track metadata for visualization (images will be reloaded from disk)
             visualization_history.append({
                 "round": round_num,
                 "winner": winner_name,
-                "score": winner_score,
-                "image_a": state_a["image"].copy(),
-                "image_b": state_b["image"].copy()
+                "score": winner_score
             })
 
             # Determine winner and loser
@@ -674,7 +686,7 @@ class VisualNudgeCompetition:
             # Update champion tracking with actual contest winner (after saving images)
             winner_state["champion_bytes"] = winner_state["bytes"]
             winner_state["champion_prompt"] = winner_state["prompt"]
-            winner_state["champion_image"] = winner_state["image"].copy()
+            # Don't copy image - will reconstruct from bytes if needed
 
             # Mark winner's most recent edit as winning
             if len(winner_state["edit_history"]) > 0:
@@ -692,7 +704,7 @@ class VisualNudgeCompetition:
             if self.use_last_winner_as_base:
                 loser_state["bytes"] = loser_state["champion_bytes"]
                 loser_state["prompt"] = loser_state["champion_prompt"]
-                loser_state["image"] = loser_state["champion_image"].copy()
+                loser_state["image"] = Image.open(io.BytesIO(loser_state["champion_bytes"]))
 
             # Check for equilibrium (score close to 0.5 = no clear winner)
             if round_num >= self.min_rounds_before_equilibrium:
@@ -705,6 +717,11 @@ class VisualNudgeCompetition:
             # Improve ONLY the loser
             logging.info(f"\n🔄 Improving {loser_name} (loser of round {round_num})\n")
 
+            # Update previous round's history entry BEFORE calling improve_loser (so history is correct)
+            if len(loser_state["edit_history"]) > 0:
+                if loser_state["edit_history"][-1]["won_next_round"] is None:
+                    loser_state["edit_history"][-1]["won_next_round"] = False
+
             improved_bytes, improved_prompt, improved_image, improvement_metadata = self._improve_loser(
                 loser_name=loser_name,
                 loser_image_bytes=loser_state["bytes"],
@@ -714,7 +731,9 @@ class VisualNudgeCompetition:
                 results_dir=results_dir,
                 pair_name=pair_name,
                 history_of_prompts=loser_state["edit_history"],
-                original_image_bytes=original_image_bytes
+                original_image_bytes=original_image_bytes,
+                winner_name=winner_name,
+                winner_image_bytes=winner_state["bytes"]
             )
 
             # Log improvement to structured log
@@ -735,11 +754,6 @@ class VisualNudgeCompetition:
                 "prompt": improved_prompt,
                 "won_next_round": None  # Will be updated after next contest
             }
-
-            # Update previous round's history entry if it lost the very next round
-            if len(loser_state["edit_history"]) > 0:
-                if loser_state["edit_history"][-1]["won_next_round"] is None:
-                    loser_state["edit_history"][-1]["won_next_round"] = False
             loser_state["edit_history"].append(history_entry)
 
         # Generate final visualization
@@ -747,7 +761,8 @@ class VisualNudgeCompetition:
             base_a=base_a,
             base_b=base_b,
             round_history=visualization_history,
-            viz_path=viz_path
+            viz_path=viz_path,
+            results_dir=results_dir
         )
 
         # Save final results
