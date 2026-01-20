@@ -354,7 +354,7 @@ class FeedbackDescentBaseline:
                 "iteration": iteration,
                 "image": current_best_image.copy(),
                 "improved": improved,
-                "instruction": current_best_instruction or "base prior"
+                "instruction": current_best_instruction or "(no additional instruction yet)"
             })
 
             # Check convergence

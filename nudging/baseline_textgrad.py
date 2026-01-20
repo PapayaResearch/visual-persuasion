@@ -4,6 +4,7 @@ import time
 import csv
 import json
 import logging
+import textwrap
 import threading
 import dataclasses
 import matplotlib
@@ -94,7 +95,7 @@ class TextGradBaseline:
         optimization_context = (
             f"FULL EDITING PROMPT USED: {full_editing_prompt}\n"
             f"ADDITIONAL INSTRUCTION BEING OPTIMIZED: {instruction}\n"
-            f"CONTEXT: The user is looking for a(n) {category}\n"
+            f"CONTEXT: The image here is of a(n) {category}\n"
             f"{self.optimization_instruction}"
         )
 
@@ -127,30 +128,46 @@ class TextGradBaseline:
         if num_iterations == 0:
             return
 
-        # Arrange images vertically (1 column, multiple rows)
+        # Arrange images with prompts (2 columns: prompt | image)
         rows = num_iterations
-        cols = 1
+        cols = 2
 
-        fig, axes = plt.subplots(rows, cols, figsize=(8, 6 * rows))
+        fig, axes = plt.subplots(rows, cols, figsize=(12, 4 * rows), 
+                                gridspec_kw={'width_ratios': [1, 2]})
 
         # Handle single iteration case
         if rows == 1:
-            axes = [axes]
+            axes = axes.reshape(1, -1)
 
-        fig.suptitle(f"TextGrad Optimization: {category}", fontsize=16, fontweight="bold", y=1.02)
+        fig.suptitle(f"TextGrad Optimization: {category}", fontsize=16, fontweight="bold")
 
         for idx, entry in enumerate(iteration_history):
-            ax = axes[idx]
+            ax_text = axes[idx, 0]
+            ax_image = axes[idx, 1]
 
             iteration = entry["iteration"]
             image = entry["image"]
+            prompt = entry.get("prompt", "")
 
-            ax.imshow(image)
+            # Left column: prompt text
+            ax_text.axis("off")
+
             if iteration == 0:
-                ax.set_title(f"Original Image", fontsize=10)
+                full_text = f"Original Image"
             else:
-                ax.set_title(f"Iteration {iteration}", fontsize=10)
-            ax.axis("off")
+                title = f"Iteration {iteration}\n"
+                wrapped_instruction = textwrap.fill(prompt, width=40)
+                full_text = f"{title}\nInstruction:\n{wrapped_instruction}"
+
+            ax_text.text(0.5, 0.5, full_text, 
+                        ha='center', va='center',
+                        fontsize=9,
+                        wrap=True,
+                        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3))
+
+            # Right column: image
+            ax_image.imshow(image)
+            ax_image.axis("off")
 
         plt.tight_layout()
         fig.savefig(viz_path, dpi=300, bbox_inches="tight")
@@ -257,7 +274,8 @@ class TextGradBaseline:
             # Store for visualization
             iteration_history.append({
                 "iteration": iteration + 1,
-                "image": current_image.copy()
+                "image": current_image.copy(),
+                "prompt": prompt_variable.value or "(no additional instruction yet)"
             })
 
             # Compute loss using TextGrad
