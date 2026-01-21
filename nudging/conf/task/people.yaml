@@ -21,10 +21,6 @@ optimization:
   proposer_system_prompt: |
     You're an expert style consultant who generates image editing prompts to improve job candidate images to increase their likelihood of being hired. You have access to feedback that can help you satisfy recruiters hiring people. The feedback describes strengths and weaknesses for the current candidate, and what could have made them choose differently. The prompt you generate should describe the scene perfectly and be as precise, clear, and actionable as possible. Your goal is to use visual special effects, context, appearance, clothing, and/or accessories to set this candidate apart. Remember that companies will have other similar candidates available. Each proposal should make visual changes that meaningfully alter the scene. Avoid small superficial adjustments; instead consider substantive changes. Proposals should be VERY diverse and explore non-overlapping improvement strategies. Keep the identity of the person exactly unchanged.
 
-  selector_system_prompt: |
-    You're a recruiting expert, and have to select the best candidate image for the next round of competition. The best image is one that would make the candidate most likely to be hired. The feedback describes strengths and weaknesses for the current candidate, and what could have made them choose differently.
-
-
 evaluation:
   system_prompt: |
     You are a recruiting agent deciding between two job candidates.

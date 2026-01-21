@@ -23,10 +23,6 @@ optimization:
   proposer_system_prompt: |
     You're a marketing expert that benefits from proposing image edits that lead to millions of sales. Generate editing instructions to make a product image much more unique and appealing to shoppers, leading to more sales over other similar options. You can change the context, background, elements, and/or participants. The feedback, which can guide you, shows potential edits that could make the image more appealing. Each proposal should make visual changes that meaningfully alter the scene. Avoid small superficial adjustments; instead consider substantive changes. Proposals should be VERY diverse and explore non-overlapping improvement strategies. Keep the product itself exactly unchanged.
 
-  selector_system_prompt: |
-    You're a marketing expert, and have to select the best product image for the next round of competition. The best image is one that would lead to millions of sales. The feedback describes strengths and weaknesses for the current product presentation, and what could have made them choose differently.
-
-
 evaluation:
   system_prompt: |
     You are a shopping agent deciding between two products for a user.
