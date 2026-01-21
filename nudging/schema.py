@@ -130,38 +130,6 @@ def create_proposer_output_schema(candidate_prompts_description: str) -> Type[IO
 
     return ProposerOutput
 
-
-def create_selector_input_schema(
-    image_bytes_list_description: str,
-    candidate_descriptions_description: str,
-    num_candidates_description: str,
-    judge_feedback_description: str
-) -> Type[IOSchema]:
-    """
-    Creates a SelectorInput schema class with configurable field descriptions.
-    """
-    class SelectorInput(IOSchema):
-        """Input schema for selector model."""
-        images: List[bytes] = Field(description=image_bytes_list_description)
-        candidate_descriptions: str = Field(description=candidate_descriptions_description)
-        num_candidates: int = Field(description=num_candidates_description)
-        judge_feedback: str = Field(description=judge_feedback_description)
-
-    return SelectorInput
-
-
-def create_selector_output_schema(choice_description: str, reason_description: str) -> Type[IOSchema]:
-    """
-    Creates a SelectorOutput schema class with configurable field descriptions.
-    """
-    class SelectorOutput(IOSchema):
-        """Output schema for selector model."""
-        choice: str = Field(description=choice_description)
-        reason: str = Field(description=reason_description)
-
-    return SelectorOutput
-
-
 def create_difference_detector_output_schema(differences_description: str) -> Type[IOSchema]:
     """
     Creates a DifferenceDetectorOutput schema class with configurable field descriptions.

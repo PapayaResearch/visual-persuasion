@@ -35,10 +35,9 @@ class VisualNudgeCompetition:
     use_last_winner_as_base: bool
     # For optimizer flow (used when num_candidates == 0)
     optimizer_model: LanguageModel
-    # For proposer/selector flow (used when num_candidates > 0)
+    # For proposer flow (used when num_candidates > 0)
     num_candidates: int
     proposer_model: LanguageModel
-    selector_model: LanguageModel
 
     def __post_init__(self):
         """Initialize tracking variables."""
@@ -297,7 +296,7 @@ class VisualNudgeCompetition:
     ) -> tuple[bytes, str, Image.Image, dict]:
         """
         Generate improved versions of the losing image based on judge feedback.
-        Uses proposer/selector flow after the initial zero-shot edit.
+        Uses proposer flow after the initial zero-shot edit.
         """
         logging.info(f"\n🔧 IMPROVING LOSER (Round {round_num})\n")
         logging.info(f"Previous prompt: {loser_prompt}\n")
@@ -513,7 +512,7 @@ class VisualNudgeCompetition:
     def _improve_loser(self, **kwargs) -> tuple[bytes, str, Image.Image, dict]:
         """
         Chooses the improvement strategy based on configuration.
-        If num_candidates > 0, uses proposer/selector flow.
+        If num_candidates > 0, uses proposer flow.
         If num_candidates == 0, uses optimizer flow.
         """
         if self.num_candidates > 0:
