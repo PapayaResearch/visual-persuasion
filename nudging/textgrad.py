@@ -188,6 +188,17 @@ class TextGradBaseline:
         """
         image_name = os.path.splitext(os.path.basename(image_path))[0]
 
+        # Check if already completed (for resume functionality)
+        viz_path = os.path.join(results_dir, f"{image_name}_visualization.png")
+        if os.path.isfile(viz_path):
+            logging.info(f"Visualization for {image_name} already exists. Skipping.\n")
+            return {
+                "image_name": image_name,
+                "iterations": 0,
+                "final_prompt": None,
+                "logs": []
+            }
+
         logging.info(f"\n{'='*80}\n")
         logging.info(f"TEXTGRAD OPTIMIZATION {image_idx+1}/{total_images}: {image_name}\n")
         logging.info(f"{'='*80}\n")
