@@ -1,0 +1,58 @@
+_target_: nudging.feedback_descent.FeedbackDescentBaseline
+
+# Strategy name for logging/results organization
+name: feedback_descent
+
+# Number of optimization iterations per image
+max_iterations: 10
+
+# Number of consecutive iterations without improvement before stopping
+convergence_patience: 5
+
+# Use default image editor from config
+image_editing_model: ${editor}
+
+# Base prior prompt for all image edits
+base_prior: ${task.optimization.base_prior}
+
+# Judge prompt for evaluations
+judge_prompt: ${task.optimization.evaluator_system_prompt}
+
+# Provides feedback to improve with edits
+evaluator_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: ${task.optimization.evaluator_system_prompt}
+  input_schema:
+    _target_: nudging.schema.create_evaluator_input_schema
+    images_description: |
+      List of image bytes: [first, second].
+    judge_prompt_description: |
+      The prompt given to the judge for this comparison.
+    metadata_description: |
+      Additional context about the images (may be empty).
+  output_schema:
+    _target_: nudging.schema.create_evaluator_output_schema
+    choice_description: |
+      Your choice: 'first' or 'second'.
+    choice_options: ['first', 'second']
+    reason_description: ${task.optimization.evaluator_reason_description}
+  api_call: ${llm}
+
+# Proposer model for generating improved instructions
+proposer_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: ${task.optimization.feedback_descent_proposer_system_prompt}
+  input_schema:
+    _target_: nudging.schema.create_feedback_descent_proposer_input_schema
+    current_prompt_description: |
+      The current image editing prompt.
+    feedback_history_description: |
+      Accumulated feedback history from previous prompts used so far.
+      Each entry contains a candidate prompt and textual feedback.
+    metadata_description: |
+      Additional context or constraints for generating the proposals (may be empty).
+  output_schema:
+    _target_: nudging.schema.create_feedback_descent_proposer_output_schema
+    new_prompt_description: |
+      An improved image editing prompt that addresses the feedback.
+  api_call: ${llm}
