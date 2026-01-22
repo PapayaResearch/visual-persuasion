@@ -16,13 +16,13 @@ image_editing_model: ${editor}
 textgrad_engine: ${llm.model}
 
 # Base prior prompt for all image edits
-base_prior: ${task.optimization.base_prior}
+base_prior: ${task.textgrad.base_prior}
 
 # System prompt for TextGrad loss evaluations
-loss_system_prompt: ${task.optimization.textgrad_loss_system_prompt}
+loss_system_prompt: ${task.textgrad.loss_system_prompt}
 
 # Context prompt for TextGrad loss evaluations
-loss_context_prompt: ${task.optimization.textgrad_loss_context_prompt}
+loss_context_prompt: ${task.textgrad.loss_context_prompt}
 
 # Natural language constraints for the optimizer
-constraints: ${task.optimization.textgrad_constraints}
+constraints: ${task.textgrad.constraints}

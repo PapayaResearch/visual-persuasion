@@ -25,15 +25,15 @@ use_last_winner_as_base: true
 image_editing_model: ${editor}
 
 # Base prior prompt for all image edits
-base_prior: ${task.optimization.base_prior}
+base_prior: ${task.competition.base_prior}
 
 # Prompts for judge evaluations
-judge_prompts: ${task.optimization.judge_prompts}
+judge_prompts: ${task.competition.judge_prompts}
 
 # Provides feedback to improve with edits
 evaluator_model:
   _target_: utils.wrappers.LanguageModel
-  system_prompt: ${task.optimization.evaluator_system_prompt}
+  system_prompt: ${task.competition.evaluator_system_prompt}
   input_schema:
     _target_: nudging.schema.create_evaluator_input_schema
     images_description: |
@@ -47,13 +47,13 @@ evaluator_model:
     choice_description: |
       Your choice: 'first' or 'second'.
     choice_options: ['first', 'second']
-    reason_description: ${task.optimization.evaluator_reason_description}
+    reason_description: ${task.competition.evaluator_reason_description}
   api_call: ${llm}
 
 # Proposes edit prompt to improve image
 optimizer_model:
   _target_: utils.wrappers.LanguageModel
-  system_prompt: ${task.optimization.optimizer_system_prompt}
+  system_prompt: ${task.competition.optimizer_system_prompt}
   input_schema:
     _target_: nudging.schema.create_optimizer_input_schema
     current_prompt_description: |
@@ -77,7 +77,7 @@ optimizer_model:
 # Generates several edit proposals
 proposer_model:
   _target_: utils.wrappers.LanguageModel
-  system_prompt: ${task.optimization.proposer_system_prompt}
+  system_prompt: ${task.competition.proposer_system_prompt}
   input_schema:
     _target_: nudging.schema.create_proposer_input_schema
     current_prompt_description: |
