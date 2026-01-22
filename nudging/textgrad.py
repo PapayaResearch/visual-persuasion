@@ -82,13 +82,13 @@ class TextGradBaseline:
         """
         Evaluate the current image and return a loss Variable.
         """
-        # Get the instruction part (what we're optimizing)
-        instruction = prompt_variable.value if prompt_variable.value else "(no additional instruction yet)"
+        # Get the prompt
+        prompt = prompt_variable.value if prompt_variable.value else "(no additional instruction yet)"
 
         # Create a description of what we're optimizing
         optimization_context = (
             f"FULL EDITING PROMPT USED: {full_editing_prompt}\n\n"
-            f"ADDITIONAL INSTRUCTION BEING OPTIMIZED: {instruction}\n\n"
+            f"ADDITIONAL PROMPT BEING OPTIMIZED: {prompt}\n\n"
             f"CONTEXT: The image is of a(n) {category}\n\n"
             f"{self.loss_context_prompt}"
         )
@@ -150,8 +150,8 @@ class TextGradBaseline:
                 full_text = f"Original Image"
             else:
                 title = f"Iteration {iteration}\n"
-                wrapped_instruction = textwrap.fill(prompt, width=40)
-                full_text = f"{title}\nInstruction:\n{wrapped_instruction}"
+                wrapped_prompt = textwrap.fill(prompt, width=40)
+                full_text = f"{title}\nPrompt:\n{wrapped_prompt}"
 
             ax_text.text(0.5, 0.5, full_text, 
                         ha='center', va='center',
@@ -203,9 +203,9 @@ class TextGradBaseline:
         original_image.save(original_save_path)
 
         # Initialize the prompt as a TextGrad Variable
-        initial_instruction = ""
+        initial_prompt = ""
         prompt_variable = Variable(
-            value=initial_instruction,
+            value=initial_prompt,
             requires_grad=True,
             role_description="image editing instruction to make the product more visually appealing"
         )
@@ -362,36 +362,9 @@ class TextGradBaseline:
         """
         run_start = time.time()
 
-        # Check for comparability results to filter images
-        image_dir = os.path.dirname(image_paths[0]) if image_paths else ""
-        comparability_results_csv = os.path.join(image_dir, "comparability_results.csv")
-
-        images_to_process = []
-
-        if os.path.isfile(comparability_results_csv):
-            logging.info(f"Reading comparable images from: {comparability_results_csv}")
-            seen_images = set()
-            with open(comparability_results_csv, "r", newline="") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    if row['is_comparable'].lower() == "true":
-                        for img_id in [row['id_1'], row['id_2']]:
-                            if img_id not in seen_images:
-                                img_path = os.path.join(image_dir, img_id + '.jpg')
-                                if os.path.isfile(img_path):
-                                    images_to_process.append(img_path)
-                                    seen_images.add(img_id)
-        else:
-            # Process all provided images
-            images_to_process = image_paths
-
-        if not images_to_process:
-            logging.error("No images found to process.")
-            raise ValueError("No images found to process.")
-
         logging.info(f"\n{'='*80}")
         logging.info(f"🎯 Starting TextGrad Baseline Optimization")
-        logging.info(f"   Total images: {len(images_to_process)}")
+        logging.info(f"   Total images: {len(image_paths)}")
         logging.info(f"   Max iterations per image: {self.max_iterations}")
         logging.info(f"   TextGrad engine: {self.textgrad_engine}")
         logging.info(f"   Gradient memory: {self.gradient_memory}")
@@ -402,7 +375,7 @@ class TextGradBaseline:
 
         # Process images
         results = []
-        with tqdm(total=len(images_to_process), desc="Images optimized", unit="image") as pbar:
+        with tqdm(total=len(image_paths), desc="Images completed", unit="image") as pbar:
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 futures = {
                     executor.submit(
@@ -410,9 +383,9 @@ class TextGradBaseline:
                         image_path,
                         results_dir,
                         idx,
-                        len(images_to_process)
+                        len(image_paths)
                     ): image_path
-                    for idx, image_path in enumerate(images_to_process)
+                    for idx, image_path in enumerate(image_paths)
                 }
 
                 for future in as_completed(futures):
@@ -425,7 +398,7 @@ class TextGradBaseline:
         with open(summary_path, "w") as f:
             f.write(f"TextGrad Baseline - Global Summary\n")
             f.write(f"{'='*80}\n\n")
-            f.write(f"Total images processed: {len(images_to_process)}\n")
+            f.write(f"Total images processed: {len(image_paths)}\n")
             f.write(f"Total images generated: {self._total_num_images_generated}\n")
             f.write(f"Estimated cost: ${self._total_num_images_generated * self._cost_per_image_generated:.2f}\n\n")
             f.write(f"Configuration:\n")
@@ -441,7 +414,7 @@ class TextGradBaseline:
         logging.info(f"\n{'='*80}")
         logging.info(f"✅ TextGrad Baseline Complete!")
         logging.info(f"⏱️  TOTAL RUNTIME: {run_duration:.2f}s ({run_duration/60:.2f}m)")
-        logging.info(f"   Total images: {len(images_to_process)}")
+        logging.info(f"   Total images: {len(image_paths)}")
         logging.info(f"   Total images generated: {self._total_num_images_generated}")
         logging.info(f"   Estimated cost: ${self._total_num_images_generated * self._cost_per_image_generated:.2f}")
         logging.info(f"{'='*80}\n")
