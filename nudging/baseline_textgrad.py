@@ -30,19 +30,13 @@ class TextGradBaseline:
     improve an image editing prompt based on evaluation feedback.
     """
     name: str
-    base_prior: str
-    image_editing_model: ImageModel
-    # TextGrad engine name
-    textgrad_engine: str
-    # Evaluation prompt for the loss function
-    evaluation_prompt: str
-    # Instruction describing the optimization goal
-    optimization_instruction: str
-    # Number of optimization iterations
     max_iterations: int
-    # Gradient memory for TGD optimizer (0 = no memory)
     gradient_memory: int
-    # Constraints for the optimizer
+    image_editing_model: ImageModel
+    textgrad_engine: str
+    base_prior: str
+    loss_system_prompt: str
+    loss_context_prompt: str
     constraints: list
 
     def __post_init__(self):
@@ -71,7 +65,7 @@ class TextGradBaseline:
         """
         Create a TextGrad loss function for evaluating image quality.
         """
-        eval_prompt = self.evaluation_prompt.format(category=category)
+        eval_prompt = f"{self.loss_system_prompt}\n\nThe image is of a(n) {category}."
 
         loss_fn = tg.TextLoss(
             eval_system_prompt=eval_prompt,
@@ -93,10 +87,10 @@ class TextGradBaseline:
 
         # Create a description of what we're optimizing
         optimization_context = (
-            f"FULL EDITING PROMPT USED: {full_editing_prompt}\n"
-            f"ADDITIONAL INSTRUCTION BEING OPTIMIZED: {instruction}\n"
-            f"CONTEXT: The image here is of a(n) {category}\n"
-            f"{self.optimization_instruction}"
+            f"FULL EDITING PROMPT USED: {full_editing_prompt}\n\n"
+            f"ADDITIONAL INSTRUCTION BEING OPTIMIZED: {instruction}\n\n"
+            f"CONTEXT: The image is of a(n) {category}\n\n"
+            f"{self.loss_context_prompt}"
         )
 
         context_var = Variable(
@@ -116,7 +110,7 @@ class TextGradBaseline:
 
     def _visualize_optimization(
         self,
-        category: str,
+        image_name: str,
         iteration_history: list[dict],
         viz_path: str
     ):
@@ -139,7 +133,7 @@ class TextGradBaseline:
         if rows == 1:
             axes = axes.reshape(1, -1)
 
-        fig.suptitle(f"TextGrad Optimization: {category}", fontsize=16, fontweight="bold")
+        fig.suptitle(f"TextGrad Optimization: {image_name}", fontsize=16, fontweight="bold")
 
         for idx, entry in enumerate(iteration_history):
             ax_text = axes[idx, 0]
@@ -333,7 +327,7 @@ class TextGradBaseline:
 
         # Generate visualization
         viz_path = os.path.join(results_dir, f"{image_name}_visualization.png")
-        self._visualize_optimization(image_name.split('_')[0].lower(), iteration_history, viz_path)
+        self._visualize_optimization(image_name, iteration_history, viz_path)
 
         # Save detailed log
         log_path = os.path.join(results_dir, f"{image_name}_log.json")
