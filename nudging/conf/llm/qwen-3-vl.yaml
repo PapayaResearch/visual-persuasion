@@ -1,5 +1,5 @@
 _target_: utils.api.create_api_call
-model: gpt-5-nano-2025-08-07
+model: bedrock/qwen.qwen3-vl-235b-a22b
 delay: 0
 params:
   additional_drop_params: []

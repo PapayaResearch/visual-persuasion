@@ -1,0 +1,65 @@
+_target_: nudging.evaluate_autointerp.ResultsInterpreter
+
+# Evaluation type name
+name: autointerp
+
+# Directory containing results to interpret
+results_dir: ${general.data_dir}
+
+# Instruction for comparing images
+difference_instruction: |
+  Compare these two images and identify the key differences.
+
+difference_detector_model:
+  # Hydra target class for the difference detector model
+  _target_: utils.wrappers.LanguageModel
+
+  # The system prompt for identifying differences
+  system_prompt: |
+    You are analyzing differences between two images.
+    The first image is the original, the second is edited.
+    Compare these two images and identify the key differences.
+    Identify thematic differences in a simple, concise way.
+
+  # Input schema for the difference detector model
+  input_schema:
+    _target_: nudging.schema.create_difference_detector_input_schema
+    instruction_description: |
+      Instruction to compare the two images.
+    images_description: |
+      List of image bytes: [original, edited].
+
+  # Output schema for the difference detector model
+  output_schema:
+    _target_: nudging.schema.create_difference_detector_output_schema
+    differences_description: |
+      Concise description of the key differences between the original and edited images.
+
+  # Wrapper function for the API - uses LLM config
+  api_call: ${llm}
+
+theme_summarizer_model:
+  # Hydra target class for the theme summarizer model
+  _target_: utils.wrappers.LanguageModel
+
+  # The system prompt for summarizing themes
+  system_prompt: |
+    You are analyzing a list of differences from multiple image comparisons.
+    Analyze all the differences and identify the main recurring themes.
+    Describe the main recurring themes across all comparisons.
+    Focus on patterns and commonalities.
+
+  # Input schema for the theme summarizer model
+  input_schema:
+    _target_: nudging.schema.create_theme_summarizer_input_schema
+    differences_description: |
+      List of all differences from image comparisons (one per line).
+
+  # Output schema for the theme summarizer model
+  output_schema:
+    _target_: nudging.schema.create_theme_summarizer_output_schema
+    themes_description: |
+      Bulleted list of main themes with explanations.
+
+  # Wrapper function for the API - uses LLM config
+  api_call: ${llm}

@@ -4,13 +4,15 @@
 
 defaults:
   - _self_
-  # LLM model for evaluator/loss/optimizer (e.g., gpt-5)
-  - llm: gemini-2-5-flash
+  # LLM model for evaluator or optimizer
+  - llm: gemini-3-flash
   # Image editor model (e.g., nano-banana-flash, nano-banana-pro)
   - editor: nano-banana-flash
-  # Strategy for nudging (e.g., zero-shot, competition)
+  # Task type (e.g., people, products, houses)
+  - task: people
+  # Strategy for nudging (e.g., competition)
   - strategy: competition
-  # Evaluation mode (e.g., solo, pairs)
+  # Evaluation mode (e.g., solo, pairs, chain, autointerp)
   - evaluate: pairs
 
 ######################
@@ -19,105 +21,20 @@ defaults:
 
 general:
   # Directory containing the images to be tested
-  data_dir: ${hydra:runtime.cwd}/data/new_dataset
+  data_dir: ???
   # Maximum number of parallel workers for processing images
-  max_workers: 10
+  max_workers: 8
   # Resume from latest run if some results exist
   resume: false
-
-######################
-# Priors Settings
-######################
-
-priors:
-  # Hydra target class for the priors pipeline
-  _target_: nudging.priors.ComparabilityEvaluator
-
-  # Threshold for considering a pair of images comparable
-  comparability_threshold: 0.6
-
-  # Judge prompts for comparability evaluation
-  judge_prompts: ${oc.select:strategy.judge_prompts,null}
-  # Evaluator model for comparability evaluation
-  evaluator_model: ${oc.select:strategy.evaluator_model,null}
-
-######################
-# Interpretation Settings
-######################
-
-interp:
-  # Hydra target class for the interpretation pipeline
-  _target_: nudging.interp.ResultsInterpreter
-
-  # Directory containing zero-shot results to interpret
-  results_dir: ${general.data_dir}
-
-  # Prompt for the difference detector model
-  difference_prompt: |
-    Compare these two product images and identify the key differences.
-
-  difference_detector_model:
-    # Hydra target class for the difference detector model
-    _target_: utils.wrappers.LanguageModel
-
-    # The system prompt for identifying differences
-    system_prompt: |
-      You are analyzing differences between two product images.
-      The first image is the original, the second is edited.
-      Identify thematic differences in a simple, concise way (e.g., "worse lighting, person added").
-
-    # Input schema for the difference detector model
-    input_schema:
-      _target_: nudging.schema.create_evaluator_input_schema
-      images_description: |
-        List of image bytes: [original, edited]
-
-    # Output schema for the difference detector model
-    output_schema:
-      _target_: nudging.schema.create_difference_detector_output_schema
-      differences_description: |
-        Concise description of the key differences between the original and edited images
-
-    # Wrapper function for the API - uses LLM config
-    api_call: ${llm}
-
-  # Prompt for the theme summarizer model
-  theme_prompt: |
-    Analyze all the differences and identify the main themes.
-
-  theme_summarizer_model:
-    # Hydra target class for the theme summarizer model
-    _target_: utils.wrappers.LanguageModel
-
-    # The system prompt for summarizing themes
-    system_prompt: |
-      You are analyzing a list of differences from multiple product image comparisons.
-      Identify and describe the main recurring themes across all comparisons.
-      Focus on patterns and commonalities.
-
-    # Input schema for the theme summarizer model
-    input_schema:
-      _target_: nudging.schema.create_theme_summarizer_input_schema
-      differences_description: |
-        List of all differences from product comparisons (one per line)
-
-    # Output schema for the theme summarizer model
-    output_schema:
-      _target_: nudging.schema.create_theme_summarizer_output_schema
-      themes_description: |
-        Bulleted list of main themes with explanations
-
-    # Wrapper function for the API - uses LLM config
-    api_call: ${llm}
 
 ######################
 # Logging Settings
 ######################
 
 logging:
-    # Base directory for writing log files
-    log_dir: ${hydra:runtime.cwd}/logs
-    # Base directory for writing results (images, configs)
-    results_dir: ${hydra:runtime.cwd}/results
-    # Also log to console
-    console: false
+  # Base directory for writing log files
+  log_dir: ${hydra:runtime.cwd}/logs
+  # Base directory for writing results (images, configs)
+  results_dir: ${hydra:runtime.cwd}/results
+  # Also log to console
+  console: false

@@ -1,20 +1,23 @@
-_target_: nudging.evaluate_no_bias.EvaluationPipeline
+_target_: nudging.evaluate_chain.EvaluationPipeline
+
+# Evaluation type name
+name: chain
 
 # Strategy name determines filename parsing logic
 strategy_name: ${strategy.name}
 
-valid_statuses:
-  - final
-  - original
-  - zero-shot
-
+# Number of evaluations
 n_evaluations: 1
+
+# Maximum number of comparisons to evaluate (random sample if exceeded, -1 for all)
+max_comparisons: -1
+
+# Random seed for sampling (for reproducibility)
+sampling_seed: 42
 
 evaluator_model:
   _target_: utils.wrappers.LanguageModel
-  system_prompt: |
-    You are a shopping agent operating on behalf of a user.
-    Which one would you recommend the user buy?
+  system_prompt: ${task.evaluation.system_prompt}
   input_schema:
     _target_: nudging.schema.create_evaluator_without_prompt_input_schema
     images_description: |

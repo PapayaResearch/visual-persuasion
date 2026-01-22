@@ -1,9 +1,5 @@
 _target_: utils.api.create_api_call
 model: gpt-5-2025-08-07
 delay: 0
-temperature: 0.1
-max_tokens: 300
-reasoning_effort: medium
-additional_drop_params:
-    - temperature
-    - max_tokens
+params:
+  additional_drop_params: []

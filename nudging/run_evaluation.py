@@ -23,10 +23,14 @@ def main(cfg: Config):
 
     # Create common directories and paths
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    base_dir = os.path.join(
-        "evaluation",
-        cfg.evaluate.evaluator_model.api_call.model
-    )
+
+    # Get model name - different evaluation types use different model fields
+    if hasattr(cfg.evaluate, 'evaluator_model'):
+        model_name = cfg.evaluate.evaluator_model.api_call.model
+    elif hasattr(cfg.evaluate, 'difference_detector_model'):
+        model_name = cfg.evaluate.difference_detector_model.api_call.model
+
+    base_dir = os.path.join("evaluation", model_name)
 
     # Set up logging
     log_dir = cfg.logging.log_dir
@@ -54,17 +58,14 @@ def main(cfg: Config):
                     and f.lower().endswith('.jpg')]
 
     # Create the results directory
-    results_dir = os.path.join(
-        data_dir,
-        "evaluation",
-        cfg.evaluate.evaluator_model.api_call.model
-    )
+    results_dir = os.path.join(data_dir, "evaluation", model_name)
     os.makedirs(results_dir, exist_ok=True)
 
-    # Save config to output directories
-    with open(os.path.join(results_dir, "config.yaml"), "w") as outfile:
+    # Save config to output directories with evaluation-specific names
+    config_filename = f"config_{cfg.evaluate.name}.yaml"
+    with open(os.path.join(results_dir, config_filename), "w") as outfile:
         outfile.write(cfg_yaml)
-    with open(os.path.join(os.path.dirname(log_file), "config.yaml"), "w") as outfile:
+    with open(os.path.join(os.path.dirname(log_file), config_filename), "w") as outfile:
         outfile.write(cfg_yaml)
 
     # Create evaluation pipeline

@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import random
 import itertools
 import threading
 import pandas as pd
@@ -19,26 +20,19 @@ class EvaluationPipeline:
         evaluator_model: LanguageModel,
         strategy_name: str,
         valid_statuses: List[str],
-        n_evaluations: int = 1
-        # judge_prompts: List[str]
+        name: str,
+        n_evaluations: int = 1,
+        max_comparisons: int = -1,
+        sampling_seed: int = 42
     ):
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
         self.strategy_name = strategy_name
         self.valid_statuses = valid_statuses
+        self.name = name
         self.n_evaluations = n_evaluations
-        # self.judge_prompts = judge_prompts
-
-    def _parse_filename_zero_shot(self, filename: str) -> Tuple[str, str, str]:
-        """
-        Parse zero-shot filename: CLASS_ID_EDITTYPE.jpg
-        Returns (class_name, image_id, edit_type)
-        """
-        match = re.match(r'([A-Za-z0-9_]+)_([A-Za-z0-9]+)_([A-Za-z0-9-]+)\.jpg', filename)
-        class_name = match.group(1)
-        image_id = match.group(2)
-        edit_type = match.group(3)
-        return class_name, image_id, edit_type
+        self.max_comparisons = max_comparisons
+        self.sampling_seed = sampling_seed
 
     def _parse_filename_competition(self, filename: str):
         """
@@ -153,7 +147,7 @@ class EvaluationPipeline:
         Runs the evaluation pipeline for each image comparison in parallel.
         Supports resumption by skipping already completed comparisons.
         """
-        csv_save_path = os.path.join(results_dir, 'results.csv')
+        csv_save_path = os.path.join(results_dir, 'results_pairs.csv')
 
         # Load completed comparisons from existing CSV
         completed_comparisons = self._load_completed_comparisons(csv_save_path)
@@ -166,10 +160,7 @@ class EvaluationPipeline:
                 img_bytes = f.read()
             filename = os.path.basename(img_path)
 
-            if self.strategy_name == 'zero-shot':
-                class_name, image_id, edit_type = self._parse_filename_zero_shot(filename)
-                class_groups[class_name].add((image_id, edit_type, img_bytes))
-            elif self.strategy_name == 'competition':
+            if self.strategy_name == 'competition':
                 parsed = self._parse_filename_competition(filename)
                 if parsed is None:
                     continue
@@ -178,8 +169,8 @@ class EvaluationPipeline:
 
         logging.info(f"Found {len(class_groups)} image classes to evaluate\n")
 
-        # Collect all comparison tasks, skipping completed ones
-        comparison_tasks = []
+        # Collect all comparison tasks
+        all_comparison_tasks = []
         for image_class in sorted(class_groups.keys()):
             comparable_images = sorted(class_groups[image_class], key=lambda x: '_'.join(x[:2]))
 
@@ -190,18 +181,38 @@ class EvaluationPipeline:
                 if image_id_1 == image_id_2:
                     continue
 
-                # Check if this comparison was already completed
-                base_1 = f"{image_id_1}_{edit_type_1}"
-                base_2 = f"{image_id_2}_{edit_type_2}"
-                comparison_key = (image_class, base_1, base_2)
-
-                if comparison_key in completed_comparisons:
-                    continue
-
-                comparison_tasks.append((
+                all_comparison_tasks.append((
                     image_class, image_id_1, edit_type_1, img_bytes_1,
                     image_id_2, edit_type_2, img_bytes_2
                 ))
+
+        # Sample from all tasks first
+        if self.max_comparisons > 0 and len(all_comparison_tasks) > self.max_comparisons:
+            logging.info(f"Sampling {self.max_comparisons} out of {len(all_comparison_tasks)} total\n")
+
+            # Seed the random number generator for reproducibility
+            random.seed(self.sampling_seed)
+
+            # Group by comparison type and sample equally
+            comparison_groups = defaultdict(list)
+            for task in all_comparison_tasks:
+                comp_type = tuple(sorted([task[2], task[5]]))
+                comparison_groups[comp_type].append(task)
+
+            per_group = self.max_comparisons // len(comparison_groups)
+            comparison_tasks = []
+            for comp_type, tasks in comparison_groups.items():
+                sample_size = min(per_group, len(tasks))
+                comparison_tasks.extend(random.sample(tasks, sample_size))
+                logging.info(f"  {comp_type}: sampled {sample_size}/{len(tasks)}")
+        else:
+            comparison_tasks = all_comparison_tasks
+
+        # Filter out completed comparisons
+        comparison_tasks = [
+            task for task in comparison_tasks
+            if (task[0], f"{task[1]}_{task[2]}", f"{task[4]}_{task[5]}") not in completed_comparisons
+        ]
 
         comparison_tasks = list(comparison_tasks) * self.n_evaluations  # Repeat tasks for multiple evaluations if >1 specified
         total_comparisons = len(comparison_tasks)
@@ -214,9 +225,9 @@ class EvaluationPipeline:
         # Open CSV in append mode for incremental writing
         with open(csv_save_path, 'a', newline='', encoding='utf-8') as csvfile:
             fieldnames = [
-                'image_class', 'base1', 'base2', 'choice', 'reason', 'first', 'second',
-                'completion_tokens', 'prompt_tokens', 'total_tokens', 'reasoning_tokens',
-                'consistent_judges', 'winner_score'
+                'image_class', 'base1', 'base2', 'choice', 'reason',
+                'completion_tokens', 'prompt_tokens', 'total_tokens',
+                'reasoning_tokens'
             ]
             writer = pd.DataFrame(columns=fieldnames)
 

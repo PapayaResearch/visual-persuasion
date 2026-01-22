@@ -20,26 +20,15 @@ class SoloEvaluationPipeline:
         evaluator_model: LanguageModel,
         strategy_name: str,
         valid_statuses: List[str],
+        name: str,
         n_evaluations: int = 1
     ):
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
         self.strategy_name = strategy_name
         self.valid_statuses = valid_statuses
+        self.name = name
         self.n_evaluations = n_evaluations
-
-    def _parse_filename_zero_shot(self, filename: str) -> Tuple[str, str, str]:
-        """
-        Parse zero-shot filename: CLASS_ID_EDITTYPE.jpg
-        Returns (class_name, image_id, edit_type)
-        """
-        match = re.match(r'([A-Za-z0-9_]+)_([A-Za-z0-9]+)_([A-Za-z0-9-]+)\\.jpg', filename)
-        if not match:
-            raise ValueError(f"Filename {filename} does not match zero-shot convention.")
-        class_name = match.group(1)
-        image_id = match.group(2)
-        edit_type = match.group(3)
-        return class_name, image_id, edit_type
 
     def _parse_filename_competition(self, filename: str):
         """
@@ -135,10 +124,7 @@ class SoloEvaluationPipeline:
                 img_bytes = f.read()
             filename = os.path.basename(img_path)
 
-            if self.strategy_name == 'zero-shot':
-                class_name, image_id, edit_type = self._parse_filename_zero_shot(filename)
-                class_groups[class_name].add((image_id, edit_type, img_bytes))
-            elif self.strategy_name == 'competition':
+            if self.strategy_name == 'competition':
                 parsed = self._parse_filename_competition(filename)
                 if parsed is None:
                     continue

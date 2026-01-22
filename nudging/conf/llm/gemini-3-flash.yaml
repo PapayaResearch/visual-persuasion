@@ -1,5 +1,5 @@
 _target_: utils.api.create_api_call
-model: gemini/gemini-3-pro-preview
+model: gemini/gemini-3-flash-preview
 delay: 0
 params:
   temperature: 1.0 # Default: 1.0; Range: [0, 2]
