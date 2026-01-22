@@ -22,20 +22,19 @@ import textwrap
 class FeedbackDescentBaseline:
     """
     Feedback Descent-based single-image optimization baseline.
-    Maintains a single best artifact and proposes improvements conditioned
+    Maintains a single best prompt and proposes improvements conditioned
     on accumulated textual feedback from pairwise comparisons.
     """
     name: str
-    base_prior: str
+    max_iterations: int
+    convergence_patience: int
     image_editing_model: ImageModel
+    base_prior: str
+    judge_prompt: str
     # Evaluator for pairwise comparisons
     evaluator_model: LanguageModel
     # Proposer model for generating improved prompts
     proposer_model: LanguageModel
-    # Maximum number of iterations
-    max_iterations: int
-    # Number of consecutive iterations without improvement before stopping
-    convergence_patience: int
 
     def __post_init__(self):
         """Initialize tracking variables."""
@@ -55,7 +54,7 @@ class FeedbackDescentBaseline:
 
     def _propose_improvement(
         self,
-        current_best_instruction: str,
+        current_best_prompt: str,
         feedback_history: list[tuple[str, str]],
         category: str
     ) -> tuple[str, str]:
@@ -72,20 +71,20 @@ class FeedbackDescentBaseline:
 
         # Prepare proposer input
         proposer_input = {
-            'current_artifact': self._compose_prompt(current_best_instruction),
+            'current_prompt': self._compose_prompt(current_best_prompt),
             'feedback_history': feedback_text,
-            "metadata": f"The image here is of a(n) {category}."
+            "metadata": f"The image is of a(n) {category}."
         }
 
         logging.info(f"\n📝 Proposing improvement via M(x*, R)...\n")
 
         # Get proposed improvement from proposer model
         response = self.proposer_model.get_response(**proposer_input)
-        proposed_instruction = response.new_instruction.strip()
+        proposed_prompt = response.new_prompt.strip()
 
-        logging.info(f"Proposed instruction: {proposed_instruction}\n")
+        logging.info(f"Proposed prompt: {proposed_prompt}\n")
 
-        return proposed_instruction, feedback_text
+        return proposed_prompt, feedback_text
 
     def _compare_images(
         self,
@@ -112,7 +111,7 @@ class FeedbackDescentBaseline:
 
             evaluation = self.evaluator_model.get_response(
                 images=images,
-                judge_prompt=f"Compare these two versions of the {category} product photo. Which would receive a higher rating? Provide detailed feedback on why.",
+                judge_prompt=self.judge_prompt,
                 metadata="The images are of a(n) %s." % category
             )
 
@@ -166,7 +165,7 @@ class FeedbackDescentBaseline:
 
     def _visualize_optimization(
         self,
-        category: str,
+        image_name: str,
         iteration_history: list[dict],
         viz_path: str
     ):
@@ -180,13 +179,13 @@ class FeedbackDescentBaseline:
 
         # Create figure with two columns: text (left) and image (right)
         fig = plt.figure(figsize=(12, 3 * num_iterations))
-        fig.suptitle(f"Feedback Descent: {category}", fontsize=16, fontweight="bold", y=0.995)
+        fig.suptitle(f"Feedback Descent: {image_name}", fontsize=16, fontweight="bold", y=0.995)
 
         for idx, entry in enumerate(iteration_history):
             iteration = entry["iteration"]
             image = entry["image"]
             improved = entry.get("improved", False)
-            instruction = entry.get("instruction", "")
+            prompt = entry.get("prompt", "")
 
             # Text column (left)
             ax_text = plt.subplot(num_iterations, 2, 2 * idx + 1)
@@ -197,8 +196,8 @@ class FeedbackDescentBaseline:
             else:
                 status = "✓ Improved" if improved else "= No change"
                 title = f"Iteration {iteration}\n{status}\n"
-                wrapped_instruction = textwrap.fill(instruction, width=40)
-                full_text = f"{title}\nInstruction:\n{wrapped_instruction}"
+                wrapped_prompt = textwrap.fill(prompt, width=40)
+                full_text = f"{title}\nPrompt:\n{wrapped_prompt}"
 
             ax_text.text(0.5, 0.5, full_text, 
                         ha='center', va='center',
@@ -253,12 +252,12 @@ class FeedbackDescentBaseline:
         original_image.save(original_save_path)
 
         # Initialize: current best starts as original (x*_0)
-        current_best_instruction = None  # Will use base_prior only
+        current_best_prompt = None  # Will use base_prior only
         current_best_bytes = original_image_bytes
         current_best_image = original_image.copy()
 
         # Feedback history R = {(x1, r1), ..., (xt, rt)}
-        feedback_history = []  # List of (artifact, rationale) tuples
+        feedback_history = []  # List of (prompt, rationale) tuples
 
         # Tracking for visualization
         iteration_history = [{"iteration": 0, "image": original_image.copy()}]
@@ -274,21 +273,21 @@ class FeedbackDescentBaseline:
 
             iteration_log = {
                 "iteration": iteration,
-                "best_instruction_before": current_best_instruction,
+                "best_prompt_before": current_best_prompt,
             }
 
             # Step 1: Propose improvement - x_t = M(x*, R)
-            proposed_instruction, feedback_text = self._propose_improvement(
-                current_best_instruction,
+            proposed_prompt, feedback_text = self._propose_improvement(
+                current_best_prompt,
                 feedback_history,
                 image_name.split('_')[0].lower()
             )
 
-            iteration_log["proposed_instruction"] = proposed_instruction
+            iteration_log["proposed_prompt"] = proposed_prompt
             iteration_log["feedback_history_used"] = feedback_text
 
             # Step 2: Generate candidate image
-            candidate_prompt = self._compose_prompt(proposed_instruction)
+            candidate_prompt = self._compose_prompt(proposed_prompt)
             logging.info(f"Generating candidate with prompt:\n{candidate_prompt}\n")
 
             candidate_image, candidate_bytes = self.image_editing_model.edit(
@@ -323,13 +322,13 @@ class FeedbackDescentBaseline:
             iteration_log["feedback"] = feedback
 
             # Step 4: Add to feedback history - R = R ∪ {(x_t, r_t)}
-            feedback_history.append((proposed_instruction, feedback))
+            feedback_history.append((proposed_prompt, feedback))
 
             # Step 5: Update best if candidate wins (p_t = 1)
             improved = False
             if winner == 'candidate':
                 logging.info(f"✅ Candidate wins (p_t=1)! Updating x* and resetting R.\n")
-                current_best_instruction = proposed_instruction
+                current_best_prompt = proposed_prompt
                 current_best_bytes = candidate_bytes
                 current_best_image = candidate_image.copy()
                 improved = True
@@ -342,7 +341,7 @@ class FeedbackDescentBaseline:
                 iterations_without_improvement += 1
 
             iteration_log["improved"] = improved
-            iteration_log["best_instruction_after"] = current_best_instruction
+            iteration_log["best_prompt_after"] = current_best_prompt
             optimization_logs.append(iteration_log)
 
             # Save current best at this iteration
@@ -354,7 +353,7 @@ class FeedbackDescentBaseline:
                 "iteration": iteration,
                 "image": current_best_image.copy(),
                 "improved": improved,
-                "instruction": current_best_instruction or "(no additional instruction yet)"
+                "prompt": current_best_prompt or "(no additional instruction yet)"
             })
 
             # Check convergence
@@ -377,7 +376,7 @@ class FeedbackDescentBaseline:
 
         # Generate visualization
         viz_path = os.path.join(results_dir, f"{image_name}_visualization.png")
-        self._visualize_optimization(image_name.split('_')[0].lower(), iteration_history, viz_path)
+        self._visualize_optimization(image_name, iteration_history, viz_path)
 
         # Save detailed log
         log_path = os.path.join(results_dir, f"{image_name}_log.json")
@@ -396,17 +395,17 @@ class FeedbackDescentBaseline:
             f.write(f"Optimization Progress:\n")
             for log in optimization_logs:
                 f.write(f"\n  Iteration {log['iteration']}:\n")
-                f.write(f"    Proposed: {log.get('proposed_instruction', 'N/A')}\n")
+                f.write(f"    Proposed: {log.get('proposed_prompt', 'N/A')}\n")
                 f.write(f"    Result: {'✓ Improved' if log.get('improved') else '= No change'}\n")
                 if 'feedback' in log:
                     f.write(f"    Feedback: {log['feedback']}\n")
-            f.write(f"\nFinal Best Instruction:\n{current_best_instruction}\n")
+            f.write(f"\nFinal Best Prompt:\n{current_best_prompt}\n")
 
         return {
             "image_name": image_name,
             "iterations": len(iteration_history),
             "improvements": sum(1 for h in iteration_history if h.get('improved', False)),
-            "final_instruction": current_best_instruction,
+            "final_prompt": current_best_prompt,
             "logs": optimization_logs
         }
 
@@ -416,36 +415,9 @@ class FeedbackDescentBaseline:
         """
         run_start = time.time()
 
-        # Check for comparability results to filter images (optional)
-        image_dir = os.path.dirname(image_paths[0]) if image_paths else ""
-        comparability_results_csv = os.path.join(image_dir, "comparability_results.csv")
-
-        images_to_process = []
-
-        if os.path.isfile(comparability_results_csv):
-            logging.info(f"Reading comparable images from: {comparability_results_csv}")
-            seen_images = set()
-            with open(comparability_results_csv, "r", newline="") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    if row['is_comparable'].lower() == "true":
-                        for img_id in [row['id_1'], row['id_2']]:
-                            if img_id not in seen_images:
-                                img_path = os.path.join(image_dir, img_id + '.jpg')
-                                if os.path.isfile(img_path):
-                                    images_to_process.append(img_path)
-                                    seen_images.add(img_id)
-        else:
-            # Process all provided images
-            images_to_process = image_paths
-
-        if not images_to_process:
-            logging.error("No images found to process.")
-            raise ValueError("No images found to process.")
-
         logging.info(f"\n{'='*80}")
         logging.info(f"⚖️  Starting Feedback Descent Optimization")
-        logging.info(f"   Total images: {len(images_to_process)}")
+        logging.info(f"   Total images: {len(image_paths)}")
         logging.info(f"   Max iterations per image: {self.max_iterations}")
         logging.info(f"   Convergence patience: {self.convergence_patience}")
         logging.info(f"   Max workers: {max_workers}")
@@ -456,43 +428,30 @@ class FeedbackDescentBaseline:
         # Process images (sequential recommended)
         results = []
 
-        with tqdm(total=len(images_to_process), desc="Images optimized", unit="image") as pbar:
-            if max_workers == 1:
-                # Sequential processing (recommended)
-                for idx, image_path in enumerate(images_to_process):
-                    result = self._optimize_single_image(
+        with tqdm(total=len(image_paths), desc="Images completed", unit="image") as pbar:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {
+                    executor.submit(
+                        self._optimize_single_image,
                         image_path,
                         results_dir,
                         idx,
-                        len(images_to_process)
-                    )
+                        len(image_paths)
+                    ): image_path
+                    for idx, image_path in enumerate(image_paths)
+                }
+
+                for future in as_completed(futures):
+                    result = future.result()
                     results.append(result)
                     pbar.update(1)
-            else:
-                # Parallel processing
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    futures = {
-                        executor.submit(
-                            self._optimize_single_image,
-                            image_path,
-                            results_dir,
-                            idx,
-                            len(images_to_process)
-                        ): image_path
-                        for idx, image_path in enumerate(images_to_process)
-                    }
-
-                    for future in as_completed(futures):
-                        result = future.result()
-                        results.append(result)
-                        pbar.update(1)
 
         # Generate global summary
         summary_path = os.path.join(results_dir, "global_summary.txt")
         with open(summary_path, "w") as f:
             f.write(f"Feedback Descent - Global Summary\n")
             f.write(f"{'='*80}\n\n")
-            f.write(f"Total images processed: {len(images_to_process)}\n")
+            f.write(f"Total images processed: {len(image_paths)}\n")
             f.write(f"Total images generated: {self._total_num_images_generated}\n")
             f.write(f"Estimated cost: ${self._total_num_images_generated * self._cost_per_image_generated:.2f}\n\n")
             f.write(f"Configuration:\n")
@@ -506,7 +465,7 @@ class FeedbackDescentBaseline:
         logging.info(f"\n{'='*80}")
         logging.info(f"✅ Feedback Descent Complete!")
         logging.info(f"⏱️  TOTAL RUNTIME: {run_duration:.2f}s ({run_duration/60:.2f}m)")
-        logging.info(f"   Total images: {len(images_to_process)}")
+        logging.info(f"   Total images: {len(image_paths)}")
         logging.info(f"   Total images generated: {self._total_num_images_generated}")
         logging.info(f"   Estimated cost: ${self._total_num_images_generated * self._cost_per_image_generated:.2f}")
         logging.info(f"{'='*80}\n")
