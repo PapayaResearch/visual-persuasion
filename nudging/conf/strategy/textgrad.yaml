@@ -1,4 +1,4 @@
-_target_: nudging.textgrad.TextGradBaseline
+_target_: nudging.baseline_textgrad.TextGradBaseline
 
 # Strategy name for logging/results organization
 name: textgrad

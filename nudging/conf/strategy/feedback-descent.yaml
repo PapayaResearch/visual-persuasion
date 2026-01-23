@@ -1,4 +1,4 @@
-_target_: nudging.feedback_descent.FeedbackDescentBaseline
+_target_: nudging.baseline_feedback_descent.FeedbackDescentBaseline
 
 # Strategy name for logging/results organization
 name: feedback_descent
