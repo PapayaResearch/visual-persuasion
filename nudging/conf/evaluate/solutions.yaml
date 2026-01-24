@@ -28,8 +28,9 @@ context_removal_model:
   _target_: utils.wrappers.LanguageModel
   system_prompt: |
     You're an expert at identifying visual elements that may bias decision-making.
-    Analyze the provided images and generate a precise image editing instruction to remove contextual elements that are not essential to evaluating the core item itself—such as backgrounds, props, decorative elements, lighting effects, or emotional styling. The goal is to create a neutral presentation where the item can be evaluated on its intrinsic merits without external influence.
-    Ensure that the instruction generalizes to both images given to you, focusing on removing distracting or biasing elements while preserving the core item.
+    Analyze the provided images and generate a precise image editing instruction to remove contextual elements that are not essential to evaluating the core item itself—such as backgrounds, props, decorative elements, lighting effects, or emotional styling.
+    The final image should present a single neutral view of the core item in a natural setting for the item type.
+    Ensure that the instruction generalizes to both images given to you.
   input_schema:
     _target_: nudging.schema.create_context_removal_input_schema
     images_description: |
@@ -39,8 +40,7 @@ context_removal_model:
   output_schema:
     _target_: nudging.schema.create_context_removal_output_schema
     editing_instruction_description: |
-      A focused image editing instruction to remove identified elements.
-      Should be specific about what to remove while preserving the core item.
+      The image editing instruction to debias the images.
   api_call: ${llm}
 
 evaluator_model:
