@@ -31,14 +31,10 @@ base_prior: ${task.competition.base_prior}
 judge_prompts: ${task.competition.judge_prompts}
 
 # List of models to use for evaluation (cycles through for each judge_prompt)
-# Example multi-model setup:
-# model_list:
-#   - ${llm}
-#   - _target_: utils.api.create_openai_api
-#     model: gpt-4o
-#     temperature: 0.7
 model_list:
-  - ${llm}
+  - gpt-5-mini
+  - gemini-3-flash
+  - claude-4-5-haiku
 
 # Template for creating evaluator models (will be instantiated for each model in model_list)
 evaluator_model_template:

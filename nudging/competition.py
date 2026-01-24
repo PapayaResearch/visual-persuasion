@@ -2,8 +2,8 @@ import os
 import io
 import time
 import random
-import csv
 import json
+import yaml
 import logging
 import threading
 import dataclasses
@@ -49,13 +49,20 @@ class VisualNudgeCompetition:
         
         # Instantiate evaluator models from template and model_list
         self.evaluator_models = []
-        for model_config in self.model_list:
+        for model_name in self.model_list:
+            # Construct path to model config file
+            config_dir = os.path.join(os.path.dirname(__file__), "conf", "llm")
+            model_config_path = os.path.join(config_dir, f"{model_name}.yaml")
+            # Get model config
+            with open(model_config_path, "r") as f:
+                model_config = yaml.safe_load(f)
             # Create a copy of the template and set the api_call
             model_cfg = dict(self.evaluator_model_template)
-            model_cfg['api_call'] = model_config
+            model_cfg['api_call'] = instantiate(model_config)
             model_cfg['_target_'] = model_cfg['target']
             model_cfg.pop('target')
             evaluator = instantiate(model_cfg)
+            evaluator.name = model_name
             self.evaluator_models.append(evaluator)
 
     def _compose_prompt(self, instruction: Optional[str] = None) -> str:
@@ -93,7 +100,7 @@ class VisualNudgeCompetition:
             # Cycle through evaluator models based on judge_id
             evaluator = self.evaluator_models[judge_id % len(self.evaluator_models)]
 
-            logging.info(f"Judge {judge_id} (Model {judge_id % len(self.evaluator_models)}): Evaluating with {image_a_name} as {'first' if is_a_first else 'second'} image.\n")
+            logging.info(f"Judge {judge_id} ({evaluator.name}): Evaluating with {image_a_name} as {'first' if is_a_first else 'second'} image.\n")
 
             evaluation = evaluator.get_response(
                 images=images,
