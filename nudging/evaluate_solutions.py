@@ -1,5 +1,4 @@
 import os
-import re
 import logging
 import random
 import itertools
@@ -9,7 +8,7 @@ from typing import List, Tuple, Set
 from collections import defaultdict
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from utils.wrappers import LanguageModel
+from utils.wrappers import LanguageModel, ImageModel
 
 class EvaluationPipeline:
     """
@@ -17,6 +16,8 @@ class EvaluationPipeline:
     """
     def __init__(
         self,
+        image_editing_model: ImageModel,
+        context_removal_model: LanguageModel,
         evaluator_model: LanguageModel,
         strategy_name: str,
         valid_statuses: List[str],
@@ -25,6 +26,8 @@ class EvaluationPipeline:
         max_comparisons: int = -1,
         sampling_seed: int = 42
     ):
+        self.image_editing_model = image_editing_model
+        self.context_removal_model = context_removal_model
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
         self.strategy_name = strategy_name
@@ -70,6 +73,47 @@ class EvaluationPipeline:
         logging.info(f"Loaded {len(completed)} completed comparisons from existing CSV\n")
         return completed
 
+    def _generate_removal_prompt(
+        self,
+        img_bytes_1: bytes,
+        img_bytes_2: bytes,
+        image_class: str
+    ) -> str:
+        """
+        Generate a prompt to remove contextual elements from both images.
+        Returns an image editing instruction focused on removing biases.
+        """
+        logging.info(f"Generating context removal prompt for {image_class}\n")
+        
+        removal_prompt = self.context_removal_model.get_response(
+            images=[img_bytes_1, img_bytes_2],
+            metadata=f"The item being shown is a(n) {image_class}."
+        )
+        
+        logging.info(f"Generated removal prompt: {removal_prompt.editing_instruction}\n")
+        return removal_prompt.editing_instruction
+
+    def _debias_image(
+        self,
+        img_bytes: bytes,
+        removal_prompt: str,
+        save_path: str = None
+    ) -> bytes:
+        """
+        Apply the removal prompt to an image to create a debiased version.
+        Returns the edited image bytes.
+        """
+        edited_image, edited_image_bytes = self.image_editing_model.edit(
+            removal_prompt,
+            img_bytes
+        )
+        
+        if save_path:
+            edited_image.save(save_path)
+            logging.info(f"Saved debiased image to {save_path}\n")
+        
+        return edited_image_bytes
+
 
     def _evaluate_comparison(
         self,
@@ -79,18 +123,38 @@ class EvaluationPipeline:
         img_bytes_1: bytes,
         image_id_2: str,
         edit_type_2: str,
-        img_bytes_2: bytes
+        img_bytes_2: bytes,
+        results_dir: str
     ) -> dict:
         """
         Evaluate a single comparison between two images using multiple judges.
+        Applies debiasing preprocessing to remove contextual elements.
         Returns a dictionary with the evaluation result based on majority vote.
         """
         base_1 = f"{image_id_1}_{edit_type_1}"
         base_2 = f"{image_id_2}_{edit_type_2}"
+        
+        # Apply debiasing preprocessing
+        logging.info(f"Applying debiasing preprocessing for {base_1} vs {base_2}\n")
+        
+        # Generate removal prompt based on both images
+        removal_prompt = self._generate_removal_prompt(
+            img_bytes_1, img_bytes_2, image_class
+        )
+        
+        # Prepare save paths for debiased images
+        debiased_path_1 = os.path.join(results_dir, f"{base_1}_debiased_vs_{base_2}.jpg")
+        debiased_path_2 = os.path.join(results_dir, f"{base_2}_debiased_vs_{base_1}.jpg")
+        
+        # Apply removal to both images and save them
+        debiased_img_bytes_1 = self._debias_image(img_bytes_1, removal_prompt, debiased_path_1)
+        debiased_img_bytes_2 = self._debias_image(img_bytes_2, removal_prompt, debiased_path_2)
+        
+        logging.info(f"Debiasing complete for {base_1} vs {base_2}\n")
 
         def evaluate_single(is_1_first: bool):
             """Single judge evaluation"""
-            images = [img_bytes_1, img_bytes_2] if is_1_first else [img_bytes_2, img_bytes_1]
+            images = [debiased_img_bytes_1, debiased_img_bytes_2] if is_1_first else [debiased_img_bytes_2, debiased_img_bytes_1]
             choice_map = {
                 "first": base_1 if is_1_first else base_2,
                 "second": base_2 if is_1_first else base_1
@@ -147,7 +211,7 @@ class EvaluationPipeline:
         Runs the evaluation pipeline for each image comparison in parallel.
         Supports resumption by skipping already completed comparisons.
         """
-        csv_save_path = os.path.join(results_dir, 'results_pairs.csv')
+        csv_save_path = os.path.join(results_dir, 'results_solutions.csv')
 
         # Load completed comparisons from existing CSV
         completed_comparisons = self._load_completed_comparisons(csv_save_path)
@@ -222,6 +286,10 @@ class EvaluationPipeline:
         csv_lock = threading.Lock()
         file_exists = os.path.exists(csv_save_path)
 
+        # Prepare results directory
+        debiased_images_dir = os.path.join(results_dir, 'debiased_images')
+        os.makedirs(debiased_images_dir, exist_ok=True)
+
         # Open CSV in append mode for incremental writing
         with open(csv_save_path, 'a', newline='', encoding='utf-8') as csvfile:
             fieldnames = [
@@ -241,7 +309,8 @@ class EvaluationPipeline:
                 futures = {
                     executor.submit(
                         self._evaluate_comparison,
-                        *task
+                        *task,
+                        debiased_images_dir
                     ): task for task in comparison_tasks
                 }
 

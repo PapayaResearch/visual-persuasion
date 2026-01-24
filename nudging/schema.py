@@ -189,3 +189,30 @@ def create_feedback_descent_proposer_output_schema(new_prompt_description: str) 
         new_prompt: str = Field(description=new_prompt_description)
 
     return FeedbackDescentProposerOutput
+
+
+def create_context_removal_input_schema(
+    images_description: str,
+    metadata_description: str = ""
+) -> Type[IOSchema]:
+    """
+    Creates a ContextRemovalInput schema class with configurable field descriptions.
+    """
+    class ContextRemovalInput(IOSchema):
+        """Input schema for context removal model."""
+        images: List[bytes] = Field(description=images_description)
+        metadata: str = Field(description=metadata_description)
+
+    return ContextRemovalInput
+
+
+def create_context_removal_output_schema(editing_instruction_description: str) -> Type[IOSchema]:
+    """
+    Creates a ContextRemovalOutput schema class with configurable field descriptions.
+    """
+    class ContextRemovalOutput(IOSchema):
+        """Output schema for context removal model."""
+        editing_instruction: str = Field(description=editing_instruction_description)
+
+    return ContextRemovalOutput
+
