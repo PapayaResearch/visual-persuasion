@@ -14,6 +14,7 @@ from PIL import Image
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
+from hydra.utils import instantiate
 from utils.wrappers import ImageModel, LanguageModel
 
 
@@ -27,7 +28,8 @@ class VisualNudgeCompetition:
     base_prior: str
     image_editing_model: ImageModel
     judge_prompts: list[str]
-    evaluator_model: LanguageModel
+    model_list: list
+    evaluator_model_template: dict
     equilibrium_threshold: float
     min_rounds_before_equilibrium: int
     max_rounds_per_pair: int
@@ -40,10 +42,21 @@ class VisualNudgeCompetition:
     proposer_model: LanguageModel
 
     def __post_init__(self):
-        """Initialize tracking variables."""
+        """Initialize tracking variables and create evaluator models."""
         self._total_num_images_generated = 0
         self._cost_per_image_generated = 0.039
         self._counter_lock = threading.Lock()
+        
+        # Instantiate evaluator models from template and model_list
+        self.evaluator_models = []
+        for model_config in self.model_list:
+            # Create a copy of the template and set the api_call
+            model_cfg = dict(self.evaluator_model_template)
+            model_cfg['api_call'] = model_config
+            model_cfg['_target_'] = model_cfg['target']
+            model_cfg.pop('target')
+            evaluator = instantiate(model_cfg)
+            self.evaluator_models.append(evaluator)
 
     def _compose_prompt(self, instruction: Optional[str] = None) -> str:
         """
@@ -76,10 +89,13 @@ class VisualNudgeCompetition:
                 "first": image_a_name if is_a_first else image_b_name,
                 "second": image_b_name if is_a_first else image_a_name,
             }
+            
+            # Cycle through evaluator models based on judge_id
+            evaluator = self.evaluator_models[judge_id % len(self.evaluator_models)]
 
-            logging.info(f"Judge {judge_id}: Evaluating with {image_a_name} as {'first' if is_a_first else 'second'} image.\n")
+            logging.info(f"Judge {judge_id} (Model {judge_id % len(self.evaluator_models)}): Evaluating with {image_a_name} as {'first' if is_a_first else 'second'} image.\n")
 
-            evaluation = self.evaluator_model.get_response(
+            evaluation = evaluator.get_response(
                 images=images,
                 judge_prompt=self.judge_prompts[judge_id],
                 metadata="Context: the user is looking for a(n) %s." % image_a_name.split("_")[0].lower()

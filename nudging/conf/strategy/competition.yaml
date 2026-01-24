@@ -30,9 +30,19 @@ base_prior: ${task.competition.base_prior}
 # Prompts for judge evaluations
 judge_prompts: ${task.competition.judge_prompts}
 
-# Provides feedback to improve with edits
-evaluator_model:
-  _target_: utils.wrappers.LanguageModel
+# List of models to use for evaluation (cycles through for each judge_prompt)
+# Example multi-model setup:
+# model_list:
+#   - ${llm}
+#   - _target_: utils.api.create_openai_api
+#     model: gpt-4o
+#     temperature: 0.7
+model_list:
+  - ${llm}
+
+# Template for creating evaluator models (will be instantiated for each model in model_list)
+evaluator_model_template:
+  target: utils.wrappers.LanguageModel
   system_prompt: ${task.competition.evaluator_system_prompt}
   input_schema:
     _target_: nudging.schema.create_evaluator_input_schema
@@ -48,7 +58,6 @@ evaluator_model:
       Your choice: 'first' or 'second'.
     choice_options: ['first', 'second']
     reason_description: ${task.competition.evaluator_reason_description}
-  api_call: ${llm}
 
 # Proposes edit prompt to improve image
 optimizer_model:
