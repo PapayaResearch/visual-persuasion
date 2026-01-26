@@ -32,9 +32,9 @@ judge_prompts: ${task.competition.judge_prompts}
 
 # List of models to use for evaluation (cycles through for each judge_prompt)
 model_list:
-  - gpt-5-mini
   - gemini-3-flash
-  - claude-4-5-haiku
+  - gemini-3-flash
+  - gemini-3-flash
 
 # Template for creating evaluator models (will be instantiated for each model in model_list)
 evaluator_model_template:
