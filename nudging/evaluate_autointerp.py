@@ -30,9 +30,10 @@ class ResultsInterpreter:
 
         Examples:
             SOFA_9760b07b_original.jpg -> ('SOFA', '9760b07b', 'original')
-            SOFA_9760b07b_final.jpg -> ('SOFA', '9760b07b', 'final')
+            FRONTAL_96frontal_original.jpg -> ('FRONTAL', '96frontal', 'original')
+            rooms_92108399_original.jpg -> ('rooms', '92108399', 'original')
         """
-        match = re.match(r'([A-Z_]+)_([a-f0-9]+)_(original|final)\.jpg', filename)
+        match = re.match(r'([A-Za-z_]+)_([a-z0-9]+)_(original|final)\.jpg', filename)
 
         if not match:
             return None, None, None
