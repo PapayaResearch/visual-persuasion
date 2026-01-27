@@ -25,24 +25,45 @@ class MethodsComparison:
     """
     def __init__(
         self,
-        evaluator_model: LanguageModel,
+        evaluator_config: dict,
+        task_names: List[str],
         name: str,
         data_dir: str,
         results_dir: str,
-        judge_prompt: str,
         model_name: str,
         max_comparisons: int = -1,
         sampling_seed: int = 42
     ):
-        self.evaluator_model = evaluator_model
-        self.evaluator_model.return_usage_data = True
         self.name = name
         self.data_dir = data_dir
         self.results_dir = results_dir
-        self.judge_prompt = judge_prompt
         self.model_name = model_name
         self.max_comparisons = max_comparisons
         self.sampling_seed = sampling_seed
+
+        # Get shared components (already instantiated by Hydra)
+        input_schema = evaluator_config['input_schema']
+        output_schema = evaluator_config['output_schema']
+        api_call = evaluator_config['api_call']
+
+        # Load task configs and create task-specific evaluators
+        task_configs_dir = Path(__file__).parent / "conf" / "task"
+        self.evaluator_models = {}
+
+        for task_name in task_names:
+            # Load task config using OmegaConf (proper Hydra way, no instantiation)
+            task_cfg = OmegaConf.load(task_configs_dir / f"{task_name}.yaml")
+
+            # Create evaluator model with task-specific system prompt
+            evaluator_model = LanguageModel(
+                system_prompt=task_cfg.evaluation.system_prompt,
+                input_schema=input_schema,
+                output_schema=output_schema,
+                api_call=api_call
+            )
+            evaluator_model.return_usage_data = True
+
+            self.evaluator_models[task_name] = evaluator_model
 
     def _load_completed_comparisons(self, csv_path: str) -> Set[Tuple[str, str, str, str, str]]:
         """
@@ -158,6 +179,10 @@ class MethodsComparison:
         """
         Evaluate a single comparison using multi-judge evaluation.
         """
+        # Get task-specific evaluator
+        task = img1['task']
+        evaluator_model = self.evaluator_models[task]
+
         def evaluate_single(is_first_order: bool):
             images = [img1['bytes'], img2['bytes']] if is_first_order else [img2['bytes'], img1['bytes']]
             choice_map = {
@@ -170,9 +195,8 @@ class MethodsComparison:
 
             logging.info(f"Evaluating: {img1_label} vs {img2_label} ({'first-second' if is_first_order else 'second-first'})\n")
 
-            evaluation, usage = self.evaluator_model.get_response(
+            evaluation, usage = evaluator_model.get_response(
                 images=images,
-                judge_prompt=self.judge_prompt,
                 metadata=f"Comparing {img1['category']} images."
             )
 
