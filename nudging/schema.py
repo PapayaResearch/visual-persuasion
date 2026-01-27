@@ -206,13 +206,16 @@ def create_context_removal_input_schema(
     return ContextRemovalInput
 
 
-def create_context_removal_output_schema(editing_instruction_description: str) -> Type[IOSchema]:
+def create_context_removal_output_schema(
+    editing_instruction_1_description: str,
+    editing_instruction_2_description: str
+) -> Type[IOSchema]:
     """
     Creates a ContextRemovalOutput schema class with configurable field descriptions.
     """
     class ContextRemovalOutput(IOSchema):
         """Output schema for context removal model."""
-        editing_instruction: str = Field(description=editing_instruction_description)
+        editing_instruction_1: str = Field(description=editing_instruction_1_description)
+        editing_instruction_2: str = Field(description=editing_instruction_2_description)
 
     return ContextRemovalOutput
-

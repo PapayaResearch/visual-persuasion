@@ -78,20 +78,21 @@ class EvaluationPipeline:
         img_bytes_1: bytes,
         img_bytes_2: bytes,
         image_class: str
-    ) -> str:
+    ) -> tuple[str, str]:
         """
-        Generate a prompt to remove contextual elements from both images.
-        Returns an image editing instruction focused on removing biases.
+        Generate prompts to remove contextual elements from both images.
+        Returns two image editing instructions, one for each image.
         """
-        logging.info(f"Generating context removal prompt for {image_class}\n")
-        
-        removal_prompt = self.context_removal_model.get_response(
+        logging.info(f"Generating context removal prompts for {image_class}\n")
+
+        removal_prompts = self.context_removal_model.get_response(
             images=[img_bytes_1, img_bytes_2],
             metadata=f"The item being shown is a(n) {image_class}."
         )
-        
-        logging.info(f"Generated removal prompt: {removal_prompt.editing_instruction}\n")
-        return removal_prompt.editing_instruction
+
+        logging.info(f"Generated removal prompt 1: {removal_prompts.editing_instruction_1}\n")
+        logging.info(f"Generated removal prompt 2: {removal_prompts.editing_instruction_2}\n")
+        return removal_prompts.editing_instruction_1, removal_prompts.editing_instruction_2
 
     def _debias_image(
         self,
@@ -107,11 +108,11 @@ class EvaluationPipeline:
             removal_prompt,
             img_bytes
         )
-        
+
         if save_path:
             edited_image.save(save_path)
             logging.info(f"Saved debiased image to {save_path}\n")
-        
+
         return edited_image_bytes
 
 
@@ -133,23 +134,23 @@ class EvaluationPipeline:
         """
         base_1 = f"{image_id_1}_{edit_type_1}"
         base_2 = f"{image_id_2}_{edit_type_2}"
-        
+
         # Apply debiasing preprocessing
         logging.info(f"Applying debiasing preprocessing for {base_1} vs {base_2}\n")
-        
-        # Generate removal prompt based on both images
-        removal_prompt = self._generate_removal_prompt(
+
+        # Generate removal prompts based on both images
+        removal_prompt_1, removal_prompt_2 = self._generate_removal_prompt(
             img_bytes_1, img_bytes_2, image_class
         )
-        
+
         # Prepare save paths for debiased images
         debiased_path_1 = os.path.join(results_dir, f"{base_1}_debiased_vs_{base_2}.jpg")
         debiased_path_2 = os.path.join(results_dir, f"{base_2}_debiased_vs_{base_1}.jpg")
-        
-        # Apply removal to both images and save them
-        debiased_img_bytes_1 = self._debias_image(img_bytes_1, removal_prompt, debiased_path_1)
-        debiased_img_bytes_2 = self._debias_image(img_bytes_2, removal_prompt, debiased_path_2)
-        
+
+        # Apply removal to both images with their respective prompts and save them
+        debiased_img_bytes_1 = self._debias_image(img_bytes_1, removal_prompt_1, debiased_path_1)
+        debiased_img_bytes_2 = self._debias_image(img_bytes_2, removal_prompt_2, debiased_path_2)
+
         logging.info(f"Debiasing complete for {base_1} vs {base_2}\n")
 
         def evaluate_single(is_1_first: bool):
@@ -243,6 +244,9 @@ class EvaluationPipeline:
 
                 # Skip same image comparisons
                 if image_id_1 == image_id_2:
+                    continue
+                # Skip same status comparisons
+                if edit_type_1 == edit_type_2:
                     continue
 
                 all_comparison_tasks.append((
