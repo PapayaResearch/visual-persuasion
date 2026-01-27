@@ -10,6 +10,8 @@ results
 outputs
 model.tar.gz
 *.pt
+scripts/prolific_within_strategy
+scripts/prolific_across_strategies
 
 
 # Byte-compiled / optimized / DLL files
