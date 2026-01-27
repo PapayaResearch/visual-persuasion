@@ -7,9 +7,14 @@ keys
 # Analysis
 logs
 results
+results-extra
 outputs
+evaluations
+evaluations-extra
 model.tar.gz
 *.pt
+scripts/prolific_within_strategy
+scripts/prolific_across_strategies
 
 
 # Byte-compiled / optimized / DLL files

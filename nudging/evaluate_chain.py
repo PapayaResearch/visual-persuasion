@@ -41,7 +41,7 @@ class EvaluationPipeline:
         Only accepts: original, zero-shot, final
         """
         # Match: CATEGORY_ID_[VARIANT_]STATUS.jpg
-        match = re.match(r'^([A-Z]+)_([a-z0-9]+)_(?:([AB])_)?(.+)\.jpg$', filename)
+        match = re.match(r'^([A-Za-z]+)_([a-z0-9]+)_(?:([AB])_)?(.+)\.jpg$', filename)
 
         if not match:
             return None
