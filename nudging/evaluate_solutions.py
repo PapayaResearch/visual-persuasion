@@ -22,6 +22,7 @@ class EvaluationPipeline:
         strategy_name: str,
         valid_statuses: List[str],
         name: str,
+        metadata_template: str,
         n_evaluations: int = 1,
         max_comparisons: int = -1,
         sampling_seed: int = 42
@@ -33,6 +34,7 @@ class EvaluationPipeline:
         self.strategy_name = strategy_name
         self.valid_statuses = valid_statuses
         self.name = name
+        self.metadata_template = metadata_template
         self.n_evaluations = n_evaluations
         self.max_comparisons = max_comparisons
         self.sampling_seed = sampling_seed
@@ -85,9 +87,15 @@ class EvaluationPipeline:
         """
         logging.info(f"Generating context removal prompts for {image_class}\n")
 
+        # Format metadata template with category if it contains placeholder
+        if '{category}' in self.metadata_template:
+            metadata = self.metadata_template.format(category=image_class)
+        else:
+            metadata = self.metadata_template
+
         removal_prompts = self.context_removal_model.get_response(
             images=[img_bytes_1, img_bytes_2],
-            metadata=f"The item being shown is a(n) {image_class}."
+            metadata=metadata
         )
 
         logging.info(f"Generated removal prompt 1: {removal_prompts.editing_instruction_1}\n")

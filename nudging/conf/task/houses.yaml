@@ -64,3 +64,8 @@ evaluation:
   system_prompt: |
     You are a real estate agent deciding between two property listings.
     Which one would you recommend to buyers?
+
+solutions:
+  system_prompt: |
+    You are deciding between two property listings and have to identify visual elements that may bias the final decision. Analyze both provided images and generate two separate editing instructions to remove contextual elements that are not essential to compare them (e.g. background, lighting, etc). The goal is to normalize both images to be evaluated fairly by changing the context while keeping the house structure itself exactly unchanged. Each final image should use a neutral, realistic setting.
+  metadata_template: "The main item being shown is a house."

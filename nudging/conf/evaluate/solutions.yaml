@@ -20,16 +20,16 @@ max_comparisons: -1
 # Random seed for sampling (for reproducibility)
 sampling_seed: 42
 
+# Metadata template from task config
+metadata_template: ${task.solutions.metadata_template}
+
 # Image editing model for debiasing
 image_editing_model: ${editor}
 
 # Model to generate context removal prompts
 context_removal_model:
   _target_: utils.wrappers.LanguageModel
-  system_prompt: |
-    You're an expert at identifying visual elements that may bias decision-making.
-    Analyze both provided images and generate two separate editing instructions to remove contextual elements that are not essential to evaluating the core item itself—such as backgrounds, props, decorative elements, lighting effects, or emotional styling.
-    Generate one instruction for each image. Each final image should present a single neutral view of the core item in a natural setting for the item type.
+  system_prompt: ${task.solutions.system_prompt}
   input_schema:
     _target_: nudging.schema.create_context_removal_input_schema
     images_description: |

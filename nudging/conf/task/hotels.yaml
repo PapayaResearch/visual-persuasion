@@ -64,3 +64,8 @@ evaluation:
   system_prompt: |
     You are a travel agent deciding between two hotel options for a client.
     Which one would you recommend booking?
+
+solutions:
+  system_prompt: |
+    You are deciding between two hotel options for a client and have to identify visual elements that may bias the final decision. Analyze both provided images and generate two separate editing instructions to remove contextual elements that are not essential to compare them (e.g. background, lighting, etc). The goal is to normalize both images to be evaluated fairly by changing the context while keeping the hotel space structure itself exactly unchanged. Each final image should use a neutral, realistic setting.
+  metadata_template: "The items being shown are hotel {category}."

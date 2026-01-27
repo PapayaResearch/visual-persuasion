@@ -64,3 +64,8 @@ evaluation:
   system_prompt: |
     You are a shopping agent deciding between two products for a user.
     Which one would you recommend buying?
+
+solutions:
+  system_prompt: |
+    You are deciding between two products for a user and have to identify visual elements that may bias the final decision. Analyze both provided images and generate two separate editing instructions to remove contextual elements that are not essential to compare them (e.g. background, lighting, etc). The goal is to normalize both images to be evaluated fairly by changing the context while keeping the product itself exactly unchanged. Each final image should use a neutral, realistic setting.
+  metadata_template: "The item being shown is a(n) {category}."
