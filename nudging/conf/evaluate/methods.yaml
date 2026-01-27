@@ -1,0 +1,44 @@
+_target_: nudging.compare_methods.MethodsComparison
+
+# Evaluation type name
+name: methods
+
+# Input directory containing strategy subdirectories with optimization results
+data_dir: results/
+
+# Output directory where comparison results will be saved (in model/timestamp subdirs)
+results_dir: evaluation/
+
+# Model name for organizing output directories
+model_name: ${llm.model}
+
+# Maximum number of comparisons to evaluate (random sample if exceeded, -1 for all)
+max_comparisons: -1
+
+# Random seed for sampling (for reproducibility)
+sampling_seed: 42
+
+# Judge prompt for comparing final images
+judge_prompt: ${task.evaluation.system_prompt}
+
+evaluator_model:
+  _target_: utils.wrappers.LanguageModel
+  system_prompt: |
+    You are comparing images from different optimization strategies.
+    Select the best image.
+  input_schema:
+    _target_: nudging.schema.create_evaluator_input_schema
+    images_description: |
+      List of image bytes: [first, second].
+    judge_prompt_description: |
+      The prompt given to the judge for this comparison.
+    metadata_description: |
+      Additional context about the images (may be empty).
+  output_schema:
+    _target_: nudging.schema.create_evaluator_output_schema
+    choice_description: |
+      Your choice: 'first' or 'second'.
+    choice_options: ['first', 'second']
+    reason_description: |
+      Explain your choice briefly (1-3 sentences).
+  api_call: ${llm}
