@@ -8,6 +8,8 @@ keys
 logs
 results
 outputs
+evaluations
+evaluations-extra
 model.tar.gz
 *.pt
 scripts/prolific_within_strategy
