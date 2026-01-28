@@ -23,6 +23,9 @@ sampling_seed: 42
 # Metadata template from task config
 metadata_template: ${task.solutions.metadata_template}
 
+# Cache directory for debiased images and editing prompts (shared across evaluator models)
+cache_dir: cache/debiased_images/${task.name}
+
 # Image editing model for debiasing
 image_editing_model: ${editor}
 
@@ -42,7 +45,13 @@ context_removal_model:
       Image editing instruction to debias the first image.
     editing_instruction_2_description: |
       Image editing instruction to debias the second image.
-  api_call: ${llm}
+  api_call:
+    _target_: utils.api.create_api_call
+    model: gemini/gemini-3-flash-preview
+    delay: 0
+    params:
+      temperature: 1.0
+      additional_drop_params: []
 
 evaluator_model:
   _target_: utils.wrappers.LanguageModel
