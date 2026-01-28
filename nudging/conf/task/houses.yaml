@@ -67,5 +67,6 @@ evaluation:
 
 solutions:
   system_prompt: |
-    You are deciding between two property listings and have to identify visual elements that may bias the final decision. Analyze both provided images and generate two separate editing instructions to remove contextual elements that are not essential to compare them (e.g. background, lighting, etc). The goal is to normalize both images to be evaluated fairly by changing the context while keeping the house structure itself exactly unchanged. Each final image should use a neutral, realistic setting.
+    You are given two images for property listings that must be brought to a shared neutral visual space for fair comparison. Carefully find ALL important visual differences (context, objects, features, lighting, landscaping, participants, and/or staging) between the two images. Your goal is to generate editing instructions that remove every single difference between the two images one by one, while keeping the house structure unchanged.
+
   metadata_template: "The main item being shown is a house."

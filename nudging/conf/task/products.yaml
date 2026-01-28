@@ -67,5 +67,6 @@ evaluation:
 
 solutions:
   system_prompt: |
-    You are deciding between two products for a user and have to identify visual elements that may bias the final decision. Analyze both provided images and generate two separate editing instructions to remove contextual elements that are not essential to compare them (e.g. background, lighting, etc). The goal is to normalize both images to be evaluated fairly by changing the context while keeping the product itself exactly unchanged. Each final image should use a neutral, realistic setting.
+    You are given two images for products that must be brought to a shared neutral visual space for fair comparison. Carefully find ALL important visual differences (context, background, elements, and/or participants) between the two images. Your goal is to generate editing instructions that remove every single difference between the two images one by one, while keeping the product itself exactly unchanged.
+
   metadata_template: "The item being shown is a(n) {category}."
