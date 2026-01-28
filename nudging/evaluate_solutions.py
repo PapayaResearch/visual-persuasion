@@ -192,9 +192,9 @@ class EvaluationPipeline:
         # Ensure cache directory exists
         os.makedirs(self.cache_dir, exist_ok=True)
 
-        # Check cache for debiased images
-        debiased_cache_path_1 = os.path.join(self.cache_dir, f"{image_class}_{base_1}_debiased.jpg")
-        debiased_cache_path_2 = os.path.join(self.cache_dir, f"{image_class}_{base_2}_debiased.jpg")
+        # Check cache for debiased images (pair-specific since editing instructions depend on both images)
+        debiased_cache_path_1 = os.path.join(self.cache_dir, f"{image_class}_{base_1}_vs_{base_2}_debiased_1.jpg")
+        debiased_cache_path_2 = os.path.join(self.cache_dir, f"{image_class}_{base_1}_vs_{base_2}_debiased_2.jpg")
 
         both_cached = os.path.exists(debiased_cache_path_1) and os.path.exists(debiased_cache_path_2)
 
@@ -245,9 +245,15 @@ class EvaluationPipeline:
 
             logging.info(f"Evaluating with {base_1} as {'first' if is_1_first else 'second'} image.\n")
 
+            # Format metadata template with category if it contains placeholder
+            if '{category}' in self.metadata_template:
+                metadata = self.metadata_template.format(category=image_class)
+            else:
+                metadata = self.metadata_template
+
             evaluation, usage = self.evaluator_model.get_response(
                 images=images,
-                metadata="The product here is a(n) %s." % image_class
+                metadata=metadata
             )
 
             real_choice = choice_map.get(evaluation.choice.lower())
