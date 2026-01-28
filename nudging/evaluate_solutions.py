@@ -4,10 +4,12 @@ import random
 import itertools
 import threading
 import pandas as pd
+import io
 from typing import List, Tuple, Set
 from collections import defaultdict
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from PIL import Image
 from utils.wrappers import LanguageModel, ImageModel
 
 class EvaluationPipeline:
@@ -23,6 +25,7 @@ class EvaluationPipeline:
         valid_statuses: List[str],
         name: str,
         metadata_template: str,
+        cache_dir: str,
         n_evaluations: int = 1,
         max_comparisons: int = -1,
         sampling_seed: int = 42
@@ -35,6 +38,7 @@ class EvaluationPipeline:
         self.valid_statuses = valid_statuses
         self.name = name
         self.metadata_template = metadata_template
+        self.cache_dir = cache_dir
         self.n_evaluations = n_evaluations
         self.max_comparisons = max_comparisons
         self.sampling_seed = sampling_seed
@@ -123,6 +127,48 @@ class EvaluationPipeline:
 
         return edited_image_bytes
 
+    def _create_comparison_grid(
+        self,
+        img_bytes_1: bytes,
+        img_bytes_2: bytes,
+        debiased_bytes_1: bytes,
+        debiased_bytes_2: bytes,
+        save_path: str
+    ):
+        """
+        Create a 2x2 grid showing original and debiased images side by side.
+        Top row: original images
+        Bottom row: debiased images
+        """
+        # Load images
+        img1 = Image.open(io.BytesIO(img_bytes_1))
+        img2 = Image.open(io.BytesIO(img_bytes_2))
+        debiased1 = Image.open(io.BytesIO(debiased_bytes_1))
+        debiased2 = Image.open(io.BytesIO(debiased_bytes_2))
+
+        # Resize all to same size (use max dimensions)
+        max_width = max(img1.width, img2.width, debiased1.width, debiased2.width)
+        max_height = max(img1.height, img2.height, debiased1.height, debiased2.height)
+
+        img1 = img1.resize((max_width, max_height))
+        img2 = img2.resize((max_width, max_height))
+        debiased1 = debiased1.resize((max_width, max_height))
+        debiased2 = debiased2.resize((max_width, max_height))
+
+        # Create 2x2 grid
+        grid_width = max_width * 2
+        grid_height = max_height * 2
+        grid = Image.new('RGB', (grid_width, grid_height))
+
+        # Paste images: top row (originals), bottom row (debiased)
+        grid.paste(img1, (0, 0))
+        grid.paste(img2, (max_width, 0))
+        grid.paste(debiased1, (0, max_height))
+        grid.paste(debiased2, (max_width, max_height))
+
+        # Save grid
+        grid.save(save_path)
+        logging.info(f"Saved comparison grid to {save_path}\n")
 
     def _evaluate_comparison(
         self,
@@ -143,23 +189,51 @@ class EvaluationPipeline:
         base_1 = f"{image_id_1}_{edit_type_1}"
         base_2 = f"{image_id_2}_{edit_type_2}"
 
-        # Apply debiasing preprocessing
-        logging.info(f"Applying debiasing preprocessing for {base_1} vs {base_2}\n")
+        # Ensure cache directory exists
+        os.makedirs(self.cache_dir, exist_ok=True)
 
-        # Generate removal prompts based on both images
-        removal_prompt_1, removal_prompt_2 = self._generate_removal_prompt(
-            img_bytes_1, img_bytes_2, image_class
-        )
+        # Check cache for debiased images
+        debiased_cache_path_1 = os.path.join(self.cache_dir, f"{image_class}_{base_1}_debiased.jpg")
+        debiased_cache_path_2 = os.path.join(self.cache_dir, f"{image_class}_{base_2}_debiased.jpg")
 
-        # Prepare save paths for debiased images
-        debiased_path_1 = os.path.join(results_dir, f"{base_1}_debiased_vs_{base_2}.jpg")
-        debiased_path_2 = os.path.join(results_dir, f"{base_2}_debiased_vs_{base_1}.jpg")
+        both_cached = os.path.exists(debiased_cache_path_1) and os.path.exists(debiased_cache_path_2)
 
-        # Apply removal to both images with their respective prompts and save them
-        debiased_img_bytes_1 = self._debias_image(img_bytes_1, removal_prompt_1, debiased_path_1)
-        debiased_img_bytes_2 = self._debias_image(img_bytes_2, removal_prompt_2, debiased_path_2)
+        if both_cached:
+            # Load both debiased images from cache
+            logging.info(f"[CACHE HIT] Loading cached debiased images for {base_1} and {base_2}\n")
+            with open(debiased_cache_path_1, 'rb') as f:
+                debiased_img_bytes_1 = f.read()
+            with open(debiased_cache_path_2, 'rb') as f:
+                debiased_img_bytes_2 = f.read()
+        else:
+            # Generate editing prompts and debias both images
+            logging.info(f"[CACHE MISS] Generating editing prompts and debiasing {base_1} and {base_2}\n")
+            removal_prompt_1, removal_prompt_2 = self._generate_removal_prompt(
+                img_bytes_1, img_bytes_2, image_class
+            )
+
+            # Debias and save both images
+            debiased_img_bytes_1 = self._debias_image(img_bytes_1, removal_prompt_1, save_path=debiased_cache_path_1)
+            debiased_img_bytes_2 = self._debias_image(img_bytes_2, removal_prompt_2, save_path=debiased_cache_path_2)
+
+            # Save prompts for reference
+            prompts_path = os.path.join(self.cache_dir, f"{image_class}_{base_1}_vs_{base_2}_prompts.txt")
+            with open(prompts_path, 'w') as f:
+                f.write(f"EDITING PROMPT FOR {base_1}:\n")
+                f.write(removal_prompt_1)
+                f.write(f"\n\n{'='*80}\n\n")
+                f.write(f"EDITING PROMPT FOR {base_2}:\n")
+                f.write(removal_prompt_2)
 
         logging.info(f"Debiasing complete for {base_1} vs {base_2}\n")
+
+        # Create and save comparison grid (original + debiased side by side)
+        grid_path = os.path.join(results_dir, f"{base_1}_vs_{base_2}_comparison.jpg")
+        self._create_comparison_grid(
+            img_bytes_1, img_bytes_2,
+            debiased_img_bytes_1, debiased_img_bytes_2,
+            grid_path
+        )
 
         def evaluate_single(is_1_first: bool):
             """Single judge evaluation"""
