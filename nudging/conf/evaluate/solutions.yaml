@@ -14,6 +14,9 @@ valid_statuses:
 # Number of evaluations
 n_evaluations: 1
 
+# Number of iterative debiasing rounds to apply
+iterations: 1
+
 # Maximum number of comparisons to evaluate (random sample if exceeded, -1 for all)
 max_comparisons: -1
 

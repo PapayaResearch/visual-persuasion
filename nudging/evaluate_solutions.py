@@ -27,6 +27,7 @@ class EvaluationPipeline:
         metadata_template: str,
         cache_dir: str,
         n_evaluations: int = 1,
+        iterations: int = 1,
         max_comparisons: int = -1,
         sampling_seed: int = 42
     ):
@@ -40,6 +41,7 @@ class EvaluationPipeline:
         self.metadata_template = metadata_template
         self.cache_dir = cache_dir
         self.n_evaluations = n_evaluations
+        self.iterations = iterations
         self.max_comparisons = max_comparisons
         self.sampling_seed = sampling_seed
 
@@ -192,9 +194,9 @@ class EvaluationPipeline:
         # Ensure cache directory exists
         os.makedirs(self.cache_dir, exist_ok=True)
 
-        # Check cache for debiased images (pair-specific since editing instructions depend on both images)
-        debiased_cache_path_1 = os.path.join(self.cache_dir, f"{image_class}_{base_1}_vs_{base_2}_debiased_1.jpg")
-        debiased_cache_path_2 = os.path.join(self.cache_dir, f"{image_class}_{base_1}_vs_{base_2}_debiased_2.jpg")
+        # Check cache for debiased images (includes iteration count)
+        debiased_cache_path_1 = os.path.join(self.cache_dir, f"{image_class}_{base_1}_vs_{base_2}_iter{self.iterations}_debiased_1.jpg")
+        debiased_cache_path_2 = os.path.join(self.cache_dir, f"{image_class}_{base_1}_vs_{base_2}_iter{self.iterations}_debiased_2.jpg")
 
         both_cached = os.path.exists(debiased_cache_path_1) and os.path.exists(debiased_cache_path_2)
 
@@ -206,24 +208,56 @@ class EvaluationPipeline:
             with open(debiased_cache_path_2, 'rb') as f:
                 debiased_img_bytes_2 = f.read()
         else:
-            # Generate editing prompts and debias both images
-            logging.info(f"[CACHE MISS] Generating editing prompts and debiasing {base_1} and {base_2}\n")
-            removal_prompt_1, removal_prompt_2 = self._generate_removal_prompt(
-                img_bytes_1, img_bytes_2, image_class
-            )
+            # Iteratively debias both images
+            logging.info(f"[CACHE MISS] Iteratively debiasing {base_1} and {base_2} for {self.iterations} iterations\n")
 
-            # Debias and save both images
-            debiased_img_bytes_1 = self._debias_image(img_bytes_1, removal_prompt_1, save_path=debiased_cache_path_1)
-            debiased_img_bytes_2 = self._debias_image(img_bytes_2, removal_prompt_2, save_path=debiased_cache_path_2)
+            # Start with original images
+            current_img_bytes_1 = img_bytes_1
+            current_img_bytes_2 = img_bytes_2
 
-            # Save prompts for reference
-            prompts_path = os.path.join(self.cache_dir, f"{image_class}_{base_1}_vs_{base_2}_prompts.txt")
+            all_prompts = []  # Store all prompts for reference
+
+            for iteration in range(1, self.iterations + 1):
+                logging.info(f"Debiasing iteration {iteration}/{self.iterations}\n")
+
+                # Generate editing prompts based on current versions
+                removal_prompt_1, removal_prompt_2 = self._generate_removal_prompt(
+                    current_img_bytes_1, current_img_bytes_2, image_class
+                )
+
+                all_prompts.append({
+                    'iteration': iteration,
+                    'prompt_1': removal_prompt_1,
+                    'prompt_2': removal_prompt_2
+                })
+
+                # Apply edits to get new versions (don't save intermediate iterations)
+                current_img_bytes_1 = self._debias_image(current_img_bytes_1, removal_prompt_1, save_path=None)
+                current_img_bytes_2 = self._debias_image(current_img_bytes_2, removal_prompt_2, save_path=None)
+
+            # Save final debiased images to cache
+            debiased_img_bytes_1 = current_img_bytes_1
+            debiased_img_bytes_2 = current_img_bytes_2
+
+            # Save final images
+            with open(debiased_cache_path_1, 'wb') as f:
+                f.write(debiased_img_bytes_1)
+            with open(debiased_cache_path_2, 'wb') as f:
+                f.write(debiased_img_bytes_2)
+            logging.info(f"Saved final debiased images to cache\n")
+
+            # Save all prompts for reference
+            prompts_path = os.path.join(self.cache_dir, f"{image_class}_{base_1}_vs_{base_2}_iter{self.iterations}_prompts.txt")
             with open(prompts_path, 'w') as f:
-                f.write(f"EDITING PROMPT FOR {base_1}:\n")
-                f.write(removal_prompt_1)
-                f.write(f"\n\n{'='*80}\n\n")
-                f.write(f"EDITING PROMPT FOR {base_2}:\n")
-                f.write(removal_prompt_2)
+                for prompt_entry in all_prompts:
+                    f.write(f"ITERATION {prompt_entry['iteration']}:\n")
+                    f.write(f"{'='*80}\n\n")
+                    f.write(f"EDITING PROMPT FOR {base_1}:\n")
+                    f.write(prompt_entry['prompt_1'])
+                    f.write(f"\n\n")
+                    f.write(f"EDITING PROMPT FOR {base_2}:\n")
+                    f.write(prompt_entry['prompt_2'])
+                    f.write(f"\n\n{'='*80}\n\n")
 
         logging.info(f"Debiasing complete for {base_1} vs {base_2}\n")
 
