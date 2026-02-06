@@ -3,16 +3,10 @@ _target_: nudging.evaluate_solutions.EvaluationPipeline
 # Evaluation type name
 name: solutions
 
-# Strategy name determines filename parsing logic
-strategy_name: ${strategy.name}
-
 # Images used for the comparisons
 valid_statuses:
   - final
   - original
-
-# Number of evaluations
-n_evaluations: 1
 
 # Number of iterative debiasing rounds to apply
 iterations: 1

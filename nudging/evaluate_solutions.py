@@ -21,12 +21,10 @@ class EvaluationPipeline:
         image_editing_model: ImageModel,
         context_removal_model: LanguageModel,
         evaluator_model: LanguageModel,
-        strategy_name: str,
         valid_statuses: List[str],
         name: str,
         metadata_template: str,
         cache_dir: str,
-        n_evaluations: int = 1,
         iterations: int = 1,
         max_comparisons: int = -1,
         sampling_seed: int = 42
@@ -35,19 +33,17 @@ class EvaluationPipeline:
         self.context_removal_model = context_removal_model
         self.evaluator_model = evaluator_model
         self.evaluator_model.return_usage_data = True
-        self.strategy_name = strategy_name
         self.valid_statuses = valid_statuses
         self.name = name
         self.metadata_template = metadata_template
         self.cache_dir = cache_dir
-        self.n_evaluations = n_evaluations
         self.iterations = iterations
         self.max_comparisons = max_comparisons
         self.sampling_seed = sampling_seed
 
-    def _parse_filename_competition(self, filename: str):
+    def _parse_filename(self, filename: str):
         """
-        Parse competition filename: CATEGORY_ID_STATUS.jpg or pair-X_..._CATEGORY_ID_STATUS.jpg
+        Parse filename: CATEGORY_ID_STATUS.jpg
         Returns (category, image_id, status) or None if should skip.
         """
         if not filename.endswith('.jpg'):
@@ -108,40 +104,25 @@ class EvaluationPipeline:
         logging.info(f"Generated removal prompt 2: {removal_prompts.editing_instruction_2}\n")
         return removal_prompts.editing_instruction_1, removal_prompts.editing_instruction_2
 
-    def _debias_image(
-        self,
-        img_bytes: bytes,
-        removal_prompt: str,
-        save_path: str = None
-    ) -> bytes:
-        """
-        Apply the removal prompt to an image to create a debiased version.
-        Returns the edited image bytes.
-        """
-        edited_image, edited_image_bytes = self.image_editing_model.edit(
-            removal_prompt,
-            img_bytes
-        )
-
-        if save_path:
-            edited_image.save(save_path)
-            logging.info(f"Saved debiased image to {save_path}\n")
-
-        return edited_image_bytes
-
     def _create_comparison_grid(
         self,
         img_bytes_1: bytes,
         img_bytes_2: bytes,
         debiased_bytes_1: bytes,
         debiased_bytes_2: bytes,
-        save_path: str
+        save_path: str,
+        choice: str,
+        base_1: str,
+        base_2: str
     ):
         """
         Create a 2x2 grid showing original and debiased images side by side.
         Top row: original images
         Bottom row: debiased images
+        Adds text showing which image was chosen.
         """
+        from PIL import ImageDraw, ImageFont
+
         # Load images
         img1 = Image.open(io.BytesIO(img_bytes_1))
         img2 = Image.open(io.BytesIO(img_bytes_2))
@@ -160,7 +141,7 @@ class EvaluationPipeline:
         # Create 2x2 grid
         grid_width = max_width * 2
         grid_height = max_height * 2
-        grid = Image.new('RGB', (grid_width, grid_height))
+        grid = Image.new('RGB', (grid_width, grid_height), color='white')
 
         # Paste images: top row (originals), bottom row (debiased)
         grid.paste(img1, (0, 0))
@@ -168,9 +149,124 @@ class EvaluationPipeline:
         grid.paste(debiased1, (0, max_height))
         grid.paste(debiased2, (max_width, max_height))
 
+        # Add text showing which was chosen
+        draw = ImageDraw.Draw(grid)
+        font_size = max(40, int(max_height * 0.05))
+        font = ImageFont.load_default(size=font_size)
+
+        if choice == base_1:
+            text = "Choice: Left"
+        elif choice == base_2:
+            text = "Choice: Right"
+        else:
+            text = "Choice: Inconsistent"
+
+        draw.text((grid_width // 2, max_height + 10), text, fill='black', font=font, anchor='mt')
+
         # Save grid
         grid.save(save_path)
         logging.info(f"Saved comparison grid to {save_path}\n")
+
+    def _generate_debiased_images(
+        self,
+        image_class: str,
+        base_1: str,
+        base_2: str,
+        img_bytes_1: bytes,
+        img_bytes_2: bytes
+    ) -> tuple[bytes, bytes]:
+        """
+        Generate debiased versions of two images, using cache if available.
+        Returns the debiased image bytes for both images.
+        """
+        # Ensure cache directory exists
+        os.makedirs(self.cache_dir, exist_ok=True)
+
+        # Find highest cached iteration
+        cached_iteration = 0
+        for i in range(self.iterations, 0, -1):
+            cache_path_1 = os.path.join(
+                self.cache_dir,
+                f"{image_class}_{base_1}_vs_{base_2}_iter{i}_debiased_1.jpg"
+            )
+            cache_path_2 = os.path.join(
+                self.cache_dir,
+                f"{image_class}_{base_1}_vs_{base_2}_iter{i}_debiased_2.jpg"
+            )
+            if os.path.exists(cache_path_1) and os.path.exists(cache_path_2):
+                cached_iteration = i
+                break
+
+        # Load from cache or start from originals
+        if cached_iteration > 0:
+            logging.info(f"[CACHE HIT] Loading iteration {cached_iteration} for {base_1} and {base_2}\n")
+            cache_path_1 = os.path.join(
+                self.cache_dir,
+                f"{image_class}_{base_1}_vs_{base_2}_iter{cached_iteration}_debiased_1.jpg"
+            )
+            cache_path_2 = os.path.join(
+                self.cache_dir,
+                f"{image_class}_{base_1}_vs_{base_2}_iter{cached_iteration}_debiased_2.jpg"
+            )
+            with open(cache_path_1, 'rb') as f:
+                current_img_bytes_1 = f.read()
+            with open(cache_path_2, 'rb') as f:
+                current_img_bytes_2 = f.read()
+        else:
+            logging.info(f"[CACHE MISS] Starting from scratch for {base_1} and {base_2}\n")
+            current_img_bytes_1 = img_bytes_1
+            current_img_bytes_2 = img_bytes_2
+
+        # If we need more iterations, continue debiasing
+        if cached_iteration < self.iterations:
+            for iteration in range(cached_iteration + 1, self.iterations + 1):
+                logging.info(f"Debiasing iteration {iteration}/{self.iterations}\n")
+
+                # Generate editing prompts based on current versions
+                removal_prompt_1, removal_prompt_2 = self._generate_removal_prompt(
+                    current_img_bytes_1,
+                    current_img_bytes_2,
+                    image_class
+                )
+
+                # Apply edits
+                _, current_img_bytes_1 = self.image_editing_model.edit(
+                    removal_prompt_1,
+                    current_img_bytes_1
+                )
+                _, current_img_bytes_2 = self.image_editing_model.edit(
+                    removal_prompt_2,
+                    current_img_bytes_2
+                )
+
+                # Save this iteration to cache
+                iter_cache_path_1 = os.path.join(
+                    self.cache_dir,
+                    f"{image_class}_{base_1}_vs_{base_2}_iter{iteration}_debiased_1.jpg"
+                )
+                iter_cache_path_2 = os.path.join(
+                    self.cache_dir,
+                    f"{image_class}_{base_1}_vs_{base_2}_iter{iteration}_debiased_2.jpg"
+                )
+                with open(iter_cache_path_1, 'wb') as f:
+                    f.write(current_img_bytes_1)
+                with open(iter_cache_path_2, 'wb') as f:
+                    f.write(current_img_bytes_2)
+
+                # Save prompts for this iteration
+                iter_prompts_path = os.path.join(
+                    self.cache_dir,
+                    f"{image_class}_{base_1}_vs_{base_2}_iter{iteration}_prompts.txt"
+                )
+                with open(iter_prompts_path, 'w') as f:
+                    f.write(f"EDITING PROMPT FOR {base_1}:\n")
+                    f.write(removal_prompt_1)
+                    f.write(f"\n\n{'='*80}\n\n")
+                    f.write(f"EDITING PROMPT FOR {base_2}:\n")
+                    f.write(removal_prompt_2)
+
+        logging.info(f"Debiasing complete for {base_1} vs {base_2}\n")
+        return current_img_bytes_1, current_img_bytes_2
 
     def _evaluate_comparison(
         self,
@@ -185,93 +281,27 @@ class EvaluationPipeline:
     ) -> dict:
         """
         Evaluate a single comparison between two images using multiple judges.
-        Applies debiasing preprocessing to remove contextual elements.
         Returns a dictionary with the evaluation result based on majority vote.
         """
         base_1 = f"{image_id_1}_{edit_type_1}"
         base_2 = f"{image_id_2}_{edit_type_2}"
 
-        # Ensure cache directory exists
-        os.makedirs(self.cache_dir, exist_ok=True)
-
-        # Check cache for debiased images (includes iteration count)
-        debiased_cache_path_1 = os.path.join(self.cache_dir, f"{image_class}_{base_1}_vs_{base_2}_iter{self.iterations}_debiased_1.jpg")
-        debiased_cache_path_2 = os.path.join(self.cache_dir, f"{image_class}_{base_1}_vs_{base_2}_iter{self.iterations}_debiased_2.jpg")
-
-        both_cached = os.path.exists(debiased_cache_path_1) and os.path.exists(debiased_cache_path_2)
-
-        if both_cached:
-            # Load both debiased images from cache
-            logging.info(f"[CACHE HIT] Loading cached debiased images for {base_1} and {base_2}\n")
-            with open(debiased_cache_path_1, 'rb') as f:
-                debiased_img_bytes_1 = f.read()
-            with open(debiased_cache_path_2, 'rb') as f:
-                debiased_img_bytes_2 = f.read()
-        else:
-            # Iteratively debias both images
-            logging.info(f"[CACHE MISS] Iteratively debiasing {base_1} and {base_2} for {self.iterations} iterations\n")
-
-            # Start with original images
-            current_img_bytes_1 = img_bytes_1
-            current_img_bytes_2 = img_bytes_2
-
-            all_prompts = []  # Store all prompts for reference
-
-            for iteration in range(1, self.iterations + 1):
-                logging.info(f"Debiasing iteration {iteration}/{self.iterations}\n")
-
-                # Generate editing prompts based on current versions
-                removal_prompt_1, removal_prompt_2 = self._generate_removal_prompt(
-                    current_img_bytes_1, current_img_bytes_2, image_class
-                )
-
-                all_prompts.append({
-                    'iteration': iteration,
-                    'prompt_1': removal_prompt_1,
-                    'prompt_2': removal_prompt_2
-                })
-
-                # Apply edits to get new versions (don't save intermediate iterations)
-                current_img_bytes_1 = self._debias_image(current_img_bytes_1, removal_prompt_1, save_path=None)
-                current_img_bytes_2 = self._debias_image(current_img_bytes_2, removal_prompt_2, save_path=None)
-
-            # Save final debiased images to cache
-            debiased_img_bytes_1 = current_img_bytes_1
-            debiased_img_bytes_2 = current_img_bytes_2
-
-            # Save final images
-            with open(debiased_cache_path_1, 'wb') as f:
-                f.write(debiased_img_bytes_1)
-            with open(debiased_cache_path_2, 'wb') as f:
-                f.write(debiased_img_bytes_2)
-            logging.info(f"Saved final debiased images to cache\n")
-
-            # Save all prompts for reference
-            prompts_path = os.path.join(self.cache_dir, f"{image_class}_{base_1}_vs_{base_2}_iter{self.iterations}_prompts.txt")
-            with open(prompts_path, 'w') as f:
-                for prompt_entry in all_prompts:
-                    f.write(f"ITERATION {prompt_entry['iteration']}:\n")
-                    f.write(f"{'='*80}\n\n")
-                    f.write(f"EDITING PROMPT FOR {base_1}:\n")
-                    f.write(prompt_entry['prompt_1'])
-                    f.write(f"\n\n")
-                    f.write(f"EDITING PROMPT FOR {base_2}:\n")
-                    f.write(prompt_entry['prompt_2'])
-                    f.write(f"\n\n{'='*80}\n\n")
-
-        logging.info(f"Debiasing complete for {base_1} vs {base_2}\n")
-
-        # Create and save comparison grid (original + debiased side by side)
-        grid_path = os.path.join(results_dir, f"{base_1}_vs_{base_2}_comparison.jpg")
-        self._create_comparison_grid(
-            img_bytes_1, img_bytes_2,
-            debiased_img_bytes_1, debiased_img_bytes_2,
-            grid_path
+        # Generate debiased images
+        debiased_img_bytes_1, debiased_img_bytes_2 = self._generate_debiased_images(
+            image_class,
+            base_1,
+            base_2,
+            img_bytes_1,
+            img_bytes_2
         )
 
         def evaluate_single(is_1_first: bool):
             """Single judge evaluation"""
-            images = [debiased_img_bytes_1, debiased_img_bytes_2] if is_1_first else [debiased_img_bytes_2, debiased_img_bytes_1]
+            if is_1_first:
+                images = [debiased_img_bytes_1, debiased_img_bytes_2]
+            else:
+                images = [debiased_img_bytes_2, debiased_img_bytes_1]
+
             choice_map = {
                 "first": base_1 if is_1_first else base_2,
                 "second": base_2 if is_1_first else base_1
@@ -299,7 +329,6 @@ class EvaluationPipeline:
         choice_1_first, reason_1_first, usage_1_first = evaluate_single(is_1_first=True)
         choice_2_first, reason_2_first, usage_2_first = evaluate_single(is_1_first=False)
 
-        choice = None
         if choice_1_first == choice_2_first:
             choice = choice_1_first
             vlm_reason = reason_1_first if choice_1_first == base_1 else reason_2_first
@@ -308,6 +337,17 @@ class EvaluationPipeline:
             logging.warning(f"Inconsistent judge results for {base_1} vs {base_2}: {choice_1_first} vs {choice_2_first}\n")
             choice = "inconsistent"
             vlm_reason = " ".join([f"Judge 1: {reason_1_first}", f"Judge 2: {reason_2_first}"])
+
+        # Create and save comparison grid
+        grid_path = os.path.join(results_dir, f"{base_1}_vs_{base_2}_comparison.jpg")
+        self._create_comparison_grid(
+            img_bytes_1, img_bytes_2,
+            debiased_img_bytes_1, debiased_img_bytes_2,
+            grid_path,
+            choice,
+            base_1,
+            base_2
+        )
 
         completion_tokens = usage_1_first.completion_tokens + usage_2_first.completion_tokens
         prompt_tokens = usage_1_first.prompt_tokens + usage_2_first.prompt_tokens
@@ -334,6 +374,10 @@ class EvaluationPipeline:
         Runs the evaluation pipeline for each image comparison in parallel.
         Supports resumption by skipping already completed comparisons.
         """
+        # Create subdirectory structure: solutions/{iterations}/
+        results_dir = os.path.join(results_dir, 'solutions', str(self.iterations))
+        os.makedirs(results_dir, exist_ok=True)
+
         csv_save_path = os.path.join(results_dir, 'results_solutions.csv')
 
         # Load completed comparisons from existing CSV
@@ -341,16 +385,13 @@ class EvaluationPipeline:
 
         # Group images by class
         class_groups = defaultdict(set)
-
         for img_path in image_paths:
             with open(img_path, "rb") as f:
                 img_bytes = f.read()
             filename = os.path.basename(img_path)
 
-            if self.strategy_name == 'competition':
-                parsed = self._parse_filename_competition(filename)
-                if parsed is None:
-                    continue
+            parsed = self._parse_filename(filename)
+            if parsed is not None:
                 category, image_id, status = parsed
                 class_groups[category].add((image_id, status, img_bytes))
 
@@ -404,7 +445,6 @@ class EvaluationPipeline:
             if (task[0], f"{task[1]}_{task[2]}", f"{task[4]}_{task[5]}") not in completed_comparisons
         ]
 
-        comparison_tasks = list(comparison_tasks) * self.n_evaluations  # Repeat tasks for multiple evaluations if >1 specified
         total_comparisons = len(comparison_tasks)
         logging.info(f"Total comparisons to evaluate: {total_comparisons}\n")
 
@@ -446,7 +486,11 @@ class EvaluationPipeline:
                         desc="Evaluating comparisons",
                         unit="comparison"
                 ):
-                    result = future.result()
+                    try:
+                        result = future.result()
+                    except Exception as e:
+                        logging.error(f"Comparison failed: {e}\n")
+                        continue
 
                     # Write result immediately to CSV with thread safety
                     with csv_lock:
