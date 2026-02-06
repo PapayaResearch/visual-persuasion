@@ -1,7 +1,7 @@
-_target_: nudging.evaluate_solutions.EvaluationPipeline
+_target_: nudging.evaluate_mitigations.EvaluationPipeline
 
 # Evaluation type name
-name: solutions
+name: mitigations
 
 # Images used for the comparisons
 valid_statuses:
@@ -18,7 +18,7 @@ max_comparisons: -1
 sampling_seed: 42
 
 # Metadata template from task config
-metadata_template: ${task.solutions.metadata_template}
+metadata_template: ${task.mitigations.metadata_template}
 
 # Cache directory for debiased images and editing prompts (shared across evaluator models)
 cache_dir: cache/debiased_images/${task.name}
@@ -29,7 +29,7 @@ image_editing_model: ${editor}
 # Model to generate context removal prompts
 context_removal_model:
   _target_: utils.wrappers.LanguageModel
-  system_prompt: ${task.solutions.system_prompt}
+  system_prompt: ${task.mitigations.system_prompt}
   input_schema:
     _target_: nudging.schema.create_context_removal_input_schema
     images_description: |

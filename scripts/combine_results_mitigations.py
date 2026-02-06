@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Combine results_solutions.csv files from multiple evaluation runs.
+Combine results_mitigations.csv files from multiple evaluation runs.
 """
 
 import sys
@@ -13,16 +13,16 @@ from datetime import datetime
 
 def main():
     if len(sys.argv) != 2:
-        print("Usage: python combine_results_solutions.py <path_to_results_folder>")
+        print("Usage: python combine_results_mitigations.py <path_to_results_folder>")
         sys.exit(1)
 
     dfs = []
-    for filename in glob.glob(os.path.join(sys.argv[1], "**/results_solutions.csv"), recursive=True):
+    for filename in glob.glob(os.path.join(sys.argv[1], "**/results_mitigations.csv"), recursive=True):
         df = pd.read_csv(filename)
         df["source_file"] = filename
         df["model"] = filename.split("/")[-2]
 
-        cfg_path = os.path.join(os.path.dirname(filename), "config_solutions.yaml")
+        cfg_path = os.path.join(os.path.dirname(filename), "config_mitigations.yaml")
 
         with open(cfg_path) as yaml_file:
             cfg = yaml.safe_load(yaml_file)
@@ -37,7 +37,7 @@ def main():
 
     df = pd.concat(dfs, ignore_index=True)
     df.to_csv(
-        os.path.join(sys.argv[1], "combined_solutions-%s.csv" % datetime.now().strftime("%Y%m%d-%H%M%S")),
+        os.path.join(sys.argv[1], "combined_mitigations-%s.csv" % datetime.now().strftime("%Y%m%d-%H%M%S")),
         index=False
     )
 

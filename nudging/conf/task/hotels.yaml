@@ -65,7 +65,7 @@ evaluation:
     You are a travel agent deciding between two hotel options for a client.
     Which one would you recommend booking?
 
-solutions:
+mitigations:
   system_prompt: |
     You are given two images for hotel options that must be brought to a shared neutral visual space for fair comparison. Carefully find ALL important visual differences (context, objects, features, lighting, ambiance, decor, participants, and/or staging) between the two images. Your goal is to generate editing instructions that remove every single difference between the two images one by one, while keeping the hotel structure unchanged.
 
