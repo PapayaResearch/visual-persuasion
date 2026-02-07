@@ -30,7 +30,7 @@ def main():
         cfg_flat = pd.json_normalize(cfg).to_dict(orient="records")[0]
 
         for key, value in cfg_flat.items():
-            if key in ["task.name", "evaluate.strategy_name"]:
+            if key in ["task.name", "evaluate.strategy_name", "evaluate.iterations"]:
                 df.loc[:, key] = value
 
         dfs.append(df)
