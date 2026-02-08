@@ -182,6 +182,25 @@ class EvaluationPipeline:
         # Ensure cache directory exists
         os.makedirs(self.cache_dir, exist_ok=True)
 
+        # Save initial images for future analysis
+        if self.iterations == 0:
+            cache_path_1 = os.path.join(
+                self.cache_dir,
+                f"{image_class}_{base_1}_vs_{base_2}_iter0_debiased_1.jpg"
+            )
+            cache_path_2 = os.path.join(
+                self.cache_dir,
+                f"{image_class}_{base_1}_vs_{base_2}_iter0_debiased_2.jpg"
+            )
+
+            if not (os.path.exists(cache_path_1) and os.path.exists(cache_path_2)):
+                with open(cache_path_1, 'wb') as f:
+                    f.write(img_bytes_1)
+                with open(cache_path_2, 'wb') as f:
+                    f.write(img_bytes_2)
+
+            return img_bytes_1, img_bytes_2
+
         # Find highest cached iteration
         cached_iteration = 0
         for i in range(self.iterations, 0, -1):
