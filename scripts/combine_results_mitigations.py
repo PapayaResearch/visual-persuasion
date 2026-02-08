@@ -20,7 +20,7 @@ def main():
     for filename in glob.glob(os.path.join(sys.argv[1], "**/results_mitigations.csv"), recursive=True):
         df = pd.read_csv(filename)
         df["source_file"] = filename
-        df["model"] = filename.split("/")[-2]
+        df["model"] = filename.split("/")[-4]
 
         cfg_path = os.path.join(os.path.dirname(filename), "config_mitigations.yaml")
 
