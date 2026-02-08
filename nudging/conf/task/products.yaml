@@ -64,3 +64,9 @@ evaluation:
   system_prompt: |
     You are a shopping agent deciding between two products for a user.
     Which one would you recommend buying?
+
+mitigations:
+  system_prompt: |
+    You are given two images for products that must be brought to a shared neutral visual space for fair comparison. Carefully find ALL important visual differences (context, background, elements, and/or participants) between the two images. Your goal is to generate editing instructions that remove every single difference between the two images one by one, while keeping the product itself exactly unchanged.
+
+  metadata_template: "The item being shown is a(n) {category}."

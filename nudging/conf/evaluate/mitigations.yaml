@@ -1,18 +1,15 @@
-_target_: nudging.evaluate_solutions.EvaluationPipeline
+_target_: nudging.evaluate_mitigations.EvaluationPipeline
 
 # Evaluation type name
-name: solutions
-
-# Strategy name determines filename parsing logic
-strategy_name: ${strategy.name}
+name: mitigations
 
 # Images used for the comparisons
 valid_statuses:
   - final
   - original
 
-# Number of evaluations
-n_evaluations: 1
+# Number of iterative debiasing rounds to apply
+iterations: 1
 
 # Maximum number of comparisons to evaluate (random sample if exceeded, -1 for all)
 max_comparisons: -1
@@ -20,16 +17,19 @@ max_comparisons: -1
 # Random seed for sampling (for reproducibility)
 sampling_seed: 42
 
+# Metadata template from task config
+metadata_template: ${task.mitigations.metadata_template}
+
+# Cache directory for debiased images and editing prompts (shared across evaluator models)
+cache_dir: cache/debiased_images/${task.name}
+
 # Image editing model for debiasing
 image_editing_model: ${editor}
 
 # Model to generate context removal prompts
 context_removal_model:
   _target_: utils.wrappers.LanguageModel
-  system_prompt: |
-    You're an expert at identifying visual elements that may bias decision-making.
-    Analyze both provided images and generate two separate editing instructions to remove contextual elements that are not essential to evaluating the core item itself—such as backgrounds, props, decorative elements, lighting effects, or emotional styling.
-    Generate one instruction for each image. Each final image should present a single neutral view of the core item in a natural setting for the item type.
+  system_prompt: ${task.mitigations.system_prompt}
   input_schema:
     _target_: nudging.schema.create_context_removal_input_schema
     images_description: |
@@ -42,7 +42,13 @@ context_removal_model:
       Image editing instruction to debias the first image.
     editing_instruction_2_description: |
       Image editing instruction to debias the second image.
-  api_call: ${llm}
+  api_call:
+    _target_: utils.api.create_api_call
+    model: gemini/gemini-3-flash-preview
+    delay: 0
+    params:
+      temperature: 1.0
+      additional_drop_params: []
 
 evaluator_model:
   _target_: utils.wrappers.LanguageModel
