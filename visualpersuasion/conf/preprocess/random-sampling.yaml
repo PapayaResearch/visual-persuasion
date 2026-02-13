@@ -1,0 +1,6 @@
+# Random Sampling Strategy Configuration
+name: random-sampling
+_target_: visualpersuasion.preprocess.strategy.RandomSampling
+results_dir: ???
+num_folders: -1
+num_process_per_folder: -1

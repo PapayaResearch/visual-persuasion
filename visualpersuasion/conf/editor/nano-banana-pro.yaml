@@ -1,0 +1,4 @@
+_target_: visualpersuasion.utils.models.Gemini
+model: gemini-3-pro-image-preview
+max_retries: 3
+aspect_ratio: "1:1"

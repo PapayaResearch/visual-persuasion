@@ -2,12 +2,12 @@
 
 ![Python version](https://img.shields.io/badge/python-3.10-blue)
 ![Package version](https://img.shields.io/badge/version-0.1.0-green)
-![GitHub license](https://img.shields.io/github/license/PapayaResearch/visual-nudging)
+![GitHub license](https://img.shields.io/github/license/PapayaResearch/visual-persuasion)
 
 > [!NOTE]
-> Code for the paper **[Visual Persuasion: What Influences Decisions of Vision-Language Models?]([PLACEHOLDER])**.
+> Code for the paper **[Visual Persuasion: What Influences Decisions of Vision-Language Models?]([PLACEHOLDER])**
 
-Decisions that once relied on human visual judgment are increasingly delegated to AI agents powered by vision-language models. These agents choose which products to purchase, which candidates to hire, which properties to consider, and which hotels to book, all based on visual information. Current evaluations of these models focus almost entirely on accuracy: can they identify objects, answer questions, follow instructions? But accuracy tells only part of the story. When agents make preference-based decisions on our behalf, we need to understand what visual features actually drive their choices and whether these align with human preferences. We introduce **Visual Persuasion**, a framework for systematically probing and optimizing visual influence on AI decision-making. Through iterative image refinement and competitive evaluation, we reveal how targeted visual modifications can substantially shift model preferences across realistic choice scenarios in personnel selection, product marketing, real estate, and hospitality.
+The web is littered with images, once created for human consumption and now increasingly interpreted by agents using vision-language models (VLMs). These agents make visual decisions at scale, deciding what to click, recommend, or buy. Yet, we know little about the structure of their visual preferences. We introduce a framework for studying this by placing VLMs in controlled image-based choice tasks and systematically perturbing their inputs. Our key idea is to treat the agent's decision function as a latent visual utility that can be inferred through revealed preference: choices between systematically edited images. Starting from common images, such as product photos, we propose methods for visual prompt optimization, adapting text optimization methods to iteratively propose and apply visually plausible modifications using an image generation model (such as in composition, lighting, or background). We then evaluate which edits increase selection probability. Through large-scale experiments on frontier VLMs, we demonstrate that optimized edits significantly shift choice probabilities in head-to-head comparisons. We develop an automatic interpretability pipeline to explain these preferences, identifying consistent visual themes that drive selection. We argue that this approach offers a practical and efficient way to surface visual vulnerabilities, safety concerns that might otherwise be discovered implicitly in the wild, supporting more proactive auditing and governance of image-based AI agents.
 
 ## Features
 
@@ -18,18 +18,13 @@ Decisions that once relied on human visual judgment are increasingly delegated t
 - 🔍 Automated interpretability pipeline for extracting visual patterns from optimized images
 - ⚙️ Hydra-based configuration system for reproducible experiments
 
-## Prerequisites
-
-- Python 3.10 or higher
-- API keys for LLM providers
-
 ## Installation
 
 ### 1. Create Python Environment
 
 ```bash
-conda create -n vnudging python=3.10
-conda activate vnudging
+conda create -n vp python=3.10
+conda activate vp
 ```
 
 ### 2. Install Dependencies
@@ -47,7 +42,7 @@ uv pip install -e .
 
 ### 3. Configure Environment Variables
 
-Create a `.env` file in both `nudging/` and `setup/` directories with your API keys:
+Create a `.env` file in the project root with your API keys:
 
 > [!IMPORTANT]
 > You must configure API keys for at least one LLM provider to run the framework.
@@ -71,11 +66,21 @@ AWS_SECRET_ACCESS_KEY="<YOUR_AWS_SECRET_KEY>"
 Before running optimization, prepare your image dataset:
 
 ```bash
-cd setup
-python main.py \
-  general.src_dir=./data/your_dataset \
-  general.dst_dir=../nudging/data/processed \
-  dataset.name=your_dataset \
+cd visualpersuasion
+python preprocess/run.py \
+  preprocess=random-sampling \
+  general.data_dir=./data/your_dataset \
+  preprocess.results_dir=./data/processed \
+  general.max_workers=8
+```
+
+Optionally enhance images with background removal and standardization:
+
+```bash
+python preprocess/run.py \
+  preprocess=enhance \
+  general.data_dir=./data/processed \
+  preprocess.results_dir=./data/enhanced \
   general.max_workers=8
 ```
 
@@ -84,11 +89,10 @@ python main.py \
 Optimize images using the competition strategy:
 
 ```bash
-cd nudging
-python run_optimization.py \
-  strategy=competition \
+python optimization/run.py \
+  strategy=cvpo \
   task=people \
-  general.data_dir=./data/processed/your_dataset \
+  general.data_dir=./data/enhanced \
   general.max_workers=8
 ```
 
@@ -97,14 +101,13 @@ python run_optimization.py \
 Evaluate the optimized images using pair-wise comparison:
 
 ```bash
-cd nudging
-python run_evaluation.py \
+python evaluation/run.py \
   evaluate=pairs \
-  general.data_dir=./results/competition/TIMESTAMP \
+  general.data_dir=./results/cvpo/TIMESTAMP \
   general.max_workers=8
 ```
 
-Results are saved in `nudging/results/` with timestamps for easy tracking.
+Results are saved in `visualpersuasion/results/` with timestamps for easy tracking.
 
 ## Optimization Strategies
 
@@ -115,7 +118,7 @@ Results are saved in `nudging/results/` with timestamps for easy tracking.
 A novel visual prompt optimization algorithm that uses a competitive selection process with judge-based evaluation to iteratively refine prompts.
 
 ```bash
-python run_optimization.py strategy=competition task=people
+python optimization/run.py strategy=cvpo task=people
 ```
 
 ### VTG (VisualTextGrad)
@@ -123,7 +126,7 @@ python run_optimization.py strategy=competition task=people
 An adaptation of the text-based gradient method from [TextGrad](https://arxiv.org/abs/2406.07496) to the visual domain by treating the image editing prompt as a differentiable textual object.
 
 ```bash
-python run_optimization.py strategy=textgrad task=hotels
+python optimization/run.py strategy=vtg task=hotels
 ```
 
 ### VFD (Visual Feedback Descent)
@@ -131,15 +134,15 @@ python run_optimization.py strategy=textgrad task=hotels
 An optimization method based on the [Feedback Descent](https://arxiv.org/abs/2511.07919) method, following a proposal-and-evaluation loop.
 
 ```bash
-python run_optimization.py strategy=feedback-descent task=houses
+python optimization/run.py strategy=vfd task=houses
 ```
 
-### Formula-based
+### Distillation
 
 A simple optimization strategy that applies a fixed formula to modify images based on domain-specific heuristics.
 
 ```bash
-python run_optimization.py strategy=formula task=products
+python optimization/run.py strategy=distillation task=products
 ```
 
 ## Evaluation Methods
@@ -151,29 +154,9 @@ python run_optimization.py strategy=formula task=products
 Compare images head-to-head using LLM judges:
 
 ```bash
-python run_evaluation.py \
+python evaluation/run.py \
   evaluate=pairs \
-  general.data_dir=./results/competition/TIMESTAMP
-```
-
-### Solo Evaluation
-
-Evaluate individual images in isolation:
-
-```bash
-python run_evaluation.py \
-  evaluate=solo \
-  general.data_dir=./results/competition/TIMESTAMP
-```
-
-### Chain Evaluation
-
-Evaluate sequences of refinements to track optimization trajectory:
-
-```bash
-python run_evaluation.py \
-  evaluate=chain \
-  general.data_dir=./results/competition/TIMESTAMP
+  general.data_dir=./results/cvpo/TIMESTAMP
 ```
 
 ### Automated Interpretability
@@ -181,9 +164,9 @@ python run_evaluation.py \
 Generate natural language interpretations of visual differences:
 
 ```bash
-python run_evaluation.py \
+python evaluation/run.py \
   evaluate=autointerp \
-  general.data_dir=./results/competition/TIMESTAMP
+  general.data_dir=./results/cvpo/TIMESTAMP
 ```
 
 ### Method Comparison
@@ -191,8 +174,8 @@ python run_evaluation.py \
 Compare different optimization strategies:
 
 ```bash
-python run_evaluation.py \
-  evaluate=methods \
+python evaluation/run.py \
+  evaluate=strategies \
   general.data_dir=./results/
 ```
 
@@ -201,9 +184,9 @@ python run_evaluation.py \
 Evaluate the effectiveness of mitigation strategies in reducing visual influence:
 
 ```bash
-python run_evaluation.py \
-  evaluate=solutions \
-  general.data_dir=./results/competition/TIMESTAMP
+python evaluation/run.py \
+  evaluate=mitigations \
+  general.data_dir=./results/cvpo/TIMESTAMP
 ```
 
 ## Advanced Usage & Customization
@@ -211,46 +194,44 @@ python run_evaluation.py \
 ### Project Structure
 
 ```
-visual-nudging/
-├── nudging/                    # Main optimization and evaluation modules
-│   ├── run_optimization.py     # Entry point for optimization
-│   ├── run_evaluation.py       # Entry point for evaluation
-│   ├── competition.py          # Competition-based optimization
-│   ├── formula.py              # Formula-based optimization
-│   ├── baseline_*.py           # Baseline optimization methods
-│   ├── evaluate_*.py           # Evaluation implementations
-│   ├── schema.py               # Pydantic schemas for structured output
-│   ├── config.py               # Hydra configuration dataclasses
+visual-persuasion/
+├── visualpersuasion/           # Main package
+│   ├── optimization/           # Optimization strategies
+│   │   ├── run.py              # Entry point for optimization
+│   │   ├── cvpo.py             # Competition-based optimization
+│   │   ├── vtg.py              # VisualTextGrad optimization
+│   │   ├── vfd.py              # Visual Feedback Descent
+│   │   └── distillation.py     # Distillation-based optimization
+│   ├── evaluation/             # Evaluation methods
+│   │   ├── run.py              # Entry point for evaluation
+│   │   ├── pairs.py            # Pairwise comparison
+│   │   ├── autointerp.py       # Automated interpretability
+│   │   ├── strategies.py       # Strategy comparison
+│   │   └── mitigations.py      # Mitigation evaluation
+│   ├── preprocess/             # Dataset preprocessing
+│   │   ├── run.py              # Preprocessing entry point
+│   │   ├── enhance.py          # Image enhancement
+│   │   └── strategy.py         # Sampling strategies
+│   ├── utils/                  # Shared utilities
+│   │   ├── api.py              # API wrappers
+│   │   ├── models.py           # Model implementations
+│   │   ├── wrappers.py         # LLM and image model wrappers
+│   │   └── misc.py             # Miscellaneous utilities
 │   ├── conf/                   # Hydra configuration files
 │   │   ├── config.yaml         # Main configuration
 │   │   ├── task/               # Task-specific configs
 │   │   ├── strategy/           # Optimization strategy configs
 │   │   ├── evaluate/           # Evaluation method configs
+│   │   ├── preprocess/         # Preprocessing configs
 │   │   ├── llm/                # LLM provider configs
 │   │   └── editor/             # Image editor configs
-│   ├── data/                   # Input datasets and processed data
-│   ├── results/                # Optimization results
-│   ├── outputs/                # Hydra outputs
-│   └── logs/                   # Execution logs
-│
-├── setup/                      # Dataset preprocessing
-│   ├── main.py                 # Preprocessing entry point
-│   ├── enhance.py              # Image enhancement
-│   ├── strategy.py             # Sampling strategies
 │   ├── config.py               # Hydra configuration dataclasses
-│   └── conf/                   # Preprocessing configs
+│   └── schema.py               # Pydantic schemas for structured output
 │
 ├── scripts/                    # Analysis and utility scripts
 │   ├── analyze_*.py            # Result analysis scripts
 │   ├── combine_results_*.py    # Result aggregation
-│   ├── generate_prolific_*.py  # Experiment generation
-│   └── sample_*.py             # Dataset sampling
-│
-├── utils/                      # Shared utilities
-│   ├── api.py                  # API wrappers
-│   ├── models.py               # Model implementations
-│   ├── wrappers.py             # LLM and image model wrappers
-│   └── misc.py                 # Miscellaneous utilities
+│   └── generate_prolific_*.py  # Experiment generation
 │
 ├── pyproject.toml              # Project dependencies
 └── README.md                   # This file
@@ -262,25 +243,25 @@ visual-nudging/
 
 ```bash
 # Modify strategy parameters
-python run_optimization.py \
-  strategy=competition \
+python optimization/run.py \
+  strategy=cvpo \
   strategy.min_rounds_before_equilibrium=10 \
   strategy.max_rounds_per_pair=20
 ```
 
 #### Customizing LLM Providers
 
-The framework uses [LiteLLM](https://www.litellm.ai/) for unified API access. Configure different models in `nudging/conf/llm/`:
+The framework uses [LiteLLM](https://www.litellm.ai/) for unified API access. Configure different models in `visualpersuasion/conf/llm/`:
 
 ```bash
 # Use GPT-4o for image editing
-python run_optimization.py llm=gpt-5-2
+python optimization/run.py llm=gpt-4o
 
 # Use Claude for evaluation
-python run_evaluation.py llm=claude-4-5-sonnet
+python evaluation/run.py llm=claude-sonnet-4-5
 
 # Use Gemini for optimization
-python run_optimization.py llm=gemini-3-pro
+python optimization/run.py llm=gemini-2-flash
 ```
 
 #### Resuming Interrupted Runs
@@ -288,26 +269,26 @@ python run_optimization.py llm=gemini-3-pro
 Resume optimization from the most recent checkpoint:
 
 ```bash
-python run_optimization.py \
-  strategy=competition \
+python optimization/run.py \
+  strategy=cvpo \
   task=people \
   general.resume=true
 ```
 
 ### Creating Custom Tasks
 
-Create a new task configuration in `nudging/conf/task/your_task.yaml`:
+Create a new task configuration in `visualpersuasion/conf/task/your_task.yaml`:
 
 ```yaml
 name: "your_task"
 
-competition:
+cvpo:
   # Prompts for the CVPO strategy
 
-textgrad:
+vtg:
   # Prompts for the VTG strategy
 
-feedback_descent:
+vfd:
   # Prompts for the VFD strategy
 
 evaluation:
@@ -317,7 +298,7 @@ evaluation:
 Then run:
 
 ```bash
-python run_optimization.py task=your_task
+python optimization/run.py task=your_task
 ```
 
 ## FAQs
@@ -329,8 +310,9 @@ Reach out to us! We have hundreds of GBs of data.
 ## Citing & Acknowledgements
 
 If you use `Visual Persuasion` in your research, please cite the following paper:
+
 ```bibtex
 [PLACEHOLDER]
 ```
 
-[PLACEHOLDER]
+We received funding from SK Telecom with MIT's Generative AI Impact Consortium (MGAIC). Research reported in this publication was supported by an Amazon Research Award, Fall 2024. Google made this project possible through a Gemini Academic Program Award. Other experiments conducted in this paper were generously supported via API credits provided by OpenAI and Anthropic. MC is supported by a fellowship from "la Caixa" Foundation (ID 100010434) with code LCF/BQ/EU23/12010079.

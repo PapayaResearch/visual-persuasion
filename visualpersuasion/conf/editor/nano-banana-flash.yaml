@@ -1,0 +1,4 @@
+_target_: visualpersuasion.utils.models.Gemini
+model: gemini-2.5-flash-image
+max_retries: 3
+aspect_ratio: "1:1"

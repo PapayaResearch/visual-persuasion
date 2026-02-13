@@ -1,0 +1,16 @@
+# Image Enhancement Configuration
+name: enhance
+_target_: visualpersuasion.preprocess.enhance.ImageEnhancer
+results_dir: ???
+enhancement_model: ${editor}
+enhancement_prompt: |
+  Upscale the image and enhance its quality.
+  Do not make any other changes to the image itself.
+  The subject is a {category}.
+
+  Edit the image to standardize it with the following requirements:
+  1. Remove the background and replace it with a plain white color (#FFFFFF).
+  2. Isolate the main subject of the image.
+  3. Apply neutral, even lighting to the subject.
+  4. Scale and position the subject so it takes up approximately 60% of the image area.
+  Do not alter the main subject's appearance beyond these standardization requirements.

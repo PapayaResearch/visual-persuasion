@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "visual-nudging"
+name = "visual-persuasion"
 version = "0.1.0"
-description = "Visual nudging framework"
+description = "Visual Persuasion: What Influences Decisions of Vision-Language Models?"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -29,8 +29,7 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["utils*", "nudging*", "setup*"]
+include = ["visualpersuasion*", "scripts*"]
 
 [tool.setuptools.package-data]
-nudging = ["conf/**/*.yaml"]
-setup = ["conf/**/*.yaml"]
+visual-persuasion = ["conf/**/*.yaml"]
