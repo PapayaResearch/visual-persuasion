@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 # Task-specific questions for Prolific survey
 TASK_QUESTIONS = {
-    'hotels': 'Which hotel one would you book?',
+    'hotels': 'Which hotel would you book?',
     'houses': 'Which house would you buy?',
     'people': 'Who would you hire for a job?'
 }
