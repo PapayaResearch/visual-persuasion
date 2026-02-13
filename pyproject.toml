@@ -32,4 +32,4 @@ dependencies = [
 include = ["visualpersuasion*", "scripts*"]
 
 [tool.setuptools.package-data]
-visual-persuasion = ["conf/**/*.yaml"]
+visualpersuasion = ["conf/**/*.yaml"]
