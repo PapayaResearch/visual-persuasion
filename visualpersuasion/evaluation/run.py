@@ -4,7 +4,7 @@ import hydra
 from datetime import datetime
 from omegaconf import OmegaConf
 from dotenv import load_dotenv
-from config import Config
+from visualpersuasion.config import Config
 from visualpersuasion.utils.misc import print_config
 
 # Load environment variables from .env
