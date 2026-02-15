@@ -15,7 +15,7 @@ load_dotenv()
 config_store = hydra.core.config_store.ConfigStore.instance()
 config_store.store(name="base_config", node=Config)
 
-@hydra.main(config_path="conf", config_name="config", version_base=None)
+@hydra.main(config_path="../conf", config_name="config", version_base=None)
 def main(cfg: Config):
     # Load and print configuration
     OmegaConf.resolve(cfg)
