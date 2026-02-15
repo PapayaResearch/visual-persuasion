@@ -1,6 +1,6 @@
 # Visual Persuasion: What Influences Decisions of Vision-Language Models?
 
-![Python version](https://img.shields.io/badge/python-3.10-blue)
+![Python version](https://img.shields.io/badge/python-3.11-blue)
 ![Package version](https://img.shields.io/badge/version-0.1.0-green)
 ![GitHub license](https://img.shields.io/github/license/PapayaResearch/visual-persuasion)
 
@@ -23,7 +23,7 @@ The web is littered with images, once created for human consumption and now incr
 ### 1. Create Python Environment
 
 ```bash
-conda create -n vp python=3.10
+conda create -n vp python=3.11
 conda activate vp
 ```
 

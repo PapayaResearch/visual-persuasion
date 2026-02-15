@@ -7,7 +7,7 @@ name = "visualpersuasion"
 version = "0.1.0"
 description = "Visual Persuasion: What Influences Decisions of Vision-Language Models?"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "hydra-core>=1.3.0",
     "litellm>=1.40.0",
@@ -18,9 +18,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pandas>=2.3.3",
     "fastembed>=0.2.0",
-    "apricot-select>=0.6.0",
     "scikit-learn>=1.3.0",
-    "scikit-image>=0.20.0",
     "tqdm>=4.65.0",
     "rich>=13.0.0",
     "google-genai>=0.2.0",
