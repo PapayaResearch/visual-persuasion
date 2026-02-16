@@ -34,7 +34,7 @@ class EvaluationPipeline:
         self.max_comparisons = max_comparisons
         self.sampling_seed = sampling_seed
 
-    def _parse_filename_competition(self, filename: str):
+    def _parse_filename(self, filename: str):
         """
         Parse competition filename: CATEGORY_ID_STATUS.jpg or pair-X_..._CATEGORY_ID_STATUS.jpg
         Returns (category, image_id, status) or None if should skip.
@@ -160,10 +160,8 @@ class EvaluationPipeline:
                 img_bytes = f.read()
             filename = os.path.basename(img_path)
 
-            if self.strategy_name == 'competition':
-                parsed = self._parse_filename_competition(filename)
-                if parsed is None:
-                    continue
+            parsed = self._parse_filename(filename)
+            if parsed is not None:
                 category, image_id, status = parsed
                 class_groups[category].add((image_id, status, img_bytes))
 

@@ -236,7 +236,7 @@ class StrategiesComparison:
         """
         Run cross-strategy comparison evaluation.
         """
-        csv_save_path = os.path.join(results_dir, 'results_methods.csv')
+        csv_save_path = os.path.join(results_dir, 'results_strategies.csv')
 
         # Load completed comparisons
         completed_comparisons = self._load_completed_comparisons(csv_save_path)
@@ -333,7 +333,7 @@ def main(cfg):
 
     # Set up logging
     log_dir = cfg.logging.log_dir
-    log_file = os.path.join(log_dir, "methods", comparison.model_name + ".log")
+    log_file = os.path.join(log_dir, "strategies", comparison.model_name + ".log")
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
     logging_handlers = [logging.FileHandler(log_file, encoding="utf-8")]
@@ -355,9 +355,9 @@ def main(cfg):
         outfile.write(cfg_yaml)
 
     # Run the comparison
-    logging.info(f"Starting methods comparison from {comparison.data_dir}\n")
+    logging.info(f"Starting strategies comparison from {comparison.data_dir}\n")
     comparison.run(max_workers=cfg.general.max_workers, results_dir=output_dir)
-    logging.info(f"Methods comparison completed: {output_dir}\n")
+    logging.info(f"Strategies comparison completed: {output_dir}\n")
 
 
 if __name__ == "__main__":
