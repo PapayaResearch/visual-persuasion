@@ -10,7 +10,7 @@ task_names: [hotels, houses, people, products]
 data_dir: ${general.data_dir}
 
 # Output directory where comparison results will be saved (in model/timestamp subdirs)
-results_dir: results-cross-strategy/
+results_dir: results-cross-strategies/
 
 # Maximum number of comparisons to evaluate (random sample if exceeded, -1 for all)
 max_comparisons: -1

@@ -4,10 +4,10 @@
 logs
 results
 results-extra
+results-cross-strategies
+results-cross-strategies-extra
 cache
 outputs
-evaluation-strategies
-evaluation-strategies-extra
 scripts/prolific_within_strategy
 scripts/prolific_across_strategies
 scripts/prolific_mitigations
