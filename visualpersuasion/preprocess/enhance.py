@@ -8,9 +8,13 @@ from visualpersuasion.utils.wrappers import ImageModel
 class ImageEnhancer:
     def __init__(
         self,
+        name: str,
+        results_dir: str,
         enhancement_model: ImageModel,
         enhancement_prompt: str
     ):
+        self.name = name
+        self.results_dir = results_dir
         self.enhancement_model = enhancement_model
         self.enhancement_prompt = enhancement_prompt
 

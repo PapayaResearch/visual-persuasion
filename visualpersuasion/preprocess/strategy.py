@@ -52,10 +52,14 @@ class SamplingStrategy(ABC):
 class RandomSampling(SamplingStrategy):
     def __init__(
         self,
+        name: str,
+        results_dir: str,
         num_folders: int,
         num_process_per_folder: int,
     ):
         super().__init__(num_folders)
+        self.name = name
+        self.results_dir = results_dir
         self.num_process_per_folder = num_process_per_folder
 
     def process_folder(self, folder_path: str, folder_name: str, images: List[str]):

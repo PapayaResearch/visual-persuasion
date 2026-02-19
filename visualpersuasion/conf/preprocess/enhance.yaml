@@ -1,6 +1,6 @@
 # Image Enhancement Configuration
-name: enhance
 _target_: visualpersuasion.preprocess.enhance.ImageEnhancer
+name: enhance
 results_dir: ???
 enhancement_model: ${editor}
 enhancement_prompt: |
