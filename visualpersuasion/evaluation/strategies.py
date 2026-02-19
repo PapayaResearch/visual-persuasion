@@ -36,7 +36,6 @@ class StrategiesComparison:
         self.name = name
         self.data_dir = data_dir
         self.results_dir = results_dir
-        self.model_name = evaluator_config['api_call'].model
         self.max_comparisons = max_comparisons
         self.sampling_seed = sampling_seed
 

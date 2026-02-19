@@ -24,14 +24,8 @@ def main(cfg: Config):
     # Create common directories and paths
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    # Get model name - different evaluation types use different model fields
-    if hasattr(cfg.evaluate, 'evaluator_model'):
-        model_name = cfg.evaluate.evaluator_model.api_call.model
-    elif hasattr(cfg.evaluate, 'evaluator_config'):
-        model_name = cfg.evaluate.evaluator_config.api_call.model
-    elif hasattr(cfg.evaluate, 'difference_detector_model'):
-        model_name = cfg.evaluate.difference_detector_model.api_call.model
-
+    # Get model name from llm config
+    model_name = cfg.llm.model
     base_dir = os.path.join("evaluation", model_name)
 
     # Set up logging
