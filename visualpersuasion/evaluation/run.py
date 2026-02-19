@@ -54,19 +54,24 @@ def main(cfg: Config):
                     and f.lower().endswith('.jpg')]
 
     # Create the results directory
-    results_dir = os.path.join(data_dir, "evaluation", model_name)
-    os.makedirs(results_dir, exist_ok=True)
-
-    # Determine actual save directory
-    if cfg.evaluate.name == 'mitigations':
-        config_dir = os.path.join(
-            results_dir,
-            cfg.evaluate.name,
-            str(cfg.evaluate.iterations)
-        )
-        os.makedirs(config_dir, exist_ok=True)
-    else:
+    if cfg.evaluate.name == 'strategies':
+        results_dir = os.path.join(cfg.evaluate.results_dir, model_name)
+        os.makedirs(results_dir, exist_ok=True)
         config_dir = results_dir
+    else:
+        results_dir = os.path.join(data_dir, "evaluation", model_name)
+        os.makedirs(results_dir, exist_ok=True)
+
+        # Determine actual save directory
+        if cfg.evaluate.name == 'mitigations':
+            config_dir = os.path.join(
+                results_dir,
+                cfg.evaluate.name,
+                str(cfg.evaluate.iterations)
+            )
+            os.makedirs(config_dir, exist_ok=True)
+        else:
+            config_dir = results_dir
 
     # Save config to output directories with evaluation-specific names
     config_filename = f"config_{cfg.evaluate.name}.yaml"
