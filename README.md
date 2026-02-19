@@ -90,6 +90,8 @@ python evaluation/run.py \
 - `evaluate.max_comparisons`: limit number of comparisons (-1 for all)
 - `general.max_workers`: number of parallel workers (default: 8)
 
+Results for pairs are saved in `results/cvpo/TIMESTAMP/evaluation/MODEL`, and for strategies in `results-cross-strategies/` by default.
+
 ## Automated Interpretability & Distillation
 
 Generate natural language explanations of visual patterns:
@@ -98,11 +100,15 @@ Generate natural language explanations of visual patterns:
 python evaluation/run.py evaluate=autointerp general.data_dir=results/cvpo/TIMESTAMP
 ```
 
+Results are saved in `results/cvpo/TIMESTAMP/evaluation/MODEL`.
+
 Zero-shot edits with learned patterns:
 
 ```bash
 python optimization/run.py strategy=distillation task=houses general.data_dir=data/houses_enhanced
 ```
+
+Results are saved in `results/` with timestamps.
 
 ## Mitigation
 
@@ -118,7 +124,7 @@ python evaluation/run.py evaluate=mitigations general.data_dir=results/cvpo/TIME
 - `evaluate.iterations`: number of debiasing rounds (default: 1)
 - `general.max_workers`: number of parallel workers (default: 8)
 
-This saves all debiased images in `cache`
+This saves all debiased images in `cache`, and the results fo the evaluation in `results/cvpo/TIMESTAMP/evaluation/MODEL`.
 
 ## Configuration
 
