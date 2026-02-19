@@ -45,7 +45,7 @@ class StrategiesComparison:
         api_call = evaluator_config['api_call']
 
         # Load task configs and create task-specific evaluators
-        task_configs_dir = Path(__file__).parent / "conf" / "task"
+        task_configs_dir = Path(__file__).parent.parent / "conf" / "task"
         self.evaluator_models = {}
 
         for task_name in task_names:
