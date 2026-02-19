@@ -17,7 +17,7 @@ def main():
         sys.exit(1)
 
     dfs = []
-    for filename in glob.glob(os.path.join(sys.argv[1], "**/results_methods.csv"), recursive=True):
+    for filename in glob.glob(os.path.join(sys.argv[1], "**/results_strategies.csv"), recursive=True):
         df = pd.read_csv(filename)
         df["source_file"] = filename
         df["model"] = filename.split("/")[-2]
