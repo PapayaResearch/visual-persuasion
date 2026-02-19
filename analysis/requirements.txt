@@ -1,0 +1,16 @@
+boto3==1.40.69
+litellm==1.81.11
+lpips==0.1.4
+matplotlib==3.10.8
+numpy==2.4.2
+openai_clip==1.0.1
+pandas==3.0.0
+Pillow==12.1.1
+pydantic==2.12.5
+PyYAML==6.0.3
+rembg==2.0.72
+scienceplots==2.2.0
+scikit_learn==1.8.0
+skimage==0.0
+torch==2.2.0
+tqdm==4.67.1
