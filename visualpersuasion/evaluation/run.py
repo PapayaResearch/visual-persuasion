@@ -27,6 +27,8 @@ def main(cfg: Config):
     # Get model name - different evaluation types use different model fields
     if hasattr(cfg.evaluate, 'evaluator_model'):
         model_name = cfg.evaluate.evaluator_model.api_call.model
+    elif hasattr(cfg.evaluate, 'evaluator_config'):
+        model_name = cfg.evaluate.evaluator_config.api_call.model
     elif hasattr(cfg.evaluate, 'difference_detector_model'):
         model_name = cfg.evaluate.difference_detector_model.api_call.model
 

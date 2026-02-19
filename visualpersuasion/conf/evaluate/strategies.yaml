@@ -7,13 +7,10 @@ name: strategies
 task_names: [hotels, houses, people, products]
 
 # Input directory containing strategy subdirectories with optimization results
-data_dir: results/
+data_dir: ${general.data_dir}
 
 # Output directory where comparison results will be saved (in model/timestamp subdirs)
 results_dir: evaluation-strategies/
-
-# Model name for organizing output directories
-model_name: ${llm.model}
 
 # Maximum number of comparisons to evaluate (random sample if exceeded, -1 for all)
 max_comparisons: -1

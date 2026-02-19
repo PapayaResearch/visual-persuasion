@@ -30,14 +30,13 @@ class StrategiesComparison:
         name: str,
         data_dir: str,
         results_dir: str,
-        model_name: str,
         max_comparisons: int = -1,
         sampling_seed: int = 42
     ):
         self.name = name
         self.data_dir = data_dir
         self.results_dir = results_dir
-        self.model_name = model_name
+        self.model_name = evaluator_config['api_call'].model
         self.max_comparisons = max_comparisons
         self.sampling_seed = sampling_seed
 
