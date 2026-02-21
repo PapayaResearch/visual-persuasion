@@ -78,28 +78,49 @@ Results are saved in `results/` with timestamps.
 
 ## Evaluation
 
+By evaluating with `pairs` you compare images in different statuses (original, zero-shot, and final).
+
 ```bash
 python evaluation/run.py \
   evaluate=pairs \
+  task=houses \
   general.data_dir=results/cvpo/TIMESTAMP
 ```
 
 **Options:**
-- `evaluate`: pairs (head-to-head comparisons), strategies (cross-strategy comparison)
 - `strategy`: cvpo, vtg, vfd, distillation
 - `task`: people, products, houses, hotels
+- `llm`: gemini-3-flash, claude-4-5-haiku, gpt-5-2, etc.
+- `evaluate.valid_statuses`: images to compare (default: [original, zero-shot, original])
+- `evaluate.max_comparisons`: limit number of comparisons (-1 for all)
+- `general.max_workers`: number of parallel workers (default: 8)
+
+Results are saved in `results/cvpo/TIMESTAMP/evaluation/MODEL`.
+
+By evaluating with `strategies` you compare across strategies (cvpo, vfd, vtg).
+
+```bash
+python evaluation/run.py \
+  evaluate=strategies \
+  general.data_dir=results/
+```
+
+**Options:**
+- `evaluate.task_names`: task names to evaluate (default: [people, products, houses, hotels])
 - `llm`: gemini-3-flash, claude-4-5-haiku, gpt-5-2, etc.
 - `evaluate.max_comparisons`: limit number of comparisons (-1 for all)
 - `general.max_workers`: number of parallel workers (default: 8)
 
-Results for pairs are saved in `results/cvpo/TIMESTAMP/evaluation/MODEL`, and for strategies in `results-cross-strategies/` by default.
+Results are saved in `results-cross-strategies/` by default, but you can set it with `evaluate.results_dir`
 
 ## Automated Interpretability & Distillation
 
 Generate natural language explanations of visual patterns:
 
 ```bash
-python evaluation/run.py evaluate=autointerp general.data_dir=results/cvpo/TIMESTAMP
+python evaluation/run.py \
+  evaluate=autointerp \
+  general.data_dir=results/cvpo/TIMESTAMP
 ```
 
 Results are saved in `results/cvpo/TIMESTAMP/evaluation/MODEL`.
@@ -107,7 +128,10 @@ Results are saved in `results/cvpo/TIMESTAMP/evaluation/MODEL`.
 Zero-shot edits with learned patterns:
 
 ```bash
-python optimization/run.py strategy=distillation task=houses general.data_dir=data/houses_enhanced
+python optimization/run.py \
+  evaluate=distillation \
+  task=houses \
+  general.data_dir=data/houses_enhanced
 ```
 
 Results are saved in `results/` with timestamps.
@@ -117,11 +141,15 @@ Results are saved in `results/` with timestamps.
 Evaluate mitigation techniques:
 
 ```bash
-python evaluation/run.py evaluate=mitigations general.data_dir=results/cvpo/TIMESTAMP
+python evaluation/run.py \
+  evaluate=mitigations \
+  task=houses \
+  general.data_dir=results/cvpo/TIMESTAMP
 ```
 
 **Options:**
 - `llm`: gemini-3-flash, claude-4-5-haiku, gpt-5-2, etc.
+- `task`: people, products, houses, hotels
 - `evaluate.max_comparisons`: limit number of comparisons (-1 for all)
 - `evaluate.iterations`: number of debiasing rounds (default: 1)
 - `general.max_workers`: number of parallel workers (default: 8)
