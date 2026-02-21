@@ -1,0 +1,42 @@
+######################
+# Defaults
+######################
+
+defaults:
+  - _self_
+  # LLM model for optimization or evaluation
+  - llm: gemini-3-flash
+  # Image editor model (e.g., nano-banana-flash, nano-banana-pro)
+  - editor: nano-banana-flash
+  # Task: products, houses, hotels, people
+  - task: houses
+  # Strategy for persuasion: cvpo, vfd, vtg, distillation
+  - strategy: cvpo
+  # Evaluation mode: pairs, autointerp, mitigations, strategies
+  - evaluate: pairs
+  # Preprocessing mode: enhance, random-sampling
+  - preprocess: enhance
+
+######################
+# General Settings
+######################
+
+general:
+  # Directory containing the images to be tested
+  data_dir: ???
+  # Maximum number of parallel workers for processing images
+  max_workers: 8
+  # Resume optimization from latest run if some results exist
+  resume: false
+
+######################
+# Logging Settings
+######################
+
+logging:
+  # Base directory for writing log files
+  log_dir: ${hydra:runtime.cwd}/logs
+  # Base directory for writing results (images, configs)
+  results_dir: ${hydra:runtime.cwd}/results
+  # Also log to console
+  console: false

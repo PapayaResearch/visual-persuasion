@@ -1,7 +1,0 @@
-_target_: utils.api.create_api_call
-model: claude-haiku-4-5-20251001
-delay: 0
-params:
-  temperature: 1.0 # Default: 1.0; Range: [0, 2]
-  additional_drop_params:
-    - logprobs

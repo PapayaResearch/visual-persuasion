@@ -1,19 +1,13 @@
 # Custom
 *.sh
 .DS_Store
-# Setup
-data
-keys
-# Analysis
 logs
 results
 results-extra
+results-cross-strategies
+results-cross-strategies-extra
 cache
 outputs
-evaluations
-evaluations-extra
-model.tar.gz
-*.pt
 scripts/prolific_within_strategy
 scripts/prolific_across_strategies
 scripts/prolific_mitigations

@@ -1,0 +1,5 @@
+_target_: visualpersuasion.utils.api.create_api_call
+model: gpt-5-mini-2025-08-07
+delay: 0
+params:
+  additional_drop_params: []

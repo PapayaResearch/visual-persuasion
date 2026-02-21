@@ -1,5 +1,0 @@
-_target_: utils.api.create_api_call
-model: bedrock/us.meta.llama4-maverick-17b-instruct-v1:0
-delay: 0
-params:
-  additional_drop_params: []

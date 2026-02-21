@@ -1,0 +1,5 @@
+_target_: visualpersuasion.utils.api.create_api_call
+model: bedrock/qwen.qwen3-vl-235b-a22b
+delay: 0
+params:
+  additional_drop_params: []
