@@ -93,7 +93,7 @@ python evaluation/run.py \
 - `strategy`: cvpo, vtg, vfd, distillation
 - `task`: people, products, houses, hotels
 - `llm`: gemini-3-flash, claude-4-5-haiku, gpt-5-2, etc.
-- `evaluate.valid_statuses`: images to compare (default: [original, zero-shot, original])
+- `evaluate.valid_statuses`: images to compare (default: [final, zero-shot, original])
 - `evaluate.max_comparisons`: limit number of comparisons (-1 for all)
 - `general.max_workers`: number of parallel workers (default: 8)
 
