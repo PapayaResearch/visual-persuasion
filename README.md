@@ -131,9 +131,10 @@ Zero-shot edits with learned patterns:
 
 ```bash
 python optimization/run.py \
-  evaluate=distillation \
+  strategy=distillation \
   task=houses \
-  general.data_dir=data/houses_enhanced
+  general.data_dir=data/houses_enhanced \
+  "strategy.distillation_prompt=Your prompt here"
 ```
 
 Results are saved in `results/` with timestamps.

@@ -13,7 +13,7 @@ from datetime import datetime
 
 def main():
     if len(sys.argv) != 2:
-        print("Usage: python combine_results.py <path_to_results_folder>")
+        print("Usage: python combine_results_pairs.py <path_to_results_folder>")
         sys.exit(1)
 
     dfs = []

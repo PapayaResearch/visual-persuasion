@@ -28,7 +28,7 @@ CATEGORY_DISPLAY_NAMES = {
     'BACKPACK': 'backpack',
     'BED': 'bed',
     'BREAD': 'bread',
-    'CELLULAR_PHONE_CASE': 'phone case',
+    'CELLULARPHONECASE': 'phone case',
     'CHAIR': 'chair',
     'CLOCK': 'clock',
     'FINERING': 'ring',
@@ -38,12 +38,12 @@ CATEGORY_DISPLAY_NAMES = {
     'PILLOW': 'pillow',
     'PLANTER': 'planter',
     'RUG': 'rug',
-    'SAUTE_FRY_PAN': 'pan',
+    'SAUTEFRYPAN': 'pan',
     'SHOES': 'shoes',
     'SOFA': 'sofa',
     'SUITCASE': 'suitcase',
     'VASE': 'vase',
-    'WALL_ART': 'wall art',
+    'WALLART': 'wall art',
     'WALLET': 'wallet',
 }
 
