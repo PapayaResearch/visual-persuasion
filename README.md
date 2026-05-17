@@ -5,7 +5,7 @@
 ![GitHub license](https://img.shields.io/github/license/PapayaResearch/visual-persuasion)
 
 > [!NOTE]
-> Code for the paper **[Visual Persuasion: What Influences Decisions of Vision-Language Models?](https://arxiv.org/abs/2602.15278)**
+> Code for the **ICML 2026** paper **[Visual Persuasion: What Influences Decisions of Vision-Language Models?](https://arxiv.org/abs/2602.15278)**
 >
 > **[Do You Also See Like an Agent?](https://visual-persuasion-website.vercel.app/game)** Complete our study to see if your instincts match agent visual preferences.
 
