@@ -194,10 +194,17 @@ If you use `Visual Persuasion` in your research, please cite the following paper
 
 ```bibtex
 @inproceedings{cherep2026visualpersuasion,
-  title     = {Visual Persuasion: What Influences Decisions of Vision-Language Models?},
-  author    = {Cherep, Manuel and M R, Pranav and Maes, Pattie and Singh, Nikhil},
-  year      = {2026},
-  url       = {https://arxiv.org/abs/2602.15278}
+  title = 	  {Visual Persuasion: What Influences Decisions of Vision-Language Models?},
+  author =    {Cherep, Manuel and R, Pranav M and Maes, Pattie and Singh, Nikhil},
+  booktitle = {Proceedings of the 43rd International Conference on Machine Learning},
+  pages = 	  {19267--19312},
+  year = 	  {2026},
+  volume = 	  {306},
+  series = 	  {Proceedings of Machine Learning Research},
+  month = 	  {06--11 Jul},
+  publisher = {PMLR},
+  pdf = 	  {https://raw.githubusercontent.com/mlresearch/v306/main/assets/cherep26a/cherep26a.pdf},
+  url = 	  {https://proceedings.mlr.press/v306/cherep26a.html},
 }
 ```
 
